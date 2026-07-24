@@ -8,10 +8,10 @@ add_library(
 )
 
 add_executable(
-    flux_grid_d0
+    d0_point
     integrand.cpp
     int_exclusive.cpp
-    int_diffractive_xpo.cpp
+    int_diffractive.cpp
     gamma_aa.cpp
     fragmentation.cpp
     lhapdf_grid.cpp
@@ -20,7 +20,7 @@ add_executable(
 )
 
 target_link_libraries(
-    flux_grid_d0
+    d0_point
     PRIVATE
     amplitude
     GSL::gsl

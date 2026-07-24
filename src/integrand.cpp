@@ -45,7 +45,7 @@ static double fragmentation(double zh, parameters* par)
 
 // D0-level exclusive integrand: dsigma/(d2pD0 dy)
 
-double integrand_exclusive_frag(double* vec, size_t /*dim*/, void* p)
+double integrand_exclusive(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
 
@@ -101,7 +101,7 @@ double integrand_exclusive_frag(double* vec, size_t /*dim*/, void* p)
 
 // D0-level (fragmented) diffractive integrand
 
-double integrand_diffractive_xpo_frag(double* vec, size_t /*dim*/, void* p)
+double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
 

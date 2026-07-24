@@ -2,8 +2,8 @@
 
 # Usage: ./run_local.sh [dipole_file] [pt_min] [pt_step] [pt_max] [y_values...]
 
-# Output: files/d0_single_point_exclusive.dat and
-# files/d0_single_point_diffractive.dat (columns: pD0  y  dsigma).
+# Output: files/d0_point_exclusive.dat and
+# files/d0_point_diffractive.dat (columns: pD0  y  dsigma).
 
 set -e
 
@@ -20,12 +20,12 @@ fi
 echo "Building..."
 mkdir -p build
 cmake -S . -B build > /dev/null
-cmake --build build -j"$(nproc)" --target flux_grid_d0
+cmake --build build -j"$(nproc)" --target d0_point
 echo "Build OK."
 
 mkdir -p files
-excl_file="files/d0_single_point_exclusive.dat"
-diff_file="files/d0_single_point_diffractive.dat"
+excl_file="files/d0_point_exclusive.dat"
+diff_file="files/d0_point_diffractive.dat"
 
 {
     echo "# D0 exclusive cross section, dipole file: $dipole_file"
@@ -40,7 +40,7 @@ echo "Running dipole_file=${dipole_file}, pD0 in [${pt_min},${pt_max}] step ${pt
 
 for pt in $(seq "$pt_min" "$pt_step" "$pt_max"); do
     for y in $y_values; do
-        result=$(./build/bin/flux_grid_d0 "$dipole_file" "$pt" "$y")
+        result=$(./build/bin/d0_point "$dipole_file" "$pt" "$y")
         excl=$(awk '$1 !~ /^#/ {print $2}' <<< "$result")
         diff=$(awk '$1 !~ /^#/ {print $3}' <<< "$result")
         echo "$pt  $y  $excl" >> "$excl_file"

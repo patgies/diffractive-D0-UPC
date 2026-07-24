@@ -13,7 +13,7 @@
 using namespace std;
 
 
-//  Run: ./flux_grid_d0 <dipole_file> <pD0> <y> [frag_type] [channel]
+//  Run: ./d0_point <dipole_file> <pD0> <y> [frag_type] [channel]
 //   frag_type  BCFY (default) | KniehlKramer | LHAPDF
 //   channel    An0n (default) | Xn0n | PL(AnAn)
 
@@ -95,8 +95,8 @@ int main(int argc, char* argv[])
     cout << "# dipole file   : " << datafile << endl;
     cout << "# pD0  exclusive  diffractive" << endl;
 
-    double result_excl = exclusiveCrossSection_frag(static_cast<void*>(&param));
-    double result_diff = diffractiveCrossSection_xpo_frag(static_cast<void*>(&param));
+    double result_excl = exclusiveCrossSection(static_cast<void*>(&param));
+    double result_diff = diffractiveCrossSection(static_cast<void*>(&param));
 
     cout << pD0 << "  " << result_excl << "  " << result_diff << endl;
 

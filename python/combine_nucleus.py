@@ -11,8 +11,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
 # Integrates the per-b, per-(pD0,y) grid files written by
-# ../run_many_nucleus.sh (main_grid_d0.cpp) over the target-nucleus impact
-# parameter b (Simpson's rule, weighted by b)
+# ../run_many_nucleus.sh (src/main.cpp / d0_point) over the target-nucleus
+# impact parameter b (Simpson's rule, weighted by b)
 #   b column = target-nucleus Glauber sample (data/<NUCLEUS>/mve/glauber_mve_<b>)
 #   exclusive:   p_e = alpha_em * Nc * e_c^2 * sigma0 / (2*pi^2)
 #   diffractive: p_d = alpha_s(mT) * alpha_em * e_c^2 * (Nc^2-1) * sigma0 / (8*pi^4)
@@ -78,7 +78,7 @@ def integrate_over_b(pairs):
 
 
 def prefactor(process, pt):
-    """Physical prefactor, matching plot_flux_grid.py's convention."""
+    """Physical prefactor, matching plot_pt_spectrum.py's convention."""
     if process == "exclusive":
         return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
     elif process == "diffractive":
@@ -88,7 +88,7 @@ def prefactor(process, pt):
 
 
 def load_results(process):
-    pattern = f"../files/flux_grid_d0_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y*.dat"
+    pattern = f"../files/d0_point_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
         y = read_rapidity(filename)
@@ -99,7 +99,7 @@ def load_results(process):
         for pt, pairs in sorted(pt_groups.items()):
             b_integral = integrate_over_b(pairs)
             # 2*pi*b_integral: Glauber transverse-plane (b) integral.
-            # 2*pi*pt: d^2pD0 -> dpD0 "kt-spectrum" Jacobian (see plot_flux_grid.py).
+            # 2*pi*pt: d^2pD0 -> dpD0 "kt-spectrum" Jacobian (see plot_pt_spectrum.py).
             cross_section = (2*math.pi) * b_integral * prefactor(process, pt) \
                             * (2*math.pi) * pt * GEVSQR_TO_MB
             results[y].append((pt, cross_section))

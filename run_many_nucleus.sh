@@ -3,7 +3,7 @@
 # Usage: NUCLEUS=Pb ./run_many_nucleus.sh
 #        NUCLEUS=Au FRAG_TYPE=KniehlKramer ./run_many_nucleus.sh
 #
-# Loops flux_grid_d0 (one point at a time: one dipole file, one pD0, one y)
+# Loops d0_point (one point at a time: one dipole file, one pD0, one y)
 # over every Glauber-sampled dipole file in data/<NUCLEUS>/mve/, every pD0
 # in [PT_MIN, PT_MAX] (step PT_STEP), and every y in Y_VALS 
 #
@@ -11,7 +11,7 @@
 #   NUCLEUS      Pb (default) | Au -- selects data/<NUCLEUS>/mve/glauber_mve_*
 #   Y_VALS       rapidities to scan (default "0.0 1.0 2.0 3.0 4.0")
 #   PT_MIN,PT_STEP,PT_MAX  pD0 sweep, GeV (default 0.2, 0.5, 12.0)
-#   CORES        parallel flux_grid_d0 invocations (default nproc/2)
+#   CORES        parallel d0_point invocations (default nproc/2)
 #   FRAG_TYPE    BCFY (default) | KniehlKramer | LHAPDF
 #   CHANNEL      An0n (default) | Xn0n | PL(AnAn) 
 #   CALLS, LHAPDF_FILE
@@ -41,7 +41,7 @@ fi
 echo "Building..."
 mkdir -p build
 cmake -S . -B build > /dev/null
-cmake --build build -j"$(nproc)" --target flux_grid_d0
+cmake --build build -j"$(nproc)" --target d0_point
 echo "Build OK."
 
 mkdir -p files
@@ -50,7 +50,7 @@ mkdir -p files
 for proc in exclusive diffractive; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="files/flux_grid_d0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		outfile="files/d0_point_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
 		{
 			echo "# ${proc} D0 cross section, ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
 			echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
@@ -62,22 +62,22 @@ for proc in exclusive diffractive; do
 	done
 done
 
-echo "Running flux_grid_d0 over $DIPOLE_DIR, pD0 in [$PT_MIN,$PT_MAX] step $PT_STEP, y in {$Y_VALS} ..."
+echo "Running d0_point over $DIPOLE_DIR, pD0 in [$PT_MIN,$PT_MAX] step $PT_STEP, y in {$Y_VALS} ..."
 echo "frag_type=$frag_tag channel=$channel"
 
-# Column 2 of flux_grid_d0's data line is "exclusive", column 3 is "diffractive".
+# Column 2 of d0_point's data line is "exclusive", column 3 is "diffractive".
 run_one_point() {
 	local dfile="$1" b="$2" pt="$3" y="$4" ytag="$5"
 	local result excl diff
-	result=$(./build/bin/flux_grid_d0 "$dfile" "$pt" "$y" "$frag_tag" "$channel")
+	result=$(./build/bin/d0_point "$dfile" "$pt" "$y" "$frag_tag" "$channel")
 	excl=$(awk '$1 !~ /^#/ {print $2}' <<< "$result")
 	diff=$(awk '$1 !~ /^#/ {print $3}' <<< "$result")
 	if [[ -z "$excl" || -z "$diff" ]]; then
-		echo "Warning: flux_grid_d0 $dfile $pt $y produced no data line -- skipping this point." >&2
+		echo "Warning: d0_point $dfile $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$b  $pt  $excl" >> "files/flux_grid_d0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
-	echo "$b  $pt  $diff" >> "files/flux_grid_d0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+	echo "$b  $pt  $excl" >> "files/d0_point_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+	echo "$b  $pt  $diff" >> "files/d0_point_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
 }
 
 for dfile in "$DIPOLE_DIR"/glauber_mve_*; do
