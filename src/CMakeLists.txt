@@ -1,0 +1,29 @@
+add_library(
+    amplitude
+    STATIC
+    amplitudelib.cpp
+    datafile.cpp
+    tools.cpp
+    interpolation.cpp
+)
+
+add_executable(
+    flux_grid_d0
+    integrand.cpp
+    int_exclusive.cpp
+    int_diffractive_xpo.cpp
+    gamma_aa.cpp
+    fragmentation.cpp
+    lhapdf_grid.cpp
+    main.cpp
+    fourier.c
+)
+
+target_link_libraries(
+    flux_grid_d0
+    PRIVATE
+    amplitude
+    GSL::gsl
+    GSL::gslcblas
+    OpenMP::OpenMP_CXX
+)
