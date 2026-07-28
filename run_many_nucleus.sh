@@ -1,22 +1,6 @@
 #!/bin/bash
 
-# Usage: NUCLEUS=Pb ./run_many_nucleus.sh
-#        NUCLEUS=Au FRAG_TYPE=KniehlKramer ./run_many_nucleus.sh
-#
-# Loops d0_point (one point at a time: one dipole file, one pD0, one y)
-# over every Glauber-sampled dipole file in data/<NUCLEUS>/mve/, every pD0
-# in [PT_MIN, PT_MAX] (step PT_STEP), and every y in Y_VALS 
-#
-# Env vars:
-#   NUCLEUS      Pb (default) | Au -- selects data/<NUCLEUS>/mve/glauber_mve_*
-#   Y_VALS       rapidities to scan (default "0.0 1.0 2.0 3.0 4.0")
-#   PT_MIN,PT_STEP,PT_MAX  pD0 sweep, GeV (default 0.2, 0.5, 12.0)
-#   CORES        parallel d0_point invocations (default nproc/2)
-#   FRAG_TYPE    BCFY (default) | KniehlKramer | LHAPDF
-#   CHANNEL      An0n (default) | Xn0n | PL(AnAn) 
-#   CALLS, LHAPDF_FILE
 
-set -e
 
 NUCLEUS=${NUCLEUS:-Pb}
 Y_VALS=${Y_VALS:-"0.0 1.0 2.0 3.0 4.0"}
@@ -30,29 +14,37 @@ frag_tag=${FRAG_TYPE:-BCFY}
 channel=${CHANNEL:-An0n}
 channel_tag=$(echo "$channel" | tr -d '() ')
 
-
-export CALLS LHAPDF_FILE
-
-if [[ ! -d "$DIPOLE_DIR" ]]; then
-	echo "Error: $DIPOLE_DIR does not exist (expected Glauber samples glauber_mve_<b>)." >&2
-	exit 1
+# PROCESS=exclusive|diffractive reruns just that one process (e.g. with a
+# bumped CALLS_EXCL) without recomputing -- or touching the output file of --
+# the other, already-converged one. Default "both" is the original behavior.
+PROCESS=${PROCESS:-exclusive}
+if [[ "$PROCESS" == "both" ]]; then
+	procs="exclusive diffractive"
+else
+	procs="$PROCESS"
 fi
 
-echo "Building..."
-mkdir -p build
-cmake -S . -B build > /dev/null
-cmake --build build -j"$(nproc)" --target d0_point
-echo "Build OK."
+# VEGAS call counts (see src/main.cpp): CALLS_EXCL/CALLS_DIFF each fall back
+# to CALLS if unset, so a bare CALLS=1e6 still applies to both as before.
+CALLS=${CALLS:-1e5}
+CALLS_EXCL=${CALLS_EXCL:-5e7}
+CALLS_DIFF=${CALLS_DIFF:-$CALLS}
+
+export CALLS CALLS_EXCL CALLS_DIFF PROCESS LHAPDF_FILE
+
 
 mkdir -p files
 
 
-for proc in exclusive diffractive; do
+for proc in $procs; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="files/d0_point_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		outfile="files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		if [[ "$proc" == "exclusive" ]]; then proc_calls=$CALLS_EXCL; else proc_calls=$CALLS_DIFF; fi
 		{
 			echo "# ${proc} D0 cross section, ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
+			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+			echo "# calls          : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_DIFF)"
 			echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
 			echo "# pD0 sweep      : ${PT_MIN} to ${PT_MAX} GeV, step ${PT_STEP}"
 			echo "# fixed rapidity y : ${y}"
@@ -62,22 +54,29 @@ for proc in exclusive diffractive; do
 	done
 done
 
-echo "Running d0_point over $DIPOLE_DIR, pD0 in [$PT_MIN,$PT_MAX] step $PT_STEP, y in {$Y_VALS} ..."
+echo "Running D0 over $DIPOLE_DIR, pD0 in [$PT_MIN,$PT_MAX] step $PT_STEP, y in {$Y_VALS} ..."
 echo "frag_type=$frag_tag channel=$channel"
 
-# Column 2 of d0_point's data line is "exclusive", column 3 is "diffractive".
+# Column 2 of D0's data line is "exclusive", column 3 is "diffractive".
 run_one_point() {
 	local dfile="$1" b="$2" pt="$3" y="$4" ytag="$5"
 	local result excl diff
-	result=$(./build/bin/d0_point "$dfile" "$pt" "$y" "$frag_tag" "$channel")
+	result=$(./build/bin/D0 "$dfile" "$pt" "$y" "$frag_tag" "$channel")
 	excl=$(awk '$1 !~ /^#/ {print $2}' <<< "$result")
 	diff=$(awk '$1 !~ /^#/ {print $3}' <<< "$result")
 	if [[ -z "$excl" || -z "$diff" ]]; then
-		echo "Warning: d0_point $dfile $pt $y produced no data line -- skipping this point." >&2
+		echo "Warning: D0 $dfile $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$b  $pt  $excl" >> "files/d0_point_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
-	echo "$b  $pt  $diff" >> "files/d0_point_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+	# Only write the file(s) for the process(es) actually computed this run --
+	# PROCESS=exclusive gives diff=0 (see main.cpp), which must not clobber an
+	# existing good diffractive file.
+	if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
+		echo "$b  $pt  $excl" >> "files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+	fi
+	if [[ "$PROCESS" == "both" || "$PROCESS" == "diffractive" ]]; then
+		echo "$b  $pt  $diff" >> "files/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+	fi
 }
 
 for dfile in "$DIPOLE_DIR"/glauber_mve_*; do

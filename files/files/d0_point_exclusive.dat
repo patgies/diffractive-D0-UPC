@@ -1,0 +1,6 @@
+# D0 exclusive cross section, dipole file: data/proton/mve.dat
+# pD0  y  dsigma
+1.0  0.0  0.137307
+1.0  1.0  0.137663
+2.0  0.0  0.00781219
+2.0  1.0  0.0074571

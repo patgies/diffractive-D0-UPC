@@ -8,10 +8,11 @@ add_library(
 )
 
 add_executable(
-    d0_point
+    D0
     integrand.cpp
     int_exclusive.cpp
     int_diffractive.cpp
+    alphas_running.cpp
     gamma_aa.cpp
     fragmentation.cpp
     lhapdf_grid.cpp
@@ -20,7 +21,51 @@ add_executable(
 )
 
 target_link_libraries(
-    d0_point
+    D0
+    PRIVATE
+    amplitude
+    GSL::gsl
+    GSL::gslcblas
+    OpenMP::OpenMP_CXX
+)
+
+add_executable(
+    D0_xpom
+    integrand.cpp
+    int_exclusive.cpp
+    int_diffractive.cpp
+    alphas_running.cpp
+    gamma_aa.cpp
+    fragmentation.cpp
+    lhapdf_grid.cpp
+    main_xpom_point.cpp
+    fourier.c
+)
+
+target_link_libraries(
+    D0_xpom
+    PRIVATE
+    amplitude
+    GSL::gsl
+    GSL::gslcblas
+    OpenMP::OpenMP_CXX
+)
+
+add_executable(
+    D0_fixedW
+    integrand.cpp
+    int_exclusive.cpp
+    int_diffractive.cpp
+    alphas_running.cpp
+    gamma_aa.cpp
+    fragmentation.cpp
+    lhapdf_grid.cpp
+    main_fixedW.cpp
+    fourier.c
+)
+
+target_link_libraries(
+    D0_fixedW
     PRIVATE
     amplitude
     GSL::gsl

@@ -1,0 +1,6 @@
+# D0 diffractive cross section, dipole file: data/proton/mve.dat
+# pD0  y  dsigma
+1.0  0.0  0.538337
+1.0  1.0  0.39647
+2.0  0.0  0.0941534
+2.0  1.0  0.0616306

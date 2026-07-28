@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Usage: NUCLEUS=Pb ./run_many_xpom.sh
+#        PT_VALS="1.0 4.0" Y_VALS="0.0 2.0" ./run_many_xpom.sh
+#
+# Loops D0_xpom (one point at a time: one dipole file, one pD0, one y,
+# one x_po) over every Glauber-sampled dipole file in data/<NUCLEUS>/mve/,
+# every pD0 in PT_VALS, every y in Y_VALS, and every x_po in a log-spaced
+# grid in [XPO_MIN, XPO_MAX] -- giving the diffractive dsigma/(d2pD0 dy dx_po)
+# differential (see integrand_diffractive_xpom in src/integrand.cpp), unlike
+# run_many_nucleus.sh's D0 which integrates x_po out.
+#
+# Env vars:
+#   NUCLEUS      Pb (default) | Au -- selects data/<NUCLEUS>/mve/glauber_mve_*
+#   Y_VALS       rapidities to scan (default "0.0 1.0 2.0")
+#   PT_VALS      pD0 values to scan, GeV (default "1.0 2.0 4.0 8.0")
+#   XPO_MIN,XPO_MAX,XPO_N  log-spaced x_po grid (default 1e-6, 0.1, 25)
+#   CORES        parallel D0_xpom invocations (default nproc/2)
+#   FRAG_TYPE    BCFY (default) | KniehlKramer | LHAPDF
+#   CHANNEL      An0n (default) | Xn0n | PL(AnAn)
+#   CALLS, CALLS_DIFF (CALLS_DIFF overrides CALLS -- this binary only ever
+#                      runs the diffractive integrand, so CALLS_EXCL is unused)
+#   LHAPDF_FILE
+
+set -e
+
+NUCLEUS=${NUCLEUS:-Pb}
+Y_VALS=${Y_VALS:-"-1.0 0.0 1.0 2.0 3.0 4.0"}
+PT_VALS=${PT_VALS:-"1.0 2.0 4.0 8.0"}
+XPO_MIN=${XPO_MIN:-1e-6}
+XPO_MAX=${XPO_MAX:-0.1}
+XPO_N=${XPO_N:-25}
+CORES=${CORES:-$(( $(nproc) / 2 ))}
+DIPOLE_DIR=${DIPOLE_DIR:-data/$NUCLEUS/mve}
+
+frag_tag=${FRAG_TYPE:-KniehlKramer}
+channel=${CHANNEL:-An0n}
+channel_tag=$(echo "$channel" | tr -d '() ')
+
+# VEGAS call count (see src/main_xpom_point.cpp): only CALLS_DIFF matters here
+# -- this binary only ever runs the diffractive integrand.
+CALLS=${CALLS:-1e5}
+CALLS_DIFF=${CALLS_DIFF:-$CALLS}
+
+export CALLS CALLS_DIFF LHAPDF_FILE
+
+if [[ ! -d "$DIPOLE_DIR" ]]; then
+	echo "Error: $DIPOLE_DIR does not exist (expected Glauber samples glauber_mve_<b>)." >&2
+	exit 1
+fi
+
+echo "Building..."
+mkdir -p build
+cmake -S . -B build > /dev/null
+cmake --build build -j"$(nproc)" --target D0_xpom
+echo "Build OK."
+
+mkdir -p files
+
+# Log-spaced x_po grid, computed once in Python (avoids bash floating-point).
+xpo_values=$(python3 -c "
+import numpy as np
+xs = np.exp(np.linspace(np.log($XPO_MIN), np.log($XPO_MAX), $XPO_N))
+print(' '.join(f'{x:.8e}' for x in xs))
+")
+
+for y in $Y_VALS; do
+	ytag=$(echo "$y" | tr -d '.')
+	for pt in $PT_VALS; do
+		pttag=$(echo "$pt" | tr -d '.')
+		outfile="files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}_pt${pttag}.dat"
+		{
+			echo "# diffractive D0 dsigma/(d2pD0 dy dx_po), ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
+			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+			echo "# calls          : ${CALLS_DIFF} (VEGAS calls per point)"
+			echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
+			echo "# x_po grid      : ${XPO_MIN} to ${XPO_MAX}, ${XPO_N} log-spaced points"
+			echo "# fixed rapidity y : ${y}"
+			echo "# fixed pD0        : ${pt}"
+			echo "# ============================================================"
+			echo "# b  x_po  dsigma_dxpo"
+		} > "$outfile"
+	done
+done
+
+echo "Running D0_xpom over $DIPOLE_DIR, pD0 in {$PT_VALS}, y in {$Y_VALS}, x_po in [$XPO_MIN,$XPO_MAX] ($XPO_N pts) ..."
+echo "frag_type=$frag_tag channel=$channel"
+
+run_one_point() {
+	local dfile="$1" b="$2" pt="$3" y="$4" ytag="$5" pttag="$6" xpo="$7"
+	local result diff
+	result=$(./build/bin/D0_xpom "$dfile" "$pt" "$y" "$xpo" "$frag_tag" "$channel")
+	diff=$(awk '$1 !~ /^#/ {print $3}' <<< "$result")
+	if [[ -z "$diff" ]]; then
+		echo "Warning: D0_xpom $dfile $pt $y $xpo produced no data line -- skipping this point." >&2
+		return
+	fi
+	echo "$b  $xpo  $diff" >> "files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}_pt${pttag}.dat"
+}
+
+for dfile in "$DIPOLE_DIR"/glauber_mve_*; do
+	b=$(basename "$dfile" | sed 's/glauber_mve_//')
+	for y in $Y_VALS; do
+		ytag=$(echo "$y" | tr -d '.')
+		for pt in $PT_VALS; do
+			pttag=$(echo "$pt" | tr -d '.')
+			for xpo in $xpo_values; do
+				run_one_point "$dfile" "$b" "$pt" "$y" "$ytag" "$pttag" "$xpo" &
+				while (( $(jobs -r | wc -l) >= CORES )); do sleep 0.2; done
+			done
+		done
+	done
+done
+wait
+
+echo "Done. Next: python3 python/xpom_spectrum.py to integrate over b and plot."

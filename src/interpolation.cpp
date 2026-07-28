@@ -15,8 +15,6 @@
 #endif
 
 typedef unsigned int uint;
-using std::isinf;
-using std::isnan;
 
 /*
  * Intialize interpolation
@@ -74,7 +72,7 @@ int Interpolator::Initialize()
 
 double Interpolator::Evaluate(double x)
 {
-    if (isnan(x) or isinf(x))
+    if (std::isnan(x) or std::isinf(x))
     {
         cerr << "Trying to evaluate interpolator with x=" << x << " at " << LINEINFO << endl;
         exit(1);
@@ -122,7 +120,7 @@ double Interpolator::Evaluate(double x)
             exit(1);
     }
 
-    if (isnan(res) or isinf(res))
+    if (std::isnan(res) or std::isinf(res))
     {
         cerr << "Interpolation at x=" << x << " gives " << res << endl;
 		return 0;

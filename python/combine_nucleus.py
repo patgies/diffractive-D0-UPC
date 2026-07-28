@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
 # Integrates the per-b, per-(pD0,y) grid files written by
-# ../run_many_nucleus.sh (src/main.cpp / d0_point) over the target-nucleus
+# ../run_many_nucleus.sh (src/main.cpp / D0) over the target-nucleus
 # impact parameter b (Simpson's rule, weighted by b)
 #   b column = target-nucleus Glauber sample (data/<NUCLEUS>/mve/glauber_mve_<b>)
 #   exclusive:   p_e = alpha_em * Nc * e_c^2 * sigma0 / (2*pi^2)
@@ -60,13 +60,15 @@ def read_data_file(filename):
 def group_by_pt(b_list, pt_list, dsigma_list):
     groups = {}
     for b, pt, dsigma in zip(b_list, pt_list, dsigma_list):
-        groups.setdefault(pt, []).append((b, dsigma))
+        if pt not in groups:
+            groups[pt] = []
+        groups[pt].append((b, dsigma))
     return groups
 
 
 def integrate_over_b(pairs):
     """int b*dsigma(b) db via Simpson's rule (the radial Glauber-b measure)."""
-    pairs = sorted(pairs, key=lambda pair: pair[0])
+    pairs = sorted(pairs)   # sorts by b first since these are (b, dsigma) tuples
     if pairs[0][0] < 0:
         raise ValueError(
             "Negative b found -- datafile wasn't a Glauber sample "
@@ -88,7 +90,7 @@ def prefactor(process, pt):
 
 
 def load_results(process):
-    pattern = f"../files/d0_point_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y*.dat"
+    pattern = f"../files/D0_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
         y = read_rapidity(filename)
@@ -136,10 +138,14 @@ def main():
     fig, ax = plt.subplots(figsize=(7.5, 6.5))
     for y, c in zip(y_values, colors):
         if y in results_diff:
-            pts, cs = zip(*sorted(results_diff[y]))
+            points = sorted(results_diff[y])
+            pts = [point[0] for point in points]
+            cs = [point[1] for point in points]
             ax.plot(pts, cs, color=c, linestyle='-', label=f"diff., $y={y:g}$")
         if y in results_excl:
-            pts, cs = zip(*sorted(results_excl[y]))
+            points = sorted(results_excl[y])
+            pts = [point[0] for point in points]
+            cs = [point[1] for point in points]
             ax.plot(pts, cs, color=c, linestyle='--', label=f"excl., $y={y:g}$")
 
     ax.set_yscale('log')

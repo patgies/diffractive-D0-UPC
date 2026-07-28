@@ -7,6 +7,9 @@
 
 using namespace std;
 
+// Modified Bessel function of the second kind, K_nu(x).
+// Just a small wrapper around the GSL function that returns 0 instead of
+// crashing if GSL can't compute it.
 double Kn(int nu, double x)
 {
     gsl_sf_result result;
@@ -15,6 +18,7 @@ double Kn(int nu, double x)
     return result.val;
 }
 
+// Bessel function of the first kind, J_nu(x). Same idea as Kn above.
 double Jn(int nu, double x)
 {
     gsl_sf_result result;
@@ -24,31 +28,30 @@ double Jn(int nu, double x)
 }
 
 
-// D(zh)/zh^2 fragmentation (c -> D0)
+// Fragmentation function D(zh)/zh^2, for turning a charm quark into a D0 meson.
+// Picks the right formula depending on which fragmentation model we're using.
 static double fragmentation(double zh, parameters* par)
 {
     double D_frag;
-    switch (par->frag_type) {
-        case FragmentationType::KniehlKramer:
-            D_frag = D_kniehl_kramer(zh, par->N_kk, par->eps_kk);
-            break;
-        case FragmentationType::LHAPDF:
-            D_frag = par->D_frag_interp->Evaluate(zh);
-            break;
-        case FragmentationType::BCFY:
-        default:
-            D_frag = Dc_to_D0(zh, par->r);
-            break;
+    if (par->frag_type == FragmentationType::KniehlKramer) {
+        D_frag = D_kniehl_kramer(zh, par->N_kk, par->eps_kk);
+    } else if (par->frag_type == FragmentationType::LHAPDF) {
+        D_frag = par->D_frag_interp->Evaluate(zh);
+    } else {
+        // BCFY is the default
+        D_frag = Dc_to_D0(zh, par->r);
     }
     return D_frag / (zh * zh);
 }
 
-// D0-level exclusive integrand: dsigma/(d2pD0 dy)
-
+// Exclusive integrand at the D0 level: dsigma/(d2pD0 dy).
+// This function gets called many times by the Monte Carlo integration
+// routine, once for each random point "vec" it picks.
 double integrand_exclusive(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
 
+    // the 5 numbers the integration routine gives us this time
     double r1   = vec[0];
     double r2   = vec[1];
     double u_qp = vec[2];
@@ -62,30 +65,29 @@ double integrand_exclusive(double* vec, size_t /*dim*/, void* p)
     double mt = sqrt(p2 + par->m2);
     double pp = (mt / M_SQRT2) * exp(par->y);
 
-    // qp from unit interval, in [pp, qpmax]
+    // turn u_qp (between 0 and 1) into qp (between pp and qpmax)
     double jac_qp = par->qpmax - pp;
     if (jac_qp <= 0.0) return 0.0;
     double qp = pp + u_qp * jac_qp;
 
-    // Photon flux
     double flux = photon_flux(b, qp, p);
 
-    // Light-cone fractions
+    // light-cone momentum fractions
     double z1 = pp / qp;
     double z2 = 1.0 - z1;
 
-    // W^2, Mqq^2, xP
+    // photon-proton energy squared (W^2), quark-pair mass squared, and
+    // the momentum fraction of the pomeron
     double w2   = M_SQRT2 * qp * par->ss;
     double Mqq2 = (p2 + par->m2) / (z1 * z2);
     double xP   = Mqq2 / w2;
     if (xP <= 0.0 || xP > 0.1) return 0.0;
-    double xP_dip = std::min(xP, 0.01);
+    double xP_dip = min(xP, 0.01);
 
-    // Dipole amplitudes 
+    // dipole scattering amplitude for each of the two dipole sizes
     double D1 = par->dipole->N(r1, xP_dip);
     double D2 = par->dipole->N(r2, xP_dip);
 
-    // Radial kernels
     double f1_r1 = r1 * Jn(1, pc*r1) * Kn(1, m*r1) * D1;
     double f1_r2 = r2 * Jn(1, pc*r2) * Kn(1, m*r2) * D2;
     double f0_r1 = r1 * Jn(0, pc*r1) * Kn(0, m*r1) * D1;
@@ -99,15 +101,16 @@ double integrand_exclusive(double* vec, size_t /*dim*/, void* p)
     return kernel * fragmentation(zh, par);
 }
 
-// D0-level (fragmented) diffractive integrand
-
+// Diffractive integrand at the D0 level: dsigma/(d2pD0 dy), summed over the
+// pomeron momentum fraction x_po and the emitted gluon's momentum k.
 double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
 
-    constexpr double k_lo_frag = 0.01;    
-    constexpr double x_po_min_log = 1e-6;
+    double k_lo_frag = 0.01;
+    double x_po_min_log = 1e-6;
 
+    // the 7 numbers the integration routine gives us this time
     double r1   = vec[0];
     double r2   = vec[1];
     double k    = k_lo_frag * exp(vec[2] * par->log_k_frag);
@@ -118,51 +121,49 @@ double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
     double zh   = vec[6];
 
     double pc = par->pD0 / zh;
-    if (k > pc) return 0.0;   // gluon can't carry more transverse momentum than the charm quark
+    if (k > pc) return 0.0;   // the gluon can't be more energetic than the charm quark that radiated it
 
     double m2 = par->m2;
     double p2 = pc * pc;
     double mt = sqrt(p2 + m2);
     double pp = (mt / M_SQRT2) * exp(par->y);
 
-    // qp from unit interval
+    // turn u_qp (between 0 and 1) into qp (between pp and qpmax)
     double jac_qp = par->qpmax - pp;
     if (jac_qp <= 0.0) return 0.0;
     double qp = pp + u_qp * jac_qp;
 
-    // Photon flux
     double flux = photon_flux(b, qp, p);
 
-    // Light-cone fractions
+    // light-cone momentum fractions
     double z1 = pp / qp;
     double z2 = 1.0 - z1;
 
-    // W^2, Mqq^2, x
+    // photon-proton energy squared (W^2), quark-pair mass squared, and Bjorken x
     double w2   = M_SQRT2 * qp * par->ss;
     double Mqq2 = (p2 + m2) / (z1 * z2);
     double x    = Mqq2 / (x_po * w2);
     if (x <= 0.0 || x >= 1.0) return 0.0;
 
-    // Transverse scale
     double xfac    = x / (1.0 - x);
     double omega2  = xfac * k * k;
     double sqomega = sqrt(xfac) * k;
 
-    // Hard factor H^2 
+    // the "hard factor" H^2
     double denom4      = (p2 + m2) * (p2 + m2);
     double p4m4        = p2*p2 + m2*m2;
     double two_m2p2m2  = 2.0 * m2 * p2;
     double H2 = z1 / (denom4 * denom4) * ((z1*z1 + z2*z2) * p4m4 + two_m2p2m2);
 
-    // gDTMD^2 
+    // the gluon transverse-momentum-dependent piece, gDTMD^2
     double gDTMD2 = omega2 * omega2 * r1*r2
                     * Jn(2, k*r1) * Kn(2, sqomega*r1)
                     * Jn(2, k*r2) * Kn(2, sqomega*r2);
 
     double fun = H2 * (1.0 / (1.0 - x)) * gDTMD2;
 
-    // Dipole amplitudes
-    double x_po_dip = std::min(x_po, 0.01);
+    // dipole scattering amplitude for each of the two dipole sizes
+    double x_po_dip = min(x_po, 0.01);
     double D1 = par->dipole->N(r1, x_po_dip);
     double D2 = par->dipole->N(r2, x_po_dip);
 
@@ -170,4 +171,132 @@ double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
                     * (k * par->log_k_frag) * (x_po * log_xpo_range);
 
     return kernel * fragmentation(zh, par);
+}
+
+// Same physics as integrand_diffractive above, but x_po is fixed at
+// par->fixed_xpo instead of being one of the random numbers the integration
+// routine picks. So this gives dsigma/(d2pD0 dy dx_po) at one specific
+// x_po, integrated over the remaining 6 variables {r1, r2, u_k, u_qp, b, zh}.
+double integrand_diffractive_xpom(double* vec, size_t /*dim*/, void* p)
+{
+    parameters* par = (parameters*)p;
+
+    double k_lo_frag = 0.01;
+
+    double r1   = vec[0];
+    double r2   = vec[1];
+    double k    = k_lo_frag * exp(vec[2] * par->log_k_frag);
+    double u_qp = vec[3];
+    double b    = vec[4];
+    double zh   = vec[5];
+    double x_po = par->fixed_xpo;
+
+    double pc = par->pD0 / zh;
+    if (k > pc) return 0.0;   // the gluon can't be more energetic than the charm quark that radiated it
+
+    double m2 = par->m2;
+    double p2 = pc * pc;
+    double mt = sqrt(p2 + m2);
+    double pp = (mt / M_SQRT2) * exp(par->y);
+
+    // turn u_qp (between 0 and 1) into qp (between pp and qpmax)
+    double jac_qp = par->qpmax - pp;
+    if (jac_qp <= 0.0) return 0.0;
+    double qp = pp + u_qp * jac_qp;
+
+    double flux = photon_flux(b, qp, p);
+
+    // light-cone momentum fractions
+    double z1 = pp / qp;
+    double z2 = 1.0 - z1;
+
+    // photon-proton energy squared (W^2), quark-pair mass squared, and Bjorken x
+    double w2   = M_SQRT2 * qp * par->ss;
+    double Mqq2 = (p2 + m2) / (z1 * z2);
+    double x    = Mqq2 / (x_po * w2);
+    if (x <= 0.0 || x >= 1.0) return 0.0;
+
+    double xfac    = x / (1.0 - x);
+    double omega2  = xfac * k * k;
+    double sqomega = sqrt(xfac) * k;
+
+    // the "hard factor" H^2
+    double denom4      = (p2 + m2) * (p2 + m2);
+    double p4m4        = p2*p2 + m2*m2;
+    double two_m2p2m2  = 2.0 * m2 * p2;
+    double H2 = z1 / (denom4 * denom4) * ((z1*z1 + z2*z2) * p4m4 + two_m2p2m2);
+
+    // the gluon transverse-momentum-dependent piece, gDTMD^2
+    double gDTMD2 = omega2 * omega2 * r1*r2
+                    * Jn(2, k*r1) * Kn(2, sqomega*r1)
+                    * Jn(2, k*r2) * Kn(2, sqomega*r2);
+
+    double fun = H2 * (1.0 / (1.0 - x)) * gDTMD2;
+
+    // dipole scattering amplitude for each of the two dipole sizes
+    double x_po_dip = min(x_po, 0.01);
+    double D1 = par->dipole->N(r1, x_po_dip);
+    double D2 = par->dipole->N(r2, x_po_dip);
+
+    double kernel = 2.0*M_PI * k * jac_qp * flux * D1*D2 * fun
+                    * (k * par->log_k_frag);
+
+    return kernel * fragmentation(zh, par);
+}
+
+// "Fixed W, no photon flux" diffractive integrand. Here q+ is set to 3*p+
+// by hand (so z1 = 1/3 always) instead of being worked out from an
+// integrated photon flux, and pc is just par->p directly -- there's no
+// fragmentation step. Only 4 random numbers this time: {r1, r2, u_k, u_xpo}.
+// Some pieces (mt, denom4, p4m4, two_m2p2m2, inv_denom8) only depend on
+// par->p, which doesn't change during this integration, so the caller
+// (main_fixedW.cpp) computes them once ahead of time instead of every call.
+double integrand_diffractive_fixedW(double* vec, size_t /*dim*/, void* p)
+{
+    parameters* par = (parameters*)p;
+
+    double k_lo = 0.01;
+    double x_po_min_log = 1e-6;
+
+    double r1   = vec[0];
+    double r2   = vec[1];
+    double k    = k_lo * exp(vec[2] * par->log_k);
+    double log_xpo_range = log(0.1 / x_po_min_log);
+    double x_po = x_po_min_log * exp(vec[3] * log_xpo_range);
+
+    if (k > par->p) return 0.0;   // the gluon can't be more energetic than the charm quark that radiated it
+
+    double z1 = 1.0 / 3.0;   // q+ = 3p+, so p+/q+ = 1/3
+    double z2 = 1.0 - z1;
+
+    double pp = (par->mt / M_SQRT2) * exp(par->y);
+    double qp = 3.0 * pp;
+    double w2   = M_SQRT2 * qp * par->ss;
+    double Mqq2 = (par->p2 + par->m2) / (z1 * z2);
+    double x    = Mqq2 / (x_po * w2);
+    if (x <= 0.0 || x >= 1.0) return 0.0;
+
+    double xfac    = x / (1.0 - x);
+    double omega2  = xfac * k * k;
+    double sqomega = sqrt(xfac) * k;
+
+    // the "hard factor" H^2, using the pieces precomputed by the caller
+    double H2 = z1 * par->inv_denom8 * ((z1*z1 + z2*z2) * par->p4m4 + par->two_m2p2m2);
+
+    // the gluon transverse-momentum-dependent piece, gDTMD^2
+    double gDTMD2 = omega2 * omega2 * r1*r2
+                    * Jn(2, k*r1) * Kn(2, sqomega*r1)
+                    * Jn(2, k*r2) * Kn(2, sqomega*r2);
+
+    double fun = H2 * (1.0 / (1.0 - x)) * gDTMD2;
+
+    // dipole scattering amplitude for each of the two dipole sizes
+    double x_po_dip = min(x_po, 0.01);
+    double D1 = par->dipole->N(r1, x_po_dip);
+    double D2 = par->dipole->N(r2, x_po_dip);
+
+    double kernel = 2.0*M_PI * k * D1*D2 * fun
+                    * (k * par->log_k) * (x_po * log_xpo_range);
+
+    return kernel;
 }

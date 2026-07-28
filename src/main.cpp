@@ -13,7 +13,7 @@
 using namespace std;
 
 
-//  Run: ./d0_point <dipole_file> <pD0> <y> [frag_type] [channel]
+//  Run: ./D0 <dipole_file> <pD0> <y> [frag_type] [channel]
 //   frag_type  BCFY (default) | KniehlKramer | LHAPDF
 //   channel    An0n (default) | Xn0n | PL(AnAn)
 
@@ -46,8 +46,16 @@ int main(int argc, char* argv[])
     param.dipole   = &inst;
     param.datafile = datafile;
     param.ss       = 5360.0;
-    if (getenv("CALLS")) param.calls = (size_t)atof(getenv("CALLS"));
-    else                 param.calls = (size_t)1e5;
+    // CALLS_EXCL and CALLS_DIFF let us set a different number of Monte Carlo
+    // calls for each process. The exclusive one is noisier (see
+    // int_exclusive.cpp) and usually needs more calls to converge, so it's
+    // useful to be able to tune them separately. If they're not set, both
+    // fall back to CALLS, and if that's not set either, to 1e5.
+    const char* calls_default = getenv("CALLS");
+    const char* calls_excl    = getenv("CALLS_EXCL");
+    const char* calls_diff    = getenv("CALLS_DIFF");
+    param.calls_excl = (size_t)atof(calls_excl ? calls_excl : (calls_default ? calls_default : "1e5"));
+    param.calls_diff = (size_t)atof(calls_diff ? calls_diff : (calls_default ? calls_default : "1e5"));
     param.m        = 1.5;
     param.m2       = param.m * param.m;
 
@@ -90,13 +98,30 @@ int main(int argc, char* argv[])
     param.y   = y;
 
 
+    // PROCESS lets us compute just one of the two processes instead of both
+    // (useful if we want to redo just the exclusive one with more calls,
+    // without wasting time recomputing diffractive too). The output line
+    // still always has 3 columns "pD0 exclusive diffractive", just with 0
+    // in whichever column we skipped. The calling script (run_many_nucleus.sh)
+    // is responsible for not overwriting good existing data with that 0.
+    const char* process_env = getenv("PROCESS");
+    string process_mode = process_env ? process_env : "both";
+    if (process_mode != "both" && process_mode != "exclusive" && process_mode != "diffractive") {
+        cerr << "Error: unknown PROCESS '" << process_mode << "'. Expected both, exclusive or diffractive." << endl;
+        return 1;
+    }
+
     cout << "# fragmentation : " << frag_tag << endl;
     cout << "# channel       : " << param.channel << endl;
     cout << "# dipole file   : " << datafile << endl;
+    cout << "# process       : " << process_mode << endl;
     cout << "# pD0  exclusive  diffractive" << endl;
 
-    double result_excl = exclusiveCrossSection(static_cast<void*>(&param));
-    double result_diff = diffractiveCrossSection(static_cast<void*>(&param));
+    double result_excl = 0.0, result_diff = 0.0;
+    if (process_mode == "both" || process_mode == "exclusive")
+        result_excl = exclusiveCrossSection(static_cast<void*>(&param));
+    if (process_mode == "both" || process_mode == "diffractive")
+        result_diff = diffractiveCrossSection(static_cast<void*>(&param));
 
     cout << pD0 << "  " << result_excl << "  " << result_diff << endl;
 
