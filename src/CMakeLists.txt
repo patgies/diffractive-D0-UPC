@@ -38,7 +38,7 @@ add_executable(
     gamma_aa.cpp
     fragmentation.cpp
     lhapdf_grid.cpp
-    main_xpom_point.cpp
+    main_xpom.cpp
     fourier.c
 )
 

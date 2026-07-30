@@ -15,8 +15,7 @@ from matplotlib.ticker import LogLocator
 #
 # Normalization: diffractive already carries the full physical prefactor
 # (see diffractiveCrossSection_fixedW in int_diffractive.cpp); exclusive
-# still needs the same "missing prefactor" applied here as every other
-# exclusive column in this project (plot_pt_spectrum.py, cross_section.py).
+# still needs the prefactor.
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -63,8 +62,7 @@ def read_data(filename):
     diff = data[:, 2]
     # Both columns come out as dsigma/d^2K (2D transverse-momentum
     # differential, k_perp,c is fixed per point, not integrated); convert to
-    # the radial dsigma/dK plotted here via the standard 2*pi*K Jacobian
-    # (same convention as the 2*pi*pt factor in cross_section.py etc.).
+    # the radial dsigma/dK plotted here via the standard 2*pi*K Jacobian.
     jac = 2 * np.pi * K
     return K, jac * excl * PREFACTOR_EXCL, jac * diff
 
@@ -77,8 +75,6 @@ def main():
 
     y_values = [read_y(f) for f in files]
 
-    # Rapidity is ordered, so we use a single-hue blue ramp: light blue for
-    # the smallest y, dark blue for the largest (same ramp as xpom_spectrum.py).
     blue_ramp = ["#cde2fb", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
     colors = []
     for i in range(len(y_values)):
@@ -94,8 +90,7 @@ def main():
         ax.plot(K, diff, color=color, linestyle='-')
         ax.plot(K, excl, color=color, linestyle='--')
 
-    # Power-law guide lines, anchored to the y=0 curves' own starting point
-    # (leftmost p_perp,c) so they line up with where the curves actually begin.
+    # Power-law guide lines, anchored to the y=0 curves.
     K0, excl0, diff0 = data_by_y[0.0]
     K_anchor = K0[0]
 
@@ -119,8 +114,6 @@ def main():
     ax.set_ylabel(r"$d\sigma/dy_c dp_{\perp c}$", labelpad=15)
     ax.set_title(r"Fixed-$W$ charm photoproduction proton target  ($q^+=3p^+$)", pad=15)
 
-    # One legend entry per rapidity (color only) -- diff./excl. is explained
-    # in the legend title instead, so the plot title itself stays one line.
     y_handles = [Line2D([0], [0], color=colors[i], linestyle='-', label=f"$y={y:g}$")
                  for i, y in enumerate(y_values)]
     ax.legend(handles=y_handles, fontsize=13, loc='upper right',

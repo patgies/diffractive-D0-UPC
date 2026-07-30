@@ -17,16 +17,20 @@ else
     y_values="0.0 1.0 2.0 3.0 4.0"
 fi
 
-# VEGAS call counts (see src/main.cpp): CALLS_EXCL/CALLS_DIFF each fall back
+# VEGAS call counts: CALLS_EXCL/CALLS_DIFF each fall back
 # to CALLS if unset, so a bare CALLS=1e6 still applies to both as before.
+# Above EXCL_PT_THRESHOLD (default 4 GeV), the exclusive integrand switches
+# to a factorized version that's much more reliable at high pt but costs
+# more per call, so it uses its own (smaller) call count,
+# CALLS_EXCL_FACTORIZED, instead of CALLS_EXCL.
 CALLS=${CALLS:-1e5}
 CALLS_EXCL=${CALLS_EXCL:-$CALLS}
+CALLS_EXCL_FACTORIZED=${CALLS_EXCL_FACTORIZED:-1e3}
+EXCL_PT_THRESHOLD=${EXCL_PT_THRESHOLD:-4.0}
 CALLS_DIFF=${CALLS_DIFF:-$CALLS}
-# PROCESS=exclusive|diffractive reruns just that one process (e.g. with a
-# bumped CALLS_EXCL) without recomputing -- or touching the output file of --
-# the other, already-converged one. Default "both" is the original behavior.
+# PROCESS=exclusive|diffractive reruns just that one process. Default "both" is the original behavior.
 PROCESS=${PROCESS:-both}
-export CALLS CALLS_EXCL CALLS_DIFF PROCESS LHAPDF_FILE
+export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS LHAPDF_FILE
 
 mkdir -p files
 excl_file="files/D0_exclusive.dat"
@@ -37,7 +41,7 @@ if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
 {
     echo "# D0 exclusive cross section, dipole file: $dipole_file"
     echo "# generated: $timestamp"
-    echo "# calls: $CALLS_EXCL (VEGAS calls per point)"
+    echo "# calls: $CALLS_EXCL below ${EXCL_PT_THRESHOLD} GeV, $CALLS_EXCL_FACTORIZED above (VEGAS calls per point)"
     echo "# pD0  y  dsigma"
 } > "$excl_file"
 fi

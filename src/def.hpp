@@ -16,11 +16,16 @@ struct parameters
     double m;    // charm quark mass
     double y;
     double ss;
-    // Two separate call counts for the Monte Carlo integration (see main.cpp)
-    // because the exclusive calculation needs more calls to be as precise as
-    // the diffractive one (it has a region where the result almost goes to
-    // zero, which is hard for Monte Carlo to get right).
+    // Call counts for the Monte Carlo integration (see main.cpp).
+    // exclusiveCrossSection (int_exclusive.cpp) picks between two exclusive
+    // integrands depending on pD0 vs excl_pt_threshold: below it, the cheap
+    // 5D integrand (calls_excl calls -- can afford to be large); at/above
+    // it, the factorized 3D one, where r1/r2's oscillatory Bessel integrals
+    // are solved analytically per point instead of by VEGAS, so it needs far
+    // fewer calls (calls_excl_factorized) but each one costs much more.
     size_t calls_excl;
+    size_t calls_excl_factorized;
+    double excl_pt_threshold;
     size_t calls_diff;
     double m2;   // just m*m, kept around so we don't recompute it everywhere
 
@@ -70,8 +75,18 @@ struct parameters
 // D0-level (fragmented) exclusive integrand: dsigma/(d2pD0 dy), evaluated
 // at the charm quark momentum pc=par->pD0/zh, with an extra fragmentation
 // dimension zh in [par->zmin, par->zmax] and weight D(zh)/zh^2 folded in.
-// 5D VEGAS: {r1, r2, u_qp, b, zh}.
-double integrand_exclusive(double* vec, size_t dim, void* p);
+// exclusiveCrossSection (see int_exclusive.cpp) picks between two versions
+// depending on pD0:
+//  - integrand_exclusive_mc: original 5D VEGAS over {r1, r2, u_qp, b, zh}.
+//    Cheap per call, used at low/mid pt.
+//  - integrand_exclusive_factorized: r1 and r2 factorize at fixed (u_qp, zh)
+//    and are solved with deterministic quadrature inside the integrand
+//    instead of being handed to Monte Carlo, leaving a 3D VEGAS over
+//    {u_qp, b, zh}. Much better convergence at high pt, where pc=pD0/zh
+//    grows large and Jn(pc*r) oscillates too fast for VEGAS to resolve --
+//    but each call is more expensive, so it's only worth it there.
+double integrand_exclusive_mc(double* vec, size_t dim, void* p);
+double integrand_exclusive_factorized(double* vec, size_t dim, void* p);
 double exclusiveCrossSection( void* p);
 
 // Diffractive integrand at the D0 level. Also sums over x_po (in [1e-6, 0.1])

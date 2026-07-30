@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);
-    inst.SetInterpolationMethod(LINEAR_LINEAR);   // thread-safe: no InitializeInterpolation needed
+    inst.SetInterpolationMethod(LINEAR_LINEAR);   
 
     gsl_set_error_handler_off();
     load_data_and_initialize("./data/Gamma_AA.dat");
@@ -46,16 +46,26 @@ int main(int argc, char* argv[])
     param.dipole   = &inst;
     param.datafile = datafile;
     param.ss       = 5360.0;
-    // CALLS_EXCL and CALLS_DIFF let us set a different number of Monte Carlo
-    // calls for each process. The exclusive one is noisier (see
-    // int_exclusive.cpp) and usually needs more calls to converge, so it's
-    // useful to be able to tune them separately. If they're not set, both
-    // fall back to CALLS, and if that's not set either, to 1e5.
+
+ 
     const char* calls_default = getenv("CALLS");
     const char* calls_excl    = getenv("CALLS_EXCL");
+    const char* calls_excl_fact = getenv("CALLS_EXCL_FACTORIZED");
     const char* calls_diff    = getenv("CALLS_DIFF");
-    param.calls_excl = (size_t)atof(calls_excl ? calls_excl : (calls_default ? calls_default : "1e5"));
-    param.calls_diff = (size_t)atof(calls_diff ? calls_diff : (calls_default ? calls_default : "1e5"));
+    const char* excl_pt_threshold = getenv("EXCL_PT_THRESHOLD");
+    if (calls_excl)         param.calls_excl = (size_t)atof(calls_excl);
+    else if (calls_default) param.calls_excl = (size_t)atof(calls_default);
+    else                     param.calls_excl = (size_t)1e5;
+
+    if (calls_excl_fact) param.calls_excl_factorized = (size_t)atof(calls_excl_fact);
+    else                  param.calls_excl_factorized = (size_t)1e3;
+
+    if (excl_pt_threshold) param.excl_pt_threshold = atof(excl_pt_threshold);
+    else                    param.excl_pt_threshold = 4.0;
+
+    if (calls_diff)         param.calls_diff = (size_t)atof(calls_diff);
+    else if (calls_default) param.calls_diff = (size_t)atof(calls_default);
+    else                     param.calls_diff = (size_t)1e5;
     param.m        = 1.5;
     param.m2       = param.m * param.m;
 
@@ -98,14 +108,11 @@ int main(int argc, char* argv[])
     param.y   = y;
 
 
-    // PROCESS lets us compute just one of the two processes instead of both
-    // (useful if we want to redo just the exclusive one with more calls,
-    // without wasting time recomputing diffractive too). The output line
-    // still always has 3 columns "pD0 exclusive diffractive", just with 0
-    // in whichever column we skipped. The calling script (run_many_nucleus.sh)
-    // is responsible for not overwriting good existing data with that 0.
+
     const char* process_env = getenv("PROCESS");
-    string process_mode = process_env ? process_env : "both";
+    string process_mode;
+    if (process_env) process_mode = process_env;
+    else              process_mode = "both";
     if (process_mode != "both" && process_mode != "exclusive" && process_mode != "diffractive") {
         cerr << "Error: unknown PROCESS '" << process_mode << "'. Expected both, exclusive or diffractive." << endl;
         return 1;

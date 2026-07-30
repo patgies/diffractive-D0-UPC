@@ -16,10 +16,8 @@ using namespace std;
 
 // Fixed-W (no photon-flux) exclusive and diffractive spectra, as a function
 // of the observed quark's transverse momentum K, at a fixed rapidity y.
-// "Fixed W" means we set the photon energy qp to 3*pp by hand (so z1=1/3),
-// instead of integrating it over the photon flux like the other programs
-// do. See exclusiveCrossSection_fixedW() and diffractiveCrossSection_fixedW()
-// for the actual calculation.
+// "Fixed W" means we set the photon energy qp to 3*pp by hand (so z1=1/3).
+
 int main(int argc, char* argv[])
 {
     string datafile = "./data/proton/mve.dat";
@@ -30,19 +28,13 @@ int main(int argc, char* argv[])
     gsl_set_error_handler_off();
     gsl_rng_env_setup();
 
-    load_data_and_initialize("./data/Gamma_AA.dat");   // unused (no flux here),
-                                                        // but integrand.cpp's
-                                                        // other functions
-                                                        // reference photon_flux()
-                                                        // at link time
+    load_data_and_initialize("./data/Gamma_AA.dat");   // unused (no flux here)
+
 
     parameters param;
     param.dipole   = &inst;
     param.datafile = datafile;
     param.ss       = 5360.0;
-    // Only the diffractive integral is Monte Carlo here (exclusive is
-    // deterministic, see exclusiveCrossSection_fixedW), so only calls_diff
-    // matters; calls_excl is set too since it's part of the shared struct.
     param.calls_diff = (argc > 3) ? (size_t)atof(argv[3]) : (size_t)1e5;
     param.calls_excl = param.calls_diff;
     param.m        = 1.5;

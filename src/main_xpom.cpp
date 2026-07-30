@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);
-    inst.SetInterpolationMethod(LINEAR_LINEAR);   // thread-safe: no InitializeInterpolation needed
+    inst.SetInterpolationMethod(LINEAR_LINEAR);  
 
     gsl_set_error_handler_off();
     load_data_and_initialize("./data/Gamma_AA.dat");
@@ -53,10 +53,7 @@ int main(int argc, char* argv[])
     param.dipole   = &inst;
     param.datafile = datafile;
     param.ss       = 5360.0;
-    // This program only ever computes the diffractive process, so only
-    // CALLS_DIFF (or CALLS as a fallback) actually matters. We still set
-    // calls_excl too since it's part of the shared parameters struct, but
-    // nothing here uses it.
+
     const char* calls_default = getenv("CALLS");
     const char* calls_diff    = getenv("CALLS_DIFF");
     param.calls_excl = (size_t)atof(calls_default ? calls_default : "1e5");

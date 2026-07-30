@@ -7,7 +7,7 @@
 # k_perp,c internally via OpenMP -- see src/main_fixedW.cpp), writing
 # files/D0_fixedW_y<ytag>.dat: fixed-W (no photon flux), q+=3p+, exclusive
 # ("missing prefactor" convention) + diffractive ("full physical cross
-# section" -- see int_diffractive.cpp) spectra vs k_perp,c.
+# section") spectra vs k_perp,c.
 #
 # Env vars:
 #   Y_VALS   rapidities to scan (default "0.0 1.0 2.0 3.0 4.0")

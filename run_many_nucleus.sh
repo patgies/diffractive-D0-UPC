@@ -15,8 +15,8 @@ channel=${CHANNEL:-An0n}
 channel_tag=$(echo "$channel" | tr -d '() ')
 
 # PROCESS=exclusive|diffractive reruns just that one process (e.g. with a
-# bumped CALLS_EXCL) without recomputing -- or touching the output file of --
-# the other, already-converged one. Default "both" is the original behavior.
+# bumped CALLS_EXCL) without recomputing  or touching the output file of 
+# the other. Default "both" is the original behavior.
 PROCESS=${PROCESS:-exclusive}
 if [[ "$PROCESS" == "both" ]]; then
 	procs="exclusive diffractive"
@@ -24,13 +24,22 @@ else
 	procs="$PROCESS"
 fi
 
-# VEGAS call counts (see src/main.cpp): CALLS_EXCL/CALLS_DIFF each fall back
+# VEGAS call counts: CALLS_EXCL/CALLS_DIFF each fall back
 # to CALLS if unset, so a bare CALLS=1e6 still applies to both as before.
+# CALLS_EXCL used to need to be huge (5e7) because the exclusive integrand
+# handed the oscillating r1, r2 Bessel integrals to VEGAS at every pt, which
+# barely converged at high pt no matter how many calls were set.
+# exclusiveCrossSection now switches, at EXCL_PT_THRESHOLD (default 4 GeV),
+# from the 5D integrand to a factorized 3D one that solves
+# r1, r2 analytically per point instead.
+
 CALLS=${CALLS:-1e5}
-CALLS_EXCL=${CALLS_EXCL:-5e7}
+CALLS_EXCL=${CALLS_EXCL:-1e5}
+CALLS_EXCL_FACTORIZED=${CALLS_EXCL_FACTORIZED:-1e3}
+EXCL_PT_THRESHOLD=${EXCL_PT_THRESHOLD:-4.0}
 CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 
-export CALLS CALLS_EXCL CALLS_DIFF PROCESS LHAPDF_FILE
+export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS LHAPDF_FILE
 
 
 mkdir -p files
@@ -40,11 +49,15 @@ for proc in $procs; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
 		outfile="files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
-		if [[ "$proc" == "exclusive" ]]; then proc_calls=$CALLS_EXCL; else proc_calls=$CALLS_DIFF; fi
+		if [[ "$proc" == "exclusive" ]]; then
+			proc_calls="${CALLS_EXCL} below ${EXCL_PT_THRESHOLD} GeV, ${CALLS_EXCL_FACTORIZED} above (see EXCL_PT_THRESHOLD)"
+		else
+			proc_calls=$CALLS_DIFF
+		fi
 		{
 			echo "# ${proc} D0 cross section, ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
 			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
-			echo "# calls          : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_DIFF)"
+			echo "# calls          : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_EXCL_FACTORIZED/CALLS_DIFF)"
 			echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
 			echo "# pD0 sweep      : ${PT_MIN} to ${PT_MAX} GeV, step ${PT_STEP}"
 			echo "# fixed rapidity y : ${y}"
@@ -68,9 +81,7 @@ run_one_point() {
 		echo "Warning: D0 $dfile $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	# Only write the file(s) for the process(es) actually computed this run --
-	# PROCESS=exclusive gives diff=0 (see main.cpp), which must not clobber an
-	# existing good diffractive file.
+	# Only write the file(s) for the process actually computed this run.
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
 		echo "$b  $pt  $excl" >> "files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
 	fi

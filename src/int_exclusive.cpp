@@ -10,26 +10,49 @@
 using namespace std;
 
 
-// Computes the exclusive cross section by doing a 5-dimensional Monte Carlo
-// integral over the integrand defined in integrand.cpp.
+// Computes the exclusive cross section with a Monte Carlo integral over the
+// integrand defined in integrand.cpp. Below par->excl_pt_threshold, uses the
+// original, cheap-per-call 5D integrand (r1, r2 handed to VEGAS along with
+// u_qp, b, zh); at or above it, switches to the factorized 3D one (r1, r2
+// solved analytically per point, see integrand_exclusive_factorized), which
+// converges properly at high pt but costs much more per call -- not worth
+// paying for at low/mid pt, where the 5D version already converges fine.
 double exclusiveCrossSection(void* p)
 {
     parameters* par = (parameters*)p;
-    size_t calls = par->calls_excl;
+    bool factorized = par->pD0 >= par->excl_pt_threshold;
+    size_t calls;
+    if (factorized) calls = par->calls_excl_factorized;
+    else             calls = par->calls_excl;
 
     const gsl_rng_type* T = gsl_rng_default;
     gsl_rng* r = gsl_rng_alloc(T);
 
     gsl_monte_function F;
-    F.f      = &integrand_exclusive;
-    F.dim    = 5;
     F.params = par;
 
-    // integration box for {r1, r2, u_qp, b, zh}
-    // (zh's box is the actual [zmin, zmax] range, not [0,1] like the others)
-    double rmax = 99.0;
-    double low[] = {0.,   0.,   0., par->bmin, par->zmin};
-    double up[]  = {rmax, rmax, 1., par->bmax, par->zmax};
+    double low[5], up[5];
+    if (factorized) {
+        F.f   = &integrand_exclusive_factorized;
+        F.dim = 3;
+        // integration box for {u_qp, b, zh}
+        // (zh's box is the actual [zmin, zmax] range, not [0,1] like u_qp)
+        // r1, r2 are not here -- they're solved analytically inside the
+        // integrand (see exclusive_radial_integrals in integrand.cpp).
+        low[0] = 0.;         up[0] = 1.;
+        low[1] = par->bmin;  up[1] = par->bmax;
+        low[2] = par->zmin;  up[2] = par->zmax;
+    } else {
+        F.f   = &integrand_exclusive_mc;
+        F.dim = 5;
+        // integration box for {r1, r2, u_qp, b, zh}
+        double rmax = 99.0;
+        low[0] = 0.;    up[0] = rmax;
+        low[1] = 0.;    up[1] = rmax;
+        low[2] = 0.;    up[2] = 1.;
+        low[3] = par->bmin;  up[3] = par->bmax;
+        low[4] = par->zmin;  up[4] = par->zmax;
+    }
 
     double res, err;
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);

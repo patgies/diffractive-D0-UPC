@@ -7,8 +7,7 @@
 # one x_po) over every Glauber-sampled dipole file in data/<NUCLEUS>/mve/,
 # every pD0 in PT_VALS, every y in Y_VALS, and every x_po in a log-spaced
 # grid in [XPO_MIN, XPO_MAX] -- giving the diffractive dsigma/(d2pD0 dy dx_po)
-# differential (see integrand_diffractive_xpom in src/integrand.cpp), unlike
-# run_many_nucleus.sh's D0 which integrates x_po out.
+# differential, unlike run_many_nucleus.sh's D0 which integrates x_po out.
 #
 # Env vars:
 #   NUCLEUS      Pb (default) | Au -- selects data/<NUCLEUS>/mve/glauber_mve_*
@@ -37,8 +36,9 @@ frag_tag=${FRAG_TYPE:-KniehlKramer}
 channel=${CHANNEL:-An0n}
 channel_tag=$(echo "$channel" | tr -d '() ')
 
-# VEGAS call count (see src/main_xpom_point.cpp): only CALLS_DIFF matters here
-# -- this binary only ever runs the diffractive integrand.
+# VEGAS call count (see src/main_xpom.cpp): only CALLS_DIFF matters here
+# this binary only runs the diffractive integrand.
+
 CALLS=${CALLS:-1e5}
 CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 
@@ -57,7 +57,7 @@ echo "Build OK."
 
 mkdir -p files
 
-# Log-spaced x_po grid, computed once in Python (avoids bash floating-point).
+# Log-spaced x_po grid, computed once in Python 
 xpo_values=$(python3 -c "
 import numpy as np
 xs = np.exp(np.linspace(np.log($XPO_MIN), np.log($XPO_MAX), $XPO_N))

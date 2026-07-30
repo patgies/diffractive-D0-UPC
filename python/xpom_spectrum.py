@@ -11,7 +11,7 @@ from scipy.integrate import simpson
 sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
-# make the plot look nicer (same style as inclusive-D0-UPC/cms_comparison.py)
+
 plt.rcParams.update({
     "text.usetex": True,
     "text.latex.preamble": r"\usepackage{amssymb}",  # for \mathbb{P} below
@@ -143,7 +143,7 @@ def main():
         sys.exit(f"No files found for NUCLEUS={NUCLEUS}, FRAG_TYPE={FRAG}, CHANNEL={CHANNEL} "
                   "in ../files/ -- run ../run_many_xpom.sh first.")
 
-    # pD0 values to include in the plot (comment/uncomment to change):
+    # pD0 values to include in the plot:
     PT_TO_PLOT = [
         # 1.0,
         2.0,
@@ -159,9 +159,6 @@ def main():
     y_values = sorted(set(y for y, pt in results))
     pt_values = sorted(set(pt for y, pt in results))
 
-    # Rapidity is ordered, so we use a single-hue blue ramp: light blue for
-    # the smallest y, dark blue for the largest. Each rapidity also gets its
-    # own linestyle, as a second way to tell the lines apart.
     blue_ramp = ["#cde2fb", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
     colors = {}
     for i, y in enumerate(y_values):
@@ -186,8 +183,7 @@ def main():
     plt.xlabel(r"$\ln(x_{\mathbb{P}})$")
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0}\,d\ln(x_{\mathbb{P}})$ [mb/GeV]", labelpad=15)
 
-    # Secondary top axis showing x_po itself (log scale), since the primary
-    # x-axis is ln(x_po): x_po = exp(ln_xpo), so forward/inverse are exp/log.
+    # Secondary top axis showing x_po 
     ax = plt.gca()
     ax.tick_params(axis='x', which='both', top=False)  # primary axis's own top ticks would clash with secax's
     secax = ax.secondary_xaxis('top', functions=(np.exp, np.log))

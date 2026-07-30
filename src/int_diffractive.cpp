@@ -98,16 +98,14 @@ double diffractiveCrossSection_xpom(void* p)
 }
 
 // "Fixed W, no photon flux" diffractive cross section: a 4-dimensional
-// integral over {r1, r2, u_k, u_xpo} (see integrand_diffractive_fixedW).
+// integral over {r1, r2, u_k, u_xpo}.
 // There's no {u_qp, b, zh} here because q+ = 3p+ is fixed by hand, there's
 // no photon flux to integrate over, and pc is just par->p directly (no
-// fragmentation). par->k_upper needs to already be set by the caller, see
-// main_fixedW.cpp.
+// fragmentation). par->k_upper needs to already be set by the caller.
 //
 // Unlike diffractiveCrossSection/diffractiveCrossSection_xpom above, this
 // one multiplies in the full physical prefactor at the end (including
-// alpha_s), instead of leaving that for the python scripts to do -- that's
-// possible here because mT (used for alpha_s) is fixed for this whole
+// alpha_s), that's possible here because mT (used for alpha_s) is fixed for this whole
 // calculation, rather than changing every time zh is sampled.
 double diffractiveCrossSection_fixedW(void* p)
 {
