@@ -37,7 +37,17 @@ int main(int argc, char* argv[])
 
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);
-    inst.SetInterpolationMethod(LINEAR_LINEAR);   
+    inst.SetInterpolationMethod(LINEAR_LINEAR);
+
+    // Some BK solver output (e.g. the rcbk-produced BK-initial-condition
+    // posterior-sample dipole files under bk/) leaves x0 out of the header,
+    // which DataFile reads as an "invalid x0" and resets to 0 -- fix that up
+    // here rather than editing the data files. Only takes effect if
+    // explicitly requested, so it's a no-op for every other dataset's
+    // already-correct header value.
+    if (getenv("DIPOLE_X0")) {
+        inst.SetX0(atof(getenv("DIPOLE_X0")));
+    }
 
     gsl_set_error_handler_off();
     load_data_and_initialize("./data/Gamma_AA.dat");
@@ -98,9 +108,19 @@ int main(int argc, char* argv[])
     if (getenv("LHAPDF_FILE")) lhapdf_file = getenv("LHAPDF_FILE");
     else                       lhapdf_file = "data/prompt-D0-1-109/prompt-D0-1-109_0000.dat";
     const int lhapdf_charm_flavor = 4;  // PDG id for the charm quark
-    unique_ptr<Interpolator> d_frag_interp;  
+    // Scale-variation knob: fragmentation scale Q = scale_factor * mt0,
+    // mt0 = sqrt(pD0^2 + m^2) the D0 transverse mass (matching
+    // inclusive-D0-UPC's convention, not just the fixed charm mass).
+    // Defaults to scale_factor=1.0 (today's behavior). Set to 0.5/2.0 for
+    // the conventional up/down envelope around that central scale -- a
+    // separate uncertainty source from the LHAPDF replica band, so it only
+    // needs the central member (0000), not all 101 replicas.
+    double mt0 = sqrt(pD0*pD0 + param.m2);
+    double scale_factor = getenv("SCALE_FACTOR") ? atof(getenv("SCALE_FACTOR")) : 1.0;
+    double frag_scale = scale_factor * mt0;
+    unique_ptr<Interpolator> d_frag_interp;
     if (param.frag_type == FragmentationType::LHAPDF) {
-        d_frag_interp = MakeLHAPDFZInterpolator(lhapdf_file, lhapdf_charm_flavor, param.m);
+        d_frag_interp = MakeLHAPDFZInterpolator(lhapdf_file, lhapdf_charm_flavor, frag_scale);
         param.D_frag_interp = d_frag_interp.get();
     }
 

@@ -7,8 +7,17 @@ Y_VALS=${Y_VALS:-"0.0 1.0 2.0 3.0 4.0"}
 PT_MIN=${PT_MIN:-0.2}
 PT_STEP=${PT_STEP:-0.5}
 PT_MAX=${PT_MAX:-12.0}
+# PT_VALS lets you pass an explicit list of pD0 points (e.g. a finer grid at
+# low pT and a coarser one at high pT) instead of one uniform PT_MIN/STEP/MAX
+# sweep. If unset, falls back to the uniform seq as before.
+PT_VALS=${PT_VALS:-$(seq "$PT_MIN" "$PT_STEP" "$PT_MAX")}
 CORES=${CORES:-$(( $(nproc) / 2 ))}
 DIPOLE_DIR=${DIPOLE_DIR:-data/$NUCLEUS/mve}
+# Where output files land: OUTDIR/files/D0_<process>_..._y<Y>.dat. Defaults to
+# the current directory (same as before OUTDIR existed). Useful for e.g. a
+# SLURM array job giving each task its own OUTDIR so tasks don't clobber
+# each other's output.
+OUTDIR=${OUTDIR:-.}
 
 frag_tag=${FRAG_TYPE:-BCFY}
 channel=${CHANNEL:-An0n}
@@ -42,13 +51,13 @@ CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS LHAPDF_FILE
 
 
-mkdir -p files
+mkdir -p "$OUTDIR/files"
 
 
 for proc in $procs; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		outfile="$OUTDIR/files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
 		if [[ "$proc" == "exclusive" ]]; then
 			proc_calls="${CALLS_EXCL} below ${EXCL_PT_THRESHOLD} GeV, ${CALLS_EXCL_FACTORIZED} above (see EXCL_PT_THRESHOLD)"
 		else
@@ -59,7 +68,7 @@ for proc in $procs; do
 			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
 			echo "# calls          : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_EXCL_FACTORIZED/CALLS_DIFF)"
 			echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
-			echo "# pD0 sweep      : ${PT_MIN} to ${PT_MAX} GeV, step ${PT_STEP}"
+			echo "# pD0 sweep      : $(echo $PT_VALS)"
 			echo "# fixed rapidity y : ${y}"
 			echo "# ============================================================"
 			echo "# b  pD0  dsigma_dyd2pD0"
@@ -83,16 +92,16 @@ run_one_point() {
 	fi
 	# Only write the file(s) for the process actually computed this run.
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
-		echo "$b  $pt  $excl" >> "files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		echo "$b  $pt  $excl" >> "$OUTDIR/files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
 	fi
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "diffractive" ]]; then
-		echo "$b  $pt  $diff" >> "files/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		echo "$b  $pt  $diff" >> "$OUTDIR/files/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
 	fi
 }
 
 for dfile in "$DIPOLE_DIR"/glauber_mve_*; do
 	b=$(basename "$dfile" | sed 's/glauber_mve_//')
-	for pt in $(seq "$PT_MIN" "$PT_STEP" "$PT_MAX"); do
+	for pt in $PT_VALS; do
 		for y in $Y_VALS; do
 			ytag=$(echo "$y" | tr -d '.')
 			run_one_point "$dfile" "$b" "$pt" "$y" "$ytag" &

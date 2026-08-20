@@ -89,9 +89,14 @@ int main(int argc, char* argv[])
     if (getenv("LHAPDF_FILE")) lhapdf_file = getenv("LHAPDF_FILE");
     else                       lhapdf_file = "data/prompt-D0-1-109/prompt-D0-1-109_0000.dat";
     const int lhapdf_charm_flavor = 4;  // PDG id for the charm quark
+    // Scale-variation knob: fragmentation scale Q = scale_factor * mt0,
+    // mt0 = sqrt(pD0^2 + m^2) the D0 transverse mass (see main.cpp).
+    double mt0 = sqrt(pD0*pD0 + param.m2);
+    double scale_factor = getenv("SCALE_FACTOR") ? atof(getenv("SCALE_FACTOR")) : 1.0;
+    double frag_scale = scale_factor * mt0;
     unique_ptr<Interpolator> d_frag_interp;
     if (param.frag_type == FragmentationType::LHAPDF) {
-        d_frag_interp = MakeLHAPDFZInterpolator(lhapdf_file, lhapdf_charm_flavor, param.m);
+        d_frag_interp = MakeLHAPDFZInterpolator(lhapdf_file, lhapdf_charm_flavor, frag_scale);
         param.D_frag_interp = d_frag_interp.get();
     }
 
