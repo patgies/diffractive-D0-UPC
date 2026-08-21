@@ -14,6 +14,15 @@
 #   sbatch run_lhapdf_members_roihu.sbatch
 #   sbatch --array=0-9 run_lhapdf_members_roihu.sbatch          # quick subset test
 #   sbatch --export=ALL,LHAPDF_DIR=/other/path run_lhapdf_members_roihu.sbatch
+#   # one-off central-value run at extra rapidities (member 0000 only,
+#   # e.g. filling in more y points for a contour plot -- not a replica
+#   # sweep, so --array=0-0 and a different OUTDIR so it doesn't land
+#   # inside the replica-band output):
+#   sbatch --array=0-0 --export=ALL,Y_VALS="-3.0 -2.5 -2.0 -1.5 -0.5 0.5 1.5 2.5",OUTDIR=/scratch/lappi/patricia/D0_contour run_lhapdf_members_roihu.sbatch
+#   # one-off run with a different fragmentation scheme entirely (BCFY,
+#   # KniehlKramer -- no LHAPDF_FILE/member lookup happens for these, so
+#   # --array=0-0 is enough regardless of member count):
+#   sbatch --array=0-0 --export=ALL,FRAG_TYPE=BCFY,Y_VALS="-3.0 -2.5 -2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0 2.5 3.0",OUTDIR=/scratch/lappi/patricia/D0_bcfy run_lhapdf_members_roihu.sbatch
 #
 # One array task per LHAPDF replica member (0-100: member 0 is the central
 # value, 1-100 are the replicas -- see data/prompt-D0-1-109/*.info,
@@ -46,23 +55,27 @@ module load gsl/2.8
 LHAPDF_DIR=${LHAPDF_DIR:-data/prompt-D0-1-109}
 LHAPDF_SET=${LHAPDF_SET:-prompt-D0-1-109}
 OUTDIR=${OUTDIR:-/scratch/lappi/patricia/D0_lhapdf_band}
+Y_VALS=${Y_VALS:-"-1.0 0.0 1.0 2.0 3.0"}
+FRAG_TYPE=${FRAG_TYPE:-LHAPDF}
 
 member_tag=$(printf '%04d' "$SLURM_ARRAY_TASK_ID")
-member_file="$LHAPDF_DIR/${LHAPDF_SET}_${member_tag}.dat"
-
-if [[ ! -f "$member_file" ]]; then
-	echo "member $member_tag: $member_file not found -- skipping" >&2
-	exit 1
+member_file=""
+if [[ "$FRAG_TYPE" == "LHAPDF" ]]; then
+	member_file="$LHAPDF_DIR/${LHAPDF_SET}_${member_tag}.dat"
+	if [[ ! -f "$member_file" ]]; then
+		echo "member $member_tag: $member_file not found -- skipping" >&2
+		exit 1
+	fi
 fi
 
 cd "$SLURM_SUBMIT_DIR"
 
-echo "Task $SLURM_ARRAY_TASK_ID: member=$member_tag file=$member_file outdir=$OUTDIR/member_${member_tag}"
+echo "Task $SLURM_ARRAY_TASK_ID: frag=$FRAG_TYPE member=$member_tag file=$member_file outdir=$OUTDIR/member_${member_tag}"
 
 PT_VALS="$(seq 0.2 0.1 2.0) $(seq 2.5 0.5 12.0)" \
-FRAG_TYPE=LHAPDF \
+FRAG_TYPE="$FRAG_TYPE" \
 LHAPDF_FILE="$member_file" \
-Y_VALS="-1.0 0.0 1.0 2.0 3.0" \
+Y_VALS="$Y_VALS" \
 PROCESS=both \
 CORES="$SLURM_CPUS_PER_TASK" \
 CALLS_EXCL=1e5 CALLS_EXCL_FACTORIZED=2e3 CALLS_DIFF=1e5 \

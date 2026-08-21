@@ -6,6 +6,6 @@ build/
 CMakeCache.txt
 CMakeFiles/
 FragFunc/
-plots/
+#plots/
 notes/
 __pycache__/
