@@ -14,22 +14,22 @@ import numpy as np
 # cross_section.py exactly).
 from cross_section import (
     read_rapidity, read_data_file, group_by_pt, integrate_over_b,
-    load_results, GEVSQR_TO_MB, NUCLEUS, CHANNEL,
+    load_results, _summed_results, GEVSQR_TO_MB, NUCLEUS, CHANNEL,
 )
 
-# Two side-by-side contour plots of this project's D0 cross-section ratios
-# (diffractive/inclusive, exclusive/inclusive) in the (y, pT) plane (x_pom
-# integrated up to 0.1 -- already true of this project's standard
-# diffractiveCrossSection, no special mode needed). diffractive/exclusive
-# sides come from ../files/, inclusive side from ../files/inclusive/
-# (copied from inclusive-D0-UPC's own files/).
+# Single contour plot of this project's (diffractive+exclusive)/inclusive
+# D0 cross-section ratio in the (y, pT) plane (x_pom integrated up to 0.1
+# -- already true of this project's standard diffractiveCrossSection, no
+# special mode needed). diffractive/exclusive sides come from ../files/,
+# inclusive side from ../files/inclusive/ (copied from inclusive-D0-UPC's
+# own files/).
 
 alpha_em = 1 / 137
 e_charm_squared = 4 / 9  # (2/3)^2, electric charge of the charm quark
 Nc = 3
 INCLUSIVE_FACTOR_A = alpha_em * e_charm_squared * Nc / (2 * math.pi) ** 4
 
-PT_MAX_PLOT = 8.0   # matches the reference figure's pT range
+PT_MAX_PLOT = 2.0   # matches the reference figure's pT range
 
 
 def load_inclusive_results(frag="LHAPDF"):
@@ -85,12 +85,12 @@ def plot_ratio_panel(ax, y_values, pt_grid, ratio_grid, label):
     contourf = ax.contourf(Y, PT, ratio_grid, levels=20, cmap="Blues")
     contour_lines = ax.contour(Y, PT, ratio_grid, levels=10, colors="navy",
                                 linestyles=":", linewidths=0.8)
-    ax.clabel(contour_lines, inline=True, fontsize=13, fmt="%.4f")
+    ax.clabel(contour_lines, inline=True, fontsize=13, fmt="%.2f")
 
     plt.colorbar(contourf, ax=ax)
 
     ax.set_xlabel(r"$y$", fontsize=24)
-    ax.set_ylabel(r"$p_T$ [GeV]", fontsize=24, labelpad=15)
+    ax.set_ylabel(r"$p_{D^0\perp}$ [GeV]", fontsize=24, labelpad=15)
     ax.set_title(label, pad=12, fontsize=24)
     ax.tick_params(axis="both", labelsize=20)
     plt.setp(ax.get_xticklabels(), fontweight="normal")
@@ -99,30 +99,38 @@ def plot_ratio_panel(ax, y_values, pt_grid, ratio_grid, label):
     ax.set_xticks([-3, -2, -1, 0, 1, 2, 3])
 
 
+def load_process_results(process, frag):
+    """process is "diffractive"/"exclusive" (-> load_results) or "sum"
+    (-> diffractive+exclusive per (y,pT), via _summed_results)."""
+    if process == "sum":
+        return _summed_results("..", frag)
+    return load_results(process, frag)
+
+
 def main():
-    diff_results = load_results("diffractive", "LHAPDF")
-    excl_results = load_results("exclusive", "LHAPDF")
-    incl_results = load_inclusive_results("LHAPDF")
+    frag = "BCFY"
+    process = "sum"
 
-    y_values = sorted(set(diff_results) & set(excl_results) & set(incl_results))
+    proc_results = load_process_results(process, frag)
+    incl_results = load_inclusive_results(frag)
+
+    y_values = sorted(set(proc_results) & set(incl_results))
     if not y_values:
-        sys.exit("No overlapping rapidities across diffractive/exclusive/inclusive data -- "
+        sys.exit(f"No overlapping rapidities across {process}/inclusive data for {frag} -- "
                   "check ../files/ and ../files/inclusive/.")
+    y_range = (y_values[0], y_values[-1], len(y_values))
 
-    pt_grid = sorted({pt for pt, _ in diff_results[y_values[0]] if pt <= PT_MAX_PLOT})
+    pt_grid = sorted({pt for pt, _ in proc_results[y_values[0]] if pt <= PT_MAX_PLOT})
+    ratio = compute_ratio_grid(proc_results, incl_results, y_values, pt_grid)
 
-    diff_ratio = compute_ratio_grid(diff_results, incl_results, y_values, pt_grid)
-    excl_ratio = compute_ratio_grid(excl_results, incl_results, y_values, pt_grid)
-
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6.5))
-    plot_ratio_panel(axes[0], y_values, pt_grid, diff_ratio, "diffractive / inclusive")
-    plot_ratio_panel(axes[1], y_values, pt_grid, excl_ratio, "exclusive / inclusive")
+    fig, ax = plt.subplots(figsize=(8, 6.5))
+    plot_ratio_panel(ax, y_values, pt_grid, ratio, f"(diffractive + exclusive) / inclusive ({frag})")
 
     plt.tight_layout()
     outname = f"../plots/diffractive_inclusive_ratio_{CHANNEL}_{NUCLEUS}.pdf"
     plt.savefig(outname)
     print(f"Saved: {outname}")
-    print(f"y range used: {y_values[0]:g} to {y_values[-1]:g} ({len(y_values)} points)")
+    print(f"y range used: {y_range[0]:g} to {y_range[1]:g} ({y_range[2]} points)")
 
 
 if __name__ == "__main__":

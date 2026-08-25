@@ -149,8 +149,8 @@ def main():
             ax.plot(pts, cs, color=c, linestyle='--', label=f"excl., $y={y:g}$")
 
     ax.set_yscale('log')
-    ax.set_xlabel(r'$p_{D^0}$ [GeV]')
-    ax.set_ylabel(r'$d\sigma/dy\,dp_{D^0}$ (mb/GeV)')
+    ax.set_xlabel(r'$p_{D^0\perp}$ [GeV]')
+    ax.set_ylabel(r'$d\sigma/dy\,dp_{D^0\perp}$ (mb/GeV)')
     ax.set_title(f'D0-level $p_{{D^0}}$ spectrum, {NUCLEUS} target ({FRAG}, {CHANNEL})')
     ax.tick_params(axis='both', which='major', labelsize=12)
 

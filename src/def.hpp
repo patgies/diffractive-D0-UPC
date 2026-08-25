@@ -124,4 +124,11 @@ double exclusiveCrossSection_fixedW(void* p);
 double integrand_diffractive_fixedW(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_fixedW(void* p);
 
+// Same as the fixedW pair above, but x_po is fixed at par->fixed_xpo
+// instead of being integrated over (dropping u_xpo), giving
+// dsigma_fixedW/(d2K dx_po) at one specific x_po -- the fixed-W analogue
+// of diffractiveCrossSection_xpom.
+double integrand_diffractive_fixedW_xpom(double* vec, size_t dim, void* p);
+double diffractiveCrossSection_fixedW_xpom(void* p);
+
 #endif

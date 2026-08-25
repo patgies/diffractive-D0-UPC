@@ -118,6 +118,10 @@ int main(int argc, char* argv[])
     double mt0 = sqrt(pD0*pD0 + param.m2);
     double scale_factor = getenv("SCALE_FACTOR") ? atof(getenv("SCALE_FACTOR")) : 1.0;
     double frag_scale = scale_factor * mt0;
+    // Below the charm mass, the fragmentation function is undefined (the
+    // LHAPDF grid's charm production threshold): use the charm mass itself
+    // as a floor rather than letting a small scale_factor push Q below it.
+    if (frag_scale < param.m) frag_scale = param.m;
     unique_ptr<Interpolator> d_frag_interp;
     if (param.frag_type == FragmentationType::LHAPDF) {
         d_frag_interp = MakeLHAPDFZInterpolator(lhapdf_file, lhapdf_charm_flavor, frag_scale);

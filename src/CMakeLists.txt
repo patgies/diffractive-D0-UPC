@@ -72,3 +72,25 @@ target_link_libraries(
     GSL::gslcblas
     OpenMP::OpenMP_CXX
 )
+
+add_executable(
+    D0_fixedW_xpom
+    integrand.cpp
+    int_exclusive.cpp
+    int_diffractive.cpp
+    alphas_running.cpp
+    gamma_aa.cpp
+    fragmentation.cpp
+    lhapdf_grid.cpp
+    main_fixedW_xpom.cpp
+    fourier.c
+)
+
+target_link_libraries(
+    D0_fixedW_xpom
+    PRIVATE
+    amplitude
+    GSL::gsl
+    GSL::gslcblas
+    OpenMP::OpenMP_CXX
+)

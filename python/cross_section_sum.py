@@ -3,7 +3,6 @@ import sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import ticker
 
@@ -26,10 +25,9 @@ def main():
     if missing:
         sys.exit(f"No data found for rapidities {missing} -- run ../run_many_nucleus.sh first.")
 
-    # Combined "HymnD" theory-uncertainty band for the sum (LHAPDF-replica,
-    # BK-IC posterior, and scale-variation uncertainties added in
-    # quadrature -- see load_hymnd_sum_band). {} until all three of
-    # run_lhapdf_members_roihu.sbatch / run_bk_posterior_members_roihu.sbatch /
+    # Combined "HymnD" theory-uncertainty band for the sum (LHAPDF-replica
+    # and scale-variation uncertainties added in quadrature -- see
+    # load_hymnd_sum_band). {} until both run_lhapdf_members_roihu.sbatch /
     # run_lhapdf_scale_variation.sh have been run and pulled back.
     hymnd_band = load_hymnd_sum_band(frag)
 
@@ -48,7 +46,7 @@ def main():
         band = hymnd_band.get(y)
         if band:
             pt_values, central_values, sigma_total = band
-            lower = [max(v - s, 1e-30) for v, s in zip(central_values, sigma_total)]
+            lower = [v - s for v, s in zip(central_values, sigma_total)]
             upper = [v + s for v, s in zip(central_values, sigma_total)]
             plt.fill_between(pt_values, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
             plt.plot(pt_values, central_values, color=colors[y], linestyle="-", linewidth=2)
@@ -61,8 +59,13 @@ def main():
         plt.plot(pt_values, totals, color=colors[y], linestyle="-", linewidth=2)
 
     plt.yscale("log")
-    plt.xlabel(r"$p_{D^0}$ [GeV]", labelpad=15)
-    plt.ylabel(r"$d\sigma/dy\,dp_{D^0}$ [mb/GeV]", labelpad=15)
+    # Fixed range rather than autoscale -- see cross_section.py's comment:
+    # the HymnD band's lower edge crashes toward the 1e-30 floor at a few
+    # very-low-pT points (charm-mass threshold effect in the scale
+    # variation), which would otherwise stretch the whole axis.
+    plt.ylim(1e-10, 1e2)
+    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
+    plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=15)
     plt.title(f"$D^0$ photoproduction (diff. + excl.), {NUCLEUS}+{NUCLEUS} UPC ({CHANNEL}, HymnD)", pad=15)
 
     # Same numticks fix as cross_section.py: with a wide log-scale range,
@@ -87,13 +90,23 @@ def main():
     cbar.ax.invert_yaxis()
     cbar.ax.minorticks_off()
 
+    # Figure caption, split across lines rather than one long figtext -- a
+    # single very long line forces bbox_inches="tight" to widen the whole
+    # saved canvas to fit it, shrinking the plot itself. Same wording as
+    # cross_section.py, since it's the same construction (applied here to
+    # the diffractive+exclusive sum).
     if hymnd_band:
-        handle = Patch(facecolor="black", alpha=0.25, label=r"$\pm$ (replica $\oplus$ BK-IC $\oplus$ scale)")
-        plt.legend(handles=[handle], loc="lower left", fontsize=15)
+        caption_lines = [
+            r"\textbf{HymnD band.} Factorization-scale variation only "
+            r"($Q=0.5$-$2\times m_T$, $m_T^2=m_c^2+p_{D^0\perp}^2$); "
+            r"replica and BK-IC uncertainty currently disabled.",
+        ]
+        for i, line in enumerate(caption_lines):
+            plt.figtext(0.01, -0.05 - 0.03 * i, line, fontsize=7, color="black", ha="left")
 
     plt.tight_layout()
     outname = f"../plots/cross_section_sum_{CHANNEL}_{NUCLEUS}.pdf"
-    plt.savefig(outname)
+    plt.savefig(outname, bbox_inches="tight")
     print(f"Saved: {outname}")
 
 

@@ -181,7 +181,7 @@ def main():
     plt.ylim(bottom=1e-9)
     plt.xlim(left=-12)
     plt.xlabel(r"$\ln(x_{\mathbb{P}})$")
-    plt.ylabel(r"$d\sigma/dy\,dp_{D^0}\,d\ln(x_{\mathbb{P}})$ [mb/GeV]", labelpad=15)
+    plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}\,d\ln(x_{\mathbb{P}})$ [mb/GeV]", labelpad=15)
 
     # Secondary top axis showing x_po 
     ax = plt.gca()
@@ -192,7 +192,7 @@ def main():
 
     ax.set_title(f"Diffractive $D^0$, {NUCLEUS}+{NUCLEUS} UPC ({CHANNEL}, {FRAG})", pad=15)
 
-    pt_labels = [f"$p_{{D^0}}$={pt:g} GeV" for pt in pt_values]
+    pt_labels = [f"$p_{{D^0\\perp}}$={pt:g} GeV" for pt in pt_values]
     pt_title = ", ".join(pt_labels)
     y_handles = [Line2D([0], [0], color=colors[y], linestyle=y_linestyles[y], label=f"y={y:g}") for y in y_values]
     plt.legend(handles=y_handles, loc="upper left", fontsize=13, title=pt_title, title_fontsize=13)

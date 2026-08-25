@@ -96,12 +96,12 @@ def main():
 
     K_ref4 = np.array([K_anchor, 6.0])
     ax.plot(K_ref4, diff0[0] * (K_ref4/K_anchor)**(-4), color='black', linestyle=':', linewidth=1.5)
-    ax.text(0.6, 4e-8, r"$\textrm{exclusive}\propto 1/p_{\perp c}^6$", fontsize=12,
+    ax.text(0.6, 4e-8, r"$\textrm{exclusive}\propto 1/p_{c\perp}^6$", fontsize=12,
             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
 
     K_ref6 = np.array([K_anchor, 4.0])
     ax.plot(K_ref6, excl0[0] * (K_ref6/K_anchor)**(-6), color='black', linestyle=':', linewidth=1.5)
-    ax.text(0.5, 3e-11, r"$\textrm{diffractive}\propto 1/p_{\perp c}^4$", fontsize=12,
+    ax.text(0.5, 3e-11, r"$\textrm{diffractive}\propto 1/p_{c\perp}^4$", fontsize=12,
             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
 
     ax.set_xscale('log')
@@ -110,12 +110,12 @@ def main():
     ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
     ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
     ax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
-    ax.set_xlabel(r"$p_{\perp c}$ [GeV]")
-    ax.set_ylabel(r"$d\sigma/dy_c dp_{\perp c}$", labelpad=15)
-    ax.set_title(r"Fixed-$W$ charm photoproduction proton target  ($q^+=3p^+$)", pad=15)
+    ax.set_xlabel(r"$p_{c\perp}$ [GeV]")
+    ax.set_ylabel(r"$d\sigma/dy_c dp_{c\perp}$ [mb/GeV]", labelpad=15)
+    ax.set_title(r"Charm photoproduction with proton target  (fixed $q^+=3p^+$)", pad=15)
 
     y_handles = [Line2D([0], [0], color=colors[i], linestyle='-', label=f"$y={y:g}$")
-                 for i, y in enumerate(y_values)]
+                 for i, y in reversed(list(enumerate(y_values)))]
     ax.legend(handles=y_handles, fontsize=13, loc='upper right',
               title="solid: diffractive\ndashed: exclusive", title_fontsize=12)
     plt.tight_layout()

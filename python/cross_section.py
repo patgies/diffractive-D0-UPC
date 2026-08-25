@@ -7,7 +7,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import ticker
 from scipy.integrate import simpson
@@ -224,6 +223,9 @@ def load_bk_band(process, frag="LHAPDF"):
     Bayesian BK-IC posterior samples in bk/. {} until
     run_bk_posterior_members_roihu.sbatch's output has been copied back into
     ../files/bk_posterior/member_*.
+
+    Currently unused in load_hymnd_band/load_hymnd_sum_band -- see the
+    commented-out lines there.
     """
     return _band_from_members(process, frag, "../files/bk_posterior/member_*")
 
@@ -291,6 +293,9 @@ def load_bk_sum_band(frag="LHAPDF"):
     """BK-IC posterior band for the diffractive+exclusive SUM (see
     _summed_band_from_members). {} until run_bk_posterior_members_roihu.sbatch's
     output is in ../files/bk_posterior/member_*.
+
+    Currently unused in load_hymnd_sum_band -- see the commented-out lines
+    there.
     """
     return _summed_band_from_members("../files/bk_posterior/member_*", frag)
 
@@ -300,10 +305,9 @@ def load_scale_band(process, frag="LHAPDF"):
     run_lhapdf_scale_variation.sh): central member only, Q = SCALE_FACTOR *
     mt0 varied at the conventional 0.5x/2x around the central scale
     (SCALE_FACTOR=1.0, i.e. the plain ../files/D0_..._LHAPDF_... run). This
-    is a scale-convention envelope (min/max), not a statistical replica/
-    posterior sample, so it's built differently from
-    load_lhapdf_band/load_bk_band -- min and max across the 3 runs, not
-    mean +/- std.
+    is a scale-convention envelope (min/max), not a statistical replica
+    sample, so it's built differently from load_lhapdf_band -- min and
+    max across the 3 runs, not mean +/- std.
 
     Returns {y: (pt_values, lower, upper)}, or {} until BOTH scale factors'
     output exists in ../files/lhapdf_scale/ (see EXPECTED_SCALE_FACTORS --
@@ -369,34 +373,38 @@ def load_scale_sum_band(frag="LHAPDF"):
 
 
 def _combine_in_quadrature(central, rep_band, bk_band, scale_band):
-    """Shared combination for load_hymnd_band/load_hymnd_sum_band: adds the
-    LHAPDF-replica std, BK-IC posterior std, and scale-variation envelope
-    half-width in quadrature around the plain central curve --
-    sigma_total = sqrt(sigma_rep^2 + sigma_bk^2 + sigma_scale^2). Requires
-    all three sources present (returns {} otherwise), since a partial
-    combination would understate the true uncertainty.
+    """Shared combination for load_hymnd_band/load_hymnd_sum_band: adds
+    uncertainty sources in quadrature around the plain central curve.
+    Currently only the scale-variation envelope half-width is active
+    (sigma_total = sigma_scale) -- the LHAPDF-replica std and BK-IC
+    uncertainty are both commented out of the sum below, but rep_band/
+    bk_band are still threaded through so re-enabling either is a
+    one-line change. Requires the (currently) active source present
+    (returns {} otherwise), since a partial combination would understate
+    the true uncertainty.
 
     Returns {y: (pt_values, central_values, sigma_total)}.
     """
-    if not central or not rep_band or not bk_band or not scale_band:
+    if not central or not scale_band:
         return {}
 
     combined = {}
     for y in central:
-        if y not in rep_band or y not in bk_band or y not in scale_band:
+        if y not in scale_band:
             continue
         central_points = dict(central[y])
-        rep_pt, _, rep_stds = rep_band[y]
-        rep_lookup = dict(zip(rep_pt, rep_stds))
-        bk_pt, _, bk_stds = bk_band[y]
-        bk_lookup = dict(zip(bk_pt, bk_stds))
+        # rep_pt, _, rep_stds = rep_band[y]
+        # rep_lookup = dict(zip(rep_pt, rep_stds))
+        # bk_pt, _, bk_stds = bk_band[y]
+        # bk_lookup = dict(zip(bk_pt, bk_stds))
         scale_pt, scale_lower, scale_upper = scale_band[y]
         scale_lookup = {pt: (upper - lower) / 2 for pt, lower, upper in zip(scale_pt, scale_lower, scale_upper)}
 
-        pt_values = sorted(set(central_points) & set(rep_lookup) & set(bk_lookup) & set(scale_lookup))
+        pt_values = sorted(set(central_points) & set(scale_lookup))
         central_values = [central_points[pt] for pt in pt_values]
         sigma_total = [
-            math.sqrt(rep_lookup[pt]**2 + bk_lookup[pt]**2 + scale_lookup[pt]**2)
+            # math.sqrt(rep_lookup[pt]**2 + bk_lookup[pt]**2 + scale_lookup[pt]**2)  # replica + BK-IC + scale
+            scale_lookup[pt]
             for pt in pt_values
         ]
         combined[y] = (pt_values, central_values, sigma_total)
@@ -405,11 +413,10 @@ def _combine_in_quadrature(central, rep_band, bk_band, scale_band):
 
 
 def load_hymnd_band(process, frag="LHAPDF"):
-    """"HymnD" combined theory-uncertainty band: LHAPDF-replica, BK-IC
-    posterior, and fragmentation-scale-variation uncertainties added in
-    quadrature around the central curve (see _combine_in_quadrature). {}
-    until all three of load_lhapdf_band/load_bk_band/load_scale_band have
-    data.
+    """"HymnD" combined theory-uncertainty band: currently just the
+    fragmentation-scale-variation uncertainty (see _combine_in_quadrature
+    -- replica and BK-IC are both commented out there). {} until
+    load_scale_band has data.
     """
     return _combine_in_quadrature(
         load_results(process, frag),
@@ -439,11 +446,11 @@ def main():
             if results:
                 all_results[(process, frag)] = results
 
-    # If run_lhapdf_members_roihu.sbatch's / run_bk_posterior_members_roihu.sbatch's /
-    # run_lhapdf_scale_variation.sh's output are all present, plot the
-    # combined "HymnD" theory-uncertainty band (LHAPDF-replica, BK-IC
-    # posterior, and scale-variation uncertainties added in quadrature --
-    # see load_hymnd_band) instead of the single-member LHAPDF line.
+    # If run_lhapdf_members_roihu.sbatch's / run_lhapdf_scale_variation.sh's
+    # output are both present, plot the combined "HymnD" theory-uncertainty
+    # band (LHAPDF-replica and scale-variation uncertainties added in
+    # quadrature -- see load_hymnd_band) instead of the single-member
+    # LHAPDF line.
     hymnd_bands = {process: load_hymnd_band(process) for process in PROCESSES}
 
     if not all_results and not any(hymnd_bands.values()):
@@ -487,7 +494,7 @@ def main():
                 if y > MAX_Y_TO_PLOT:
                     continue
                 pt_values, central_values, sigma_total = hymnd_band[y]
-                lower = [max(v - s, 1e-30) for v, s in zip(central_values, sigma_total)]
+                lower = [v - s for v, s in zip(central_values, sigma_total)]
                 upper = [v + s for v, s in zip(central_values, sigma_total)]
                 plt.fill_between(pt_values, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
                 plt.plot(pt_values, central_values, color=colors[y], linestyle=linestyle)
@@ -505,8 +512,15 @@ def main():
             plt.plot(pt_values, cross_section_values, color=colors[y], linestyle=linestyle)
 
     plt.yscale("log")
-    plt.xlabel(r"$p_{D^0}$ [GeV]", labelpad=15)
-    plt.ylabel(r"$d\sigma/dy\,dp_{D^0}$ [mb/GeV]", labelpad=15)
+    # Fixed range rather than autoscale: at very low pT, mt0~m_c and
+    # SCALE_FACTOR=0.5 pushes Q below the charm-mass threshold, where the
+    # fragmentation function genuinely goes to ~0 (real physics, see
+    # notes/) -- that blows up the HymnD band's lower edge toward the
+    # 1e-30 floor at a few low-pT points, which would otherwise stretch
+    # the whole axis and make everything else unreadable.
+    plt.ylim(1e-10, 1e2)
+    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
+    plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=15)
     plt.title(f"$D^0$ photoproduction, {NUCLEUS}+{NUCLEUS} UPC ({CHANNEL}, HymnD)", pad=15)
     # Force log-scale minor ticks (2,3,...,9 within each decade) to actually
     # show. LogLocator has an internal numticks budget that silently
@@ -548,8 +562,6 @@ def main():
             label = process if frag == "LHAPDF" else f"{process}, {frag}"
             if frag == "LHAPDF" and hymnd_bands.get(process):
                 style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))
-                style_handles.append(Patch(facecolor="black", alpha=0.25,
-                                            label=r"  $\pm$ (replica $\oplus$ BK-IC $\oplus$ scale)"))
             elif (process, frag) in all_results:
                 style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))
     plt.legend(handles=style_handles, loc="lower left", fontsize=15)
@@ -560,17 +572,16 @@ def main():
     # inclusive-D0-UPC's cms_comparison.py, since it's the same construction.
     if any(hymnd_bands.values()):
         caption_lines = [
-            r"\textbf{HymnD band.} Combines, in quadrature: factorization-scale "
-            r"variation ($Q=0.5$-$2\times m_T$, $m_T^2=m_c^2+p_{D^0}^2$);",
-            r"fit (replica) uncertainty from the 101 LHAPDF fit replicas;",
-            r"and BK initial-condition uncertainty from a 100-sample dipole-amplitude posterior.",
+            r"\textbf{HymnD band.} Factorization-scale variation only "
+            r"($Q=0.5$-$2\times m_T$, $m_T^2=m_c^2+p_{D^0\perp}^2$); "
+            r"replica and BK-IC uncertainty currently disabled.",
         ]
         for i, line in enumerate(caption_lines):
-            plt.figtext(0.01, -0.05 - 0.03 * i, line, fontsize=7, color="dimgray", ha="left")
+            plt.figtext(0.01, -0.05 - 0.03 * i, line, fontsize=7, color="black", ha="left")
 
     plt.tight_layout()
     outname = f"../plots/cross_section_{CHANNEL}_{NUCLEUS}.pdf"
-    plt.savefig(outname)
+    plt.savefig(outname, bbox_inches="tight")
     print(f"Saved: {outname}")
 
 
