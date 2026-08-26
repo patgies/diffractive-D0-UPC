@@ -7,7 +7,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import ticker
 from scipy.integrate import simpson
 sys.path.insert(0, os.path.dirname(__file__))
@@ -56,6 +55,7 @@ CHANNEL = os.environ.get("CHANNEL", "An0n").translate(str.maketrans('', '', '() 
 
 PROCESSES = ["diffractive", "exclusive"]
 FRAG_TYPES = ["LHAPDF"]
+MIN_Y_TO_PLOT = -1.0  # keeps the plot from getting too crowded
 MAX_Y_TO_PLOT = 3.0   # keeps the plot from getting too crowded
 EXPECTED_SCALE_FACTORS = ["0.5", "2.0"]   # must match run_lhapdf_scale_variation.sh's SCALE_FACTORS
 
@@ -458,15 +458,19 @@ def main():
                   "in ../files/ -- run ../run_many_nucleus.sh first.")
 
     # collect every rapidity value that shows up in any of the results,
-    # keeping only y <= MAX_Y_TO_PLOT so the plot doesn't get too crowded
+    # keeping only integer y in [MIN_Y_TO_PLOT, MAX_Y_TO_PLOT] so the plot
+    # doesn't get too crowded
+    def y_in_range(y):
+        return MIN_Y_TO_PLOT <= y <= MAX_Y_TO_PLOT and y == round(y)
+
     y_values = set()
     for results in all_results.values():
         for y in results:
-            if y <= MAX_Y_TO_PLOT:
+            if y_in_range(y):
                 y_values.add(y)
     for band in hymnd_bands.values():
         for y in band:
-            if y <= MAX_Y_TO_PLOT:
+            if y_in_range(y):
                 y_values.add(y)
     y_values = sorted(y_values)
 
@@ -491,7 +495,7 @@ def main():
         hymnd_band = hymnd_bands.get(process) if frag == "LHAPDF" else None
         if hymnd_band:
             for y in sorted(hymnd_band):
-                if y > MAX_Y_TO_PLOT:
+                if not y_in_range(y):
                     continue
                 pt_values, central_values, sigma_total = hymnd_band[y]
                 lower = [v - s for v, s in zip(central_values, sigma_total)]
@@ -504,7 +508,7 @@ def main():
         if not results:
             continue
         for y in sorted(results):
-            if y > MAX_Y_TO_PLOT:
+            if not y_in_range(y):
                 continue
             points = sorted(results[y])
             pt_values = [pair[0] for pair in points]
@@ -539,19 +543,14 @@ def main():
         ticker.FuncFormatter(lambda val, pos: f"$10^{{{round(math.log10(val))}}}$"
                               if round(math.log10(val)) % 2 == 0 else ""))
 
-    # Colorbar instead of a discrete per-y legend: one categorical band,
-    # boundaries between consecutive y's, ticks labeled at each y's own
-    # segment center. Inverted so y increases downward (matching the plot's
-    # own color progression read top-to-bottom being less natural here).
-    y_cmap = ListedColormap([colors[y] for y in y_values])
-    boundaries = list(range(len(y_values) + 1))
-    y_norm = BoundaryNorm(boundaries, y_cmap.N)
-    mappable = plt.cm.ScalarMappable(norm=y_norm, cmap=y_cmap)
-    cbar = plt.colorbar(mappable, ax=plt.gca(), ticks=[i + 0.5 for i in range(len(y_values))])
-    cbar.ax.set_yticklabels([f"{y:g}" for y in y_values], fontsize=17)
-    cbar.set_label("$y$", fontsize=20)
-    cbar.ax.invert_yaxis()
-    cbar.ax.minorticks_off()
+    # Discrete per-y legend (a plain colorbar doesn't read well once y is
+    # restricted to a handful of integers) -- a separate legend box from
+    # the process/frag one below, added via add_artist so the second
+    # plt.legend() call doesn't replace it.
+    y_handles = [Line2D([0], [0], color=colors[y], linestyle="-", linewidth=2, label=f"$y={y:g}$")
+                 for y in y_values]
+    y_legend = plt.legend(handles=y_handles, loc="upper right", fontsize=15)
+    plt.gca().add_artist(y_legend)
 
     style_handles = []
     for process in ["exclusive", "diffractive"]:
@@ -565,19 +564,6 @@ def main():
             elif (process, frag) in all_results:
                 style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))
     plt.legend(handles=style_handles, loc="lower left", fontsize=15)
-
-    # Figure caption, split across lines rather than one long figtext -- a
-    # single very long line forces bbox_inches="tight" to widen the whole
-    # saved canvas to fit it, shrinking the plot itself. Same wording as
-    # inclusive-D0-UPC's cms_comparison.py, since it's the same construction.
-    if any(hymnd_bands.values()):
-        caption_lines = [
-            r"\textbf{HymnD band.} Factorization-scale variation only "
-            r"($Q=0.5$-$2\times m_T$, $m_T^2=m_c^2+p_{D^0\perp}^2$); "
-            r"replica and BK-IC uncertainty currently disabled.",
-        ]
-        for i, line in enumerate(caption_lines):
-            plt.figtext(0.01, -0.05 - 0.03 * i, line, fontsize=7, color="black", ha="left")
 
     plt.tight_layout()
     outname = f"../plots/cross_section_{CHANNEL}_{NUCLEUS}.pdf"

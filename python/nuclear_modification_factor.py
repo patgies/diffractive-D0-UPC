@@ -1,0 +1,146 @@
+import glob
+import math
+import sys
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+from cross_section import (
+    read_rapidity, alphae, mc, e_c, Nc, _summed_results, load_bk_sum_band, CHANNEL,
+)
+from alphas_running import alphas_run
+
+# GBW proton-dipole normalization -- for a PROTON target this is applied
+# DIRECTLY (already in mb, no separate GEVSQR_TO_MB natural-units
+# conversion needed), unlike the Pb+Pb case where the Glauber b-integral
+# supplies the area instead and DOES need GEVSQR_TO_MB (see
+# notes/hymnd_band_construction.tex-adjacent discussion / fixedW_spectrum.py's
+# identical convention).
+sigma0 = 16.36   # mb
+
+
+def proton_prefactor(process, pt):
+    """Physical prefactor for a PROTON target, matching
+    fixedW_spectrum.py's PREFACTOR_EXCL / diffractiveCrossSection_fixedW's
+    C++ prefactor exactly -- sigma0 included directly (no GEVSQR_TO_MB).
+    """
+    if process == "exclusive":
+        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
+    elif process == "diffractive":
+        alphas = alphas_run(math.sqrt(pt**2 + mc**2))
+        return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
+    raise ValueError(f"unknown process {process}")
+
+# R_pA nuclear modification factor:
+#
+#              dsigma_AA / (d2k_Dperp dy_D)
+#   R_pA = -------------------------------------
+#           A * dsigma_pA(B_perp>2R) / (d2k_Dperp dy_D)
+#
+# Numerator: this project's Pb+Pb exclusive+diffractive sum (already
+# correctly normalized, from cross_section.py's _summed_results).
+# Denominator: a proton-target baseline computed with the SAME nuclear
+# photon flux as Pb+Pb (Z=82, bmin=2R_Pb -- both hardcoded in src/main.cpp
+# regardless of dipole file), from ../run_proton_baseline.sh's output. No
+# Glauber b-average applies here (a single proton has no nucleon-position
+# ensemble to sample), so unlike the nuclear "2*pi*b_integral" step, the
+# raw D0 output is used directly -- just the standard prefactor and
+# d2k_Dperp -> dk_Dperp Jacobian, no extra Glauber-transverse-plane (2*pi)
+# factor (see cross_section.py's load_results for comparison).
+#
+# In the dilute (large pT) limit, saturation effects vanish and R_pA -> 1.
+
+A_PB = 208   # Pb mass number
+
+
+def load_proton_baseline_sum(frag="LHAPDF"):
+    """Read ../files/D0_proton_baseline_{exclusive,diffractive}_<frag>_<channel>_y*.dat
+    (no b column -- single proton, no Glauber average) and return
+    {y: [(pt, dsigma_pA_dy_dpt), ...]}, summing exclusive+diffractive.
+    """
+    results = {}
+    for process in ["exclusive", "diffractive"]:
+        pattern = f"../files/D0_proton_baseline_{process}_{frag}_{CHANNEL}_y*.dat"
+        for filename in sorted(glob.glob(pattern)):
+            y = read_rapidity(filename)
+            points = {}
+            with open(filename) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    pt, raw = line.split()
+                    pt, raw = float(pt), float(raw)
+                    cross_section = raw * proton_prefactor(process, pt) * (2 * math.pi) * pt
+                    points[pt] = points.get(pt, 0.0) + cross_section
+            if y not in results:
+                results[y] = {}
+            for pt, cs in points.items():
+                results[y][pt] = results[y].get(pt, 0.0) + cs
+
+    return {y: sorted(pts.items()) for y, pts in results.items()}
+
+
+def main():
+    aa_results = _summed_results("..", "LHAPDF")
+    pa_results = load_proton_baseline_sum("LHAPDF")
+    # BK initial-condition posterior uncertainty (100 Pb-target dipole-
+    # amplitude samples) -- only available/meaningful for the Pb+Pb
+    # (numerator) side, since these BK-IC samples were fit specifically
+    # for the Pb-208 nuclear dipole; there's no analogous posterior for
+    # the proton-baseline denominator, so its relative uncertainty is
+    # propagated straight through into R_pA (sigma_RpA/RpA = sigma_AA/AA),
+    # treating the denominator as fixed.
+    bk_band = load_bk_sum_band("LHAPDF")
+
+    y_values = sorted(set(aa_results) & set(pa_results))
+    if not y_values:
+        sys.exit("No overlapping rapidities between Pb+Pb and proton-baseline data -- "
+                  "check ../files/ and run ../run_proton_baseline.sh.")
+
+    blue_ramp = ["#cde2fb", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
+    colors = {}
+    for i, y in enumerate(y_values):
+        step = round(i * (len(blue_ramp) - 1) / max(len(y_values) - 1, 1))
+        colors[y] = blue_ramp[step]
+
+    linestyle_cycle = ['-', '--', ':', '-.']
+    y_linestyles = {y: linestyle_cycle[i % len(linestyle_cycle)] for i, y in enumerate(y_values)}
+
+    plt.figure(figsize=(7.5, 6.5))
+    for y in y_values:
+        aa_points = dict(aa_results[y])
+        pa_points = dict(pa_results[y])
+        pt_values = sorted(set(aa_points) & set(pa_points))
+        r_pa = [aa_points[pt] / (A_PB * pa_points[pt]) for pt in pt_values]
+        plt.plot(pt_values, r_pa, color=colors[y], linestyle=y_linestyles[y], linewidth=2)
+
+        if y in bk_band:
+            bk_pt, bk_mean, bk_std = bk_band[y]
+            rel_bk = {pt: s / m for pt, m, s in zip(bk_pt, bk_mean, bk_std) if m > 0}
+            band_pt = [pt for pt in pt_values if pt in rel_bk]
+            band_r = [aa_points[pt] / (A_PB * pa_points[pt]) for pt in band_pt]
+            band_rel = [rel_bk[pt] for pt in band_pt]
+            lower = [r * (1 - rel) for r, rel in zip(band_r, band_rel)]
+            upper = [r * (1 + rel) for r, rel in zip(band_r, band_rel)]
+            plt.fill_between(band_pt, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
+
+    plt.axhline(1.0, color="gray", linestyle=":", linewidth=1)
+
+    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
+    plt.ylabel(r"$R_{pA}$", labelpad=15)
+    plt.title(r"Nuclear modification factor $R_{pA}$ (exclusive + diffractive)", pad=15)
+
+    y_handles = [Line2D([0], [0], color=colors[y], linestyle=y_linestyles[y], linewidth=2, label=f"$y={y:g}$")
+                 for y in y_values]
+    plt.legend(handles=y_handles, loc="upper right", fontsize=15)
+
+    plt.tight_layout()
+    outname = f"../plots/nuclear_modification_factor_{CHANNEL}.pdf"
+    plt.savefig(outname, bbox_inches="tight")
+    print(f"Saved: {outname}")
+
+
+if __name__ == "__main__":
+    main()

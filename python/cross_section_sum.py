@@ -3,7 +3,7 @@ import sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.lines import Line2D
 from matplotlib import ticker
 
 # Reuses cross_section.py's data-loading (and picks up its "fancy" rcParams
@@ -13,7 +13,7 @@ from cross_section import (
     load_results, load_hymnd_sum_band, NUCLEUS, CHANNEL, FRAG_TYPES,
 )
 
-Y_TO_PLOT = [-3.0, -2.5, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+Y_TO_PLOT = [-1.0, 0.0, 1.0, 2.0, 3.0]
 
 
 def main():
@@ -41,6 +41,13 @@ def main():
         step = round(i * (len(blue_ramp) - 1) / max(len(Y_TO_PLOT) - 1, 1))
         colors[y] = blue_ramp[step]
 
+    # Color AND linestyle both cycle with y (see fixedW_xpom_spectrum.py) --
+    # makes adjacent/crossing curves easier to tell apart than color alone.
+    linestyle_cycle = ['-', '--', ':', '-.']
+    y_linestyles = {}
+    for i, y in enumerate(Y_TO_PLOT):
+        y_linestyles[y] = linestyle_cycle[i % len(linestyle_cycle)]
+
     plt.figure(figsize=(7.5, 6.5))
     for y in Y_TO_PLOT:
         band = hymnd_band.get(y)
@@ -49,14 +56,14 @@ def main():
             lower = [v - s for v, s in zip(central_values, sigma_total)]
             upper = [v + s for v, s in zip(central_values, sigma_total)]
             plt.fill_between(pt_values, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
-            plt.plot(pt_values, central_values, color=colors[y], linestyle="-", linewidth=2)
+            plt.plot(pt_values, central_values, color=colors[y], linestyle=y_linestyles[y], linewidth=2)
             continue
 
         diff_points = dict(results_diff.get(y, []))
         excl_points = dict(results_excl.get(y, []))
         pt_values = sorted(set(diff_points) | set(excl_points))
         totals = [diff_points.get(pt, 0.0) + excl_points.get(pt, 0.0) for pt in pt_values]
-        plt.plot(pt_values, totals, color=colors[y], linestyle="-", linewidth=2)
+        plt.plot(pt_values, totals, color=colors[y], linestyle=y_linestyles[y], linewidth=2)
 
     plt.yscale("log")
     # Fixed range rather than autoscale -- see cross_section.py's comment:
@@ -79,30 +86,10 @@ def main():
         ticker.FuncFormatter(lambda val, pos: f"$10^{{{round(math.log10(val))}}}$"
                               if round(math.log10(val)) % 2 == 0 else ""))
 
-    # Colorbar instead of a discrete per-y legend (see cross_section.py).
-    y_cmap = ListedColormap([colors[y] for y in Y_TO_PLOT])
-    boundaries = list(range(len(Y_TO_PLOT) + 1))
-    y_norm = BoundaryNorm(boundaries, y_cmap.N)
-    mappable = plt.cm.ScalarMappable(norm=y_norm, cmap=y_cmap)
-    cbar = plt.colorbar(mappable, ax=plt.gca(), ticks=[i + 0.5 for i in range(len(Y_TO_PLOT))])
-    cbar.ax.set_yticklabels([f"{y:g}" for y in Y_TO_PLOT], fontsize=17)
-    cbar.set_label("$y$", fontsize=20)
-    cbar.ax.invert_yaxis()
-    cbar.ax.minorticks_off()
-
-    # Figure caption, split across lines rather than one long figtext -- a
-    # single very long line forces bbox_inches="tight" to widen the whole
-    # saved canvas to fit it, shrinking the plot itself. Same wording as
-    # cross_section.py, since it's the same construction (applied here to
-    # the diffractive+exclusive sum).
-    if hymnd_band:
-        caption_lines = [
-            r"\textbf{HymnD band.} Factorization-scale variation only "
-            r"($Q=0.5$-$2\times m_T$, $m_T^2=m_c^2+p_{D^0\perp}^2$); "
-            r"replica and BK-IC uncertainty currently disabled.",
-        ]
-        for i, line in enumerate(caption_lines):
-            plt.figtext(0.01, -0.05 - 0.03 * i, line, fontsize=7, color="black", ha="left")
+    # Discrete per-y legend instead of a colorbar (see cross_section.py).
+    y_handles = [Line2D([0], [0], color=colors[y], linestyle=y_linestyles[y], linewidth=2, label=f"$y={y:g}$")
+                 for y in Y_TO_PLOT]
+    plt.legend(handles=y_handles, loc="upper right", fontsize=15)
 
     plt.tight_layout()
     outname = f"../plots/cross_section_sum_{CHANNEL}_{NUCLEUS}.pdf"
