@@ -124,7 +124,7 @@ def prefactor(process, pt):
     Glauber b-integral -- applying sigma0 on top of that would double-count it.
     """
     if process == "exclusive":
-        return alphae * Nc * e_c**2 / (2 * math.pi**2)
+        return alphae * Nc * e_c**2 / (2 * math.pi**2 * mc**2)
     elif process == "diffractive":
         alphas = alphas_run(math.sqrt(pt**2 + mc**2))
         return alphas * alphae * e_c**2 * (Nc**2 - 1) / (8 * math.pi**4)

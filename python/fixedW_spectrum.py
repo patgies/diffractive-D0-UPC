@@ -38,13 +38,14 @@ plt.rcParams.update({
 })
 
 alphae = 1/137
+mc     = 1.5          # charm mass in GeV
 e_c    = 2/3
 Nc     = 3
 sigma0 = 16.36   # dipole normalization, same convention as python/*.py
 
 # Missing prefactor for the exclusive column (diffractive already has its
 # full prefactor baked in on the C++ side, see int_diffractive.cpp).
-PREFACTOR_EXCL = alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
+PREFACTOR_EXCL = alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2 * mc**2)
 
 
 def read_y(filename):

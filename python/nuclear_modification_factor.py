@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 from cross_section import (
-    read_rapidity, alphae, mc, e_c, Nc, _summed_results, load_bk_sum_band, CHANNEL,
+    read_rapidity, alphae, mc, e_c, Nc, load_results, _summed_results,
+    load_bk_band, load_bk_sum_band, CHANNEL,
 )
 from alphas_running import alphas_run
 
@@ -26,7 +27,7 @@ def proton_prefactor(process, pt):
     C++ prefactor exactly -- sigma0 included directly (no GEVSQR_TO_MB).
     """
     if process == "exclusive":
-        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
+        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2 * mc**2)
     elif process == "diffractive":
         alphas = alphas_run(math.sqrt(pt**2 + mc**2))
         return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
@@ -54,37 +55,55 @@ def proton_prefactor(process, pt):
 A_PB = 208   # Pb mass number
 
 
-def load_proton_baseline_sum(frag="LHAPDF"):
-    """Read ../files/D0_proton_baseline_{exclusive,diffractive}_<frag>_<channel>_y*.dat
+def load_proton_baseline(process, frag="LHAPDF"):
+    """Read ../files/D0_proton_baseline_<process>_<frag>_<channel>_y*.dat
     (no b column -- single proton, no Glauber average) and return
-    {y: [(pt, dsigma_pA_dy_dpt), ...]}, summing exclusive+diffractive.
+    {y: [(pt, dsigma_pA_dy_dpt), ...]} for that one process.
     """
     results = {}
-    for process in ["exclusive", "diffractive"]:
-        pattern = f"../files/D0_proton_baseline_{process}_{frag}_{CHANNEL}_y*.dat"
-        for filename in sorted(glob.glob(pattern)):
-            y = read_rapidity(filename)
-            points = {}
-            with open(filename) as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    pt, raw = line.split()
-                    pt, raw = float(pt), float(raw)
-                    cross_section = raw * proton_prefactor(process, pt) * (2 * math.pi) * pt
-                    points[pt] = points.get(pt, 0.0) + cross_section
-            if y not in results:
-                results[y] = {}
-            for pt, cs in points.items():
-                results[y][pt] = results[y].get(pt, 0.0) + cs
-
-    return {y: sorted(pts.items()) for y, pts in results.items()}
+    pattern = f"../files/D0_proton_baseline_{process}_{frag}_{CHANNEL}_y*.dat"
+    for filename in sorted(glob.glob(pattern)):
+        y = read_rapidity(filename)
+        points = {}
+        with open(filename) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                pt, raw = line.split()
+                pt, raw = float(pt), float(raw)
+                points[pt] = raw * proton_prefactor(process, pt) * (2 * math.pi) * pt
+        results[y] = sorted(points.items())
+    return results
 
 
-def main():
-    aa_results = _summed_results("..", "LHAPDF")
-    pa_results = load_proton_baseline_sum("LHAPDF")
+def load_proton_baseline_sum(frag="LHAPDF"):
+    """Same as load_proton_baseline, but summing exclusive+diffractive."""
+    excl = load_proton_baseline("exclusive", frag)
+    diff = load_proton_baseline("diffractive", frag)
+    results = {}
+    for y in set(excl) | set(diff):
+        excl_points = dict(excl.get(y, []))
+        diff_points = dict(diff.get(y, []))
+        pt_values = sorted(set(excl_points) | set(diff_points))
+        results[y] = [(pt, excl_points.get(pt, 0.0) + diff_points.get(pt, 0.0)) for pt in pt_values]
+    return results
+
+
+def make_plot(process):
+    """process is "exclusive"/"diffractive" (-> load_results/load_proton_baseline)
+    or "sum" (-> _summed_results/load_proton_baseline_sum)."""
+    if process == "sum":
+        aa_results = _summed_results("..", "LHAPDF")
+        pa_results = load_proton_baseline_sum("LHAPDF")
+        bk_band = load_bk_sum_band("LHAPDF")
+        label = "exclusive + diffractive"
+    else:
+        aa_results = load_results(process, "LHAPDF")
+        pa_results = load_proton_baseline(process, "LHAPDF")
+        bk_band = load_bk_band(process, "LHAPDF")
+        label = process
+
     # BK initial-condition posterior uncertainty (100 Pb-target dipole-
     # amplitude samples) -- only available/meaningful for the Pb+Pb
     # (numerator) side, since these BK-IC samples were fit specifically
@@ -92,11 +111,10 @@ def main():
     # the proton-baseline denominator, so its relative uncertainty is
     # propagated straight through into R_pA (sigma_RpA/RpA = sigma_AA/AA),
     # treating the denominator as fixed.
-    bk_band = load_bk_sum_band("LHAPDF")
 
     y_values = sorted(set(aa_results) & set(pa_results))
     if not y_values:
-        sys.exit("No overlapping rapidities between Pb+Pb and proton-baseline data -- "
+        sys.exit(f"No overlapping rapidities between Pb+Pb and proton-baseline data for {process} -- "
                   "check ../files/ and run ../run_proton_baseline.sh.")
 
     blue_ramp = ["#cde2fb", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
@@ -130,16 +148,22 @@ def main():
 
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
     plt.ylabel(r"$R_{pA}$", labelpad=15)
-    plt.title(r"Nuclear modification factor $R_{pA}$ (exclusive + diffractive)", pad=15)
+    plt.title(rf"Nuclear modification factor $R_{{pA}}$ ({label})", pad=15)
 
     y_handles = [Line2D([0], [0], color=colors[y], linestyle=y_linestyles[y], linewidth=2, label=f"$y={y:g}$")
                  for y in y_values]
     plt.legend(handles=y_handles, loc="upper right", fontsize=15)
 
     plt.tight_layout()
-    outname = f"../plots/nuclear_modification_factor_{CHANNEL}.pdf"
+    suffix = "" if process == "sum" else f"_{process}"
+    outname = f"../plots/nuclear_modification_factor_{CHANNEL}{suffix}.pdf"
     plt.savefig(outname, bbox_inches="tight")
     print(f"Saved: {outname}")
+
+
+def main():
+    make_plot("sum")
+    make_plot("exclusive")
 
 
 if __name__ == "__main__":

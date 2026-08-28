@@ -82,7 +82,7 @@ def integrate_over_b(pairs):
 def prefactor(process, pt):
     """Physical prefactor, matching plot_pt_spectrum.py's convention."""
     if process == "exclusive":
-        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
+        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2 * mc**2)
     elif process == "diffractive":
         alphas = alphas_run(math.sqrt(pt**2 + mc**2))
         return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
