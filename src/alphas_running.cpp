@@ -1,7 +1,7 @@
 #include "alphas_running.hpp"
 #include <cmath>
 
-// PDG world-average value of the strong coupling at the Z boson mass
+// PDG value of the strong coupling at the Z boson mass
 static double alphas_mZ = 0.118;
 static double mZ = 91.2;    // Z boson mass, in GeV
 static double Nf = 4.0;     // number of active quark flavors at the charm mass scale
