@@ -57,7 +57,28 @@ PROCESSES = ["diffractive", "exclusive"]
 FRAG_TYPES = ["LHAPDF"]
 MIN_Y_TO_PLOT = -1.0  # keeps the plot from getting too crowded
 MAX_Y_TO_PLOT = 3.0   # keeps the plot from getting too crowded
-EXPECTED_SCALE_FACTORS = ["0.5", "2.0"]   # must match run_lhapdf_scale_variation.sh's SCALE_FACTORS
+
+# mu_F (fragmentation/factorization scale, Q = factor*mt0 -- see SCALE_FACTOR
+# in src/main.cpp/main_xpom.cpp) and mu_R (renormalization scale used inside
+# alpha_s, see prefactor() below) each range over these three factors times
+# mu0 = mT = sqrt(pD0^2+mc^2), following e.g. Cacciari, Innocenti & Stasto,
+# arXiv:2506.09893. mu_F=1.0 tags to the plain (no-subdir) run; the two
+# non-central mu_F values need their own pre-computed run_many_nucleus.sh
+# output (run_lhapdf_scale_variation.sh), since Q feeds into the LHAPDF FF
+# grid read by the C++ side. mu_R has no such directory: alpha_s(mu_R) is
+# applied here in Python as a plain multiplicative factor in prefactor(), on
+# top of whichever mu_F directory's raw dsigma is being read -- so varying
+# mu_R alone never needs a new VEGAS run.
+SCALE_FACTOR_TAGS = {0.5: "0.5", 1.0: None, 2.0: "2.0"}
+SCALE_FACTORS = list(SCALE_FACTOR_TAGS)                  # [0.5, 1.0, 2.0]
+EXPECTED_SCALE_FACTORS = [tag for tag in SCALE_FACTOR_TAGS.values() if tag]  # ["0.5", "2.0"]
+# must match run_lhapdf_scale_variation.sh's SCALE_FACTORS
+
+
+def _mu_f_dir(factor):
+    """Raw-output directory for a given mu_F factor (see SCALE_FACTOR_TAGS)."""
+    tag = SCALE_FACTOR_TAGS[factor]
+    return ".." if tag is None else f"../files/lhapdf_scale/factor_{tag}"
 
 # which linestyle to use for each (process, fragmentation) combination
 LINESTYLES = {
@@ -117,21 +138,27 @@ def integrate_over_b(pairs):
     return simpson(weighted, x=b_values)
 
 
-def prefactor(process, pt):
+def prefactor(process, pt, mu_r_factor=1.0):
     """Physical prefactor, matching plot_pt_spectrum.py's convention.
     No sigma0 here: that's the GBW proton-dipole normalization, and for a
     nucleus target the "area" is already accounted for by integrate_over_b's
     Glauber b-integral -- applying sigma0 on top of that would double-count it.
+
+    mu_r_factor rescales the renormalization scale mu_R = mu_r_factor*mT fed
+    into alpha_s -- independent of the mu_F used for the fragmentation
+    function (that one lives in which raw-output directory load_results()
+    reads from, see _mu_f_dir()). Only the diffractive process depends on
+    alpha_s, so mu_r_factor is a no-op for exclusive.
     """
     if process == "exclusive":
         return alphae * Nc * e_c**2 / (2 * math.pi**2 * mc**2)
     elif process == "diffractive":
-        alphas = alphas_run(math.sqrt(pt**2 + mc**2))
+        alphas = alphas_run(mu_r_factor * math.sqrt(pt**2 + mc**2))
         return alphas * alphae * e_c**2 * (Nc**2 - 1) / (8 * math.pi**4)
     raise ValueError(f"unknown process {process}")
 
 
-def load_results(process, frag, base_dir=".."):
+def load_results(process, frag, base_dir="..", mu_r_factor=1.0):
     """Read all files for one (process, frag) combination and return {y: [(pt, cross_section), ...]}."""
     pattern = f"{base_dir}/files/D0_{process}_{frag}_{CHANNEL}_{NUCLEUS}_y*.dat"
     results = {}
@@ -164,7 +191,7 @@ def load_results(process, frag, base_dir=".."):
             b_integral = integrate_over_b(pairs)
             # 2*pi*b_integral is the Glauber transverse-plane (b) integral.
             # 2*pi*pt is the Jacobian from d^2pD0 to dpD0.
-            cross_section = (2*math.pi) * b_integral * prefactor(process, pt) \
+            cross_section = (2*math.pi) * b_integral * prefactor(process, pt, mu_r_factor) \
                             * (2*math.pi) * pt * GEVSQR_TO_MB
             points.append((pt, cross_section))
         results[y] = points
@@ -230,12 +257,12 @@ def load_bk_band(process, frag="LHAPDF"):
     return _band_from_members(process, frag, "../files/bk_posterior/member_*")
 
 
-def _summed_results(base_dir, frag="LHAPDF"):
+def _summed_results(base_dir, frag="LHAPDF", mu_r_factor=1.0):
     """diffractive+exclusive summed per (y, pt) for one directory. Returns
     {y: [(pt, total), ...]}, or {} if neither process has data there.
     """
-    diff = load_results("diffractive", frag, base_dir=base_dir)
-    excl = load_results("exclusive", frag, base_dir=base_dir)
+    diff = load_results("diffractive", frag, base_dir=base_dir, mu_r_factor=mu_r_factor)
+    excl = load_results("exclusive", frag, base_dir=base_dir, mu_r_factor=mu_r_factor)
     if not diff and not excl:
         return {}
     totals = {}
@@ -300,76 +327,98 @@ def load_bk_sum_band(frag="LHAPDF"):
     return _summed_band_from_members("../files/bk_posterior/member_*", frag)
 
 
-def load_scale_band(process, frag="LHAPDF"):
-    """LHAPDF fragmentation-scale variation envelope (see
-    run_lhapdf_scale_variation.sh): central member only, Q = SCALE_FACTOR *
-    mt0 varied at the conventional 0.5x/2x around the central scale
-    (SCALE_FACTOR=1.0, i.e. the plain ../files/D0_..._LHAPDF_... run). This
-    is a scale-convention envelope (min/max), not a statistical replica
-    sample, so it's built differently from load_lhapdf_band -- min and
-    max across the 3 runs, not mean +/- std.
-
-    Returns {y: (pt_values, lower, upper)}, or {} until BOTH scale factors'
-    output exists in ../files/lhapdf_scale/ (see EXPECTED_SCALE_FACTORS --
-    checking each by name rather than just globbing "factor_*" and using
-    whatever's there matters here: run_lhapdf_scale_variation.sh runs the
-    two factors sequentially, so factor_2.0's directory doesn't exist on
-    disk AT ALL until factor_0.5 has fully finished -- glob-and-use-whatever
-    -exists would silently treat a still-running factor_0.5 alone as if it
-    were the complete envelope).
+def _scale_combos():
+    """The restricted 7-point (mu_F, mu_R) grid: both range over
+    SCALE_FACTORS, dropping the two anti-correlated corners mu_F/mu_R in
+    {4, 1/4} -- the conventional 7-point scheme (e.g. arXiv:2506.09893),
+    since those two extreme combinations aren't believed to give a
+    meaningful estimate of missing higher orders.
     """
-    variation_dirs = [f"../files/lhapdf_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
-    if not all(os.path.isdir(d) for d in variation_dirs):
-        return {}
+    return [(mu_f, mu_r) for mu_f in SCALE_FACTORS for mu_r in SCALE_FACTORS
+            if 0.5 <= mu_f / mu_r <= 2.0]
 
-    central = load_results(process, frag)
-    variations = [load_results(process, frag, base_dir=d) for d in variation_dirs]
-    if not central or not all(variations):
-        return {}
-    all_results = [central] + variations
 
+def _envelope_from_results(results_by_combo):
+    """Shared min/max-over-combos envelope builder for load_scale_band/
+    load_scale_sum_band. results_by_combo: {(mu_f, mu_r): {y: [(pt, val), ...]}}.
+    Returns {y: (pt_values, lower, upper)}.
+    """
+    central = results_by_combo[(1.0, 1.0)]
     envelope = {}
     for y in central:
         pt_values = sorted(pt for pt, _ in central[y])
         lower = []
         upper = []
         for pt in pt_values:
-            values = [dict(results[y])[pt] for results in all_results if y in results and pt in dict(results[y])]
+            values = [dict(results[y])[pt] for results in results_by_combo.values()
+                      if y in results and pt in dict(results[y])]
             lower.append(min(values))
             upper.append(max(values))
         envelope[y] = (pt_values, lower, upper)
-
     return envelope
+
+
+def load_scale_band(process, frag="LHAPDF"):
+    """Combined factorization/renormalization-scale-variation envelope: the
+    restricted 7-point (mu_F, mu_R) grid (see _scale_combos), mu_F, mu_R in
+    {0.5, 1, 2} * mu0 (mu0 = mT = sqrt(pD0^2+mc^2)), following e.g.
+    Cacciari, Innocenti & Stasto, arXiv:2506.09893.
+
+    mu_F only affects the LHAPDF fragmentation function's evolution scale Q,
+    which is baked into the raw dsigma files at generation time (see
+    SCALE_FACTOR in src/main.cpp/main_xpom.cpp, run via
+    run_lhapdf_scale_variation.sh) -- so its two non-central values need
+    their own pre-computed run_many_nucleus.sh output directories
+    (_mu_f_dir). mu_R only enters through alpha_s(mu_R) in prefactor(),
+    applied here in Python on top of whichever mu_F directory's raw dsigma
+    is being read -- so varying mu_R needs no extra VEGAS run, just a
+    different mu_r_factor passed to load_results() on the SAME 3 files.
+
+    This is a scale-convention envelope (min/max over the 7 points), not a
+    statistical replica sample, so it's built differently from
+    load_lhapdf_band -- min and max, not mean +/- std.
+
+    Returns {y: (pt_values, lower, upper)}, or {} until BOTH non-central
+    mu_F directories exist in ../files/lhapdf_scale/ (see
+    EXPECTED_SCALE_FACTORS -- checking each by name rather than just
+    globbing "factor_*" and using whatever's there matters here:
+    run_lhapdf_scale_variation.sh runs the two factors sequentially, so
+    factor_2.0's directory doesn't exist on disk AT ALL until factor_0.5 has
+    fully finished -- glob-and-use-whatever-exists would silently treat a
+    still-running factor_0.5 alone as if it were the complete envelope).
+    """
+    variation_dirs = [f"../files/lhapdf_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
+    if not all(os.path.isdir(d) for d in variation_dirs):
+        return {}
+
+    results_by_combo = {}
+    for mu_f, mu_r in _scale_combos():
+        results = load_results(process, frag, base_dir=_mu_f_dir(mu_f), mu_r_factor=mu_r)
+        if not results:
+            return {}
+        results_by_combo[(mu_f, mu_r)] = results
+
+    return _envelope_from_results(results_by_combo)
 
 
 def load_scale_sum_band(frag="LHAPDF"):
     """Scale-variation envelope (see load_scale_band) for the diffractive+
-    exclusive SUM. {} until BOTH scale factors' output exists (see
-    load_scale_band's docstring for why this checks by name rather than
-    globbing).
+    exclusive SUM. {} until BOTH non-central mu_F directories' output exists
+    (see load_scale_band's docstring for why this checks by name rather
+    than globbing).
     """
     variation_dirs = [f"../files/lhapdf_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
     if not all(os.path.isdir(d) for d in variation_dirs):
         return {}
 
-    central = _summed_results("..", frag)
-    variations = [_summed_results(d, frag) for d in variation_dirs]
-    if not central or not all(variations):
-        return {}
-    all_totals = [central] + variations
+    totals_by_combo = {}
+    for mu_f, mu_r in _scale_combos():
+        totals = _summed_results(_mu_f_dir(mu_f), frag, mu_r_factor=mu_r)
+        if not totals:
+            return {}
+        totals_by_combo[(mu_f, mu_r)] = totals
 
-    envelope = {}
-    for y in central:
-        pt_values = sorted(pt for pt, _ in central[y])
-        lower = []
-        upper = []
-        for pt in pt_values:
-            values = [dict(totals[y])[pt] for totals in all_totals if y in totals and pt in dict(totals[y])]
-            lower.append(min(values))
-            upper.append(max(values))
-        envelope[y] = (pt_values, lower, upper)
-
-    return envelope
+    return _envelope_from_results(totals_by_combo)
 
 
 def _combine_in_quadrature(central, rep_band, bk_band, scale_band):

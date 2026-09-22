@@ -45,7 +45,12 @@ double BCFY_DV(double z, double r) {
 double Dc_to_D0(double z, double r)
 {
     const double mD = 1.8648;   // D0 mass in GeV
-    const double mDstar = 2.0067; // D*0 mass in GeV
+    // Isospin-averaged D* mass (see notes/fragmentation_and_nucleus_targets.pdf,
+    // "Where the BCFY D0 coefficients come from"): stands in for both D*0 and
+    // D*+, whose feed-down BRs to D0 (1 and 0.677) are already summed into the
+    // 0.39 coefficient below, since Cacciari & Nason (hep-ph/0306212) treat the
+    // two as kinematically degenerate.
+    const double mDstar = 2.0067; // D* mass in GeV (D*0 value, used for both D*0/D*+)
     const double mass_ratio = mDstar / mD;
 
     double DP_part = 0.168 * BCFY_DP(z, r);
