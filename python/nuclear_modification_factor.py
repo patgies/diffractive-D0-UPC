@@ -27,7 +27,7 @@ def proton_prefactor(process, pt):
     C++ prefactor exactly -- sigma0 included directly (no GEVSQR_TO_MB).
     """
     if process == "exclusive":
-        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2 * mc**2)
+        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
     elif process == "diffractive":
         alphas = alphas_run(math.sqrt(pt**2 + mc**2))
         return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
@@ -43,7 +43,7 @@ def proton_prefactor(process, pt):
 # correctly normalized, from cross_section.py's _summed_results).
 # Denominator: a proton-target baseline computed with the SAME nuclear
 # photon flux as Pb+Pb (Z=82, bmin=2R_Pb -- both hardcoded in src/main.cpp
-# regardless of dipole file), from ../run_proton_baseline.sh's output. No
+# regardless of dipole file), from ../local_workflows/run_proton_baseline.sh's output. No
 # Glauber b-average applies here (a single proton has no nucleon-position
 # ensemble to sample), so unlike the nuclear "2*pi*b_integral" step, the
 # raw D0 output is used directly -- just the standard prefactor and
@@ -55,7 +55,7 @@ def proton_prefactor(process, pt):
 A_PB = 208   # Pb mass number
 
 
-def load_proton_baseline(process, frag="LHAPDF"):
+def load_proton_baseline(process, frag="HymnD"):
     """Read ../files/D0_proton_baseline_<process>_<frag>_<channel>_y*.dat
     (no b column -- single proton, no Glauber average) and return
     {y: [(pt, dsigma_pA_dy_dpt), ...]} for that one process.
@@ -77,7 +77,7 @@ def load_proton_baseline(process, frag="LHAPDF"):
     return results
 
 
-def load_proton_baseline_sum(frag="LHAPDF"):
+def load_proton_baseline_sum(frag="HymnD"):
     """Same as load_proton_baseline, but summing exclusive+diffractive."""
     excl = load_proton_baseline("exclusive", frag)
     diff = load_proton_baseline("diffractive", frag)
@@ -94,14 +94,14 @@ def make_plot(process):
     """process is "exclusive"/"diffractive" (-> load_results/load_proton_baseline)
     or "sum" (-> _summed_results/load_proton_baseline_sum)."""
     if process == "sum":
-        aa_results = _summed_results("..", "LHAPDF")
-        pa_results = load_proton_baseline_sum("LHAPDF")
-        bk_band = load_bk_sum_band("LHAPDF")
+        aa_results = _summed_results("..", "HymnD")
+        pa_results = load_proton_baseline_sum("HymnD")
+        bk_band = load_bk_sum_band("HymnD")
         label = "exclusive + diffractive"
     else:
-        aa_results = load_results(process, "LHAPDF")
-        pa_results = load_proton_baseline(process, "LHAPDF")
-        bk_band = load_bk_band(process, "LHAPDF")
+        aa_results = load_results(process, "HymnD")
+        pa_results = load_proton_baseline(process, "HymnD")
+        bk_band = load_bk_band(process, "HymnD")
         label = process
 
     # BK initial-condition posterior uncertainty (100 Pb-target dipole-
@@ -115,7 +115,7 @@ def make_plot(process):
     y_values = sorted(set(aa_results) & set(pa_results))
     if not y_values:
         sys.exit(f"No overlapping rapidities between Pb+Pb and proton-baseline data for {process} -- "
-                  "check ../files/ and run ../run_proton_baseline.sh.")
+                  "check ../files/ and run ../local_workflows/run_proton_baseline.sh.")
 
     blue_ramp = ["#cde2fb", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
     colors = {}

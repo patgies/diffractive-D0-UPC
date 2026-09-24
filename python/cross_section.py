@@ -33,7 +33,7 @@ plt.rcParams.update({
     "ytick.minor.visible": True,
 })
 
-# This script reads the data files written by ../run_many_nucleus.sh
+# This script reads the data files written by ../local_workflows/run_many_nucleus.sh
 # (produced by the D0 program), integrates them over the target-nucleus
 # impact parameter b using Simpson's rule, and makes one plot with every
 # combination of process (exclusive/diffractive) and fragmentation function
@@ -54,7 +54,7 @@ NUCLEUS = os.environ.get("NUCLEUS", "Pb")
 CHANNEL = os.environ.get("CHANNEL", "An0n").translate(str.maketrans('', '', '() '))
 
 PROCESSES = ["diffractive", "exclusive"]
-FRAG_TYPES = ["LHAPDF"]
+FRAG_TYPES = ["HymnD"]
 MIN_Y_TO_PLOT = -1.0  # keeps the plot from getting too crowded
 MAX_Y_TO_PLOT = 3.0   # keeps the plot from getting too crowded
 
@@ -64,7 +64,7 @@ MAX_Y_TO_PLOT = 3.0   # keeps the plot from getting too crowded
 # mu0 = mT = sqrt(pD0^2+mc^2), following e.g. Cacciari, Innocenti & Stasto,
 # arXiv:2506.09893. mu_F=1.0 tags to the plain (no-subdir) run; the two
 # non-central mu_F values need their own pre-computed run_many_nucleus.sh
-# output (run_lhapdf_scale_variation.sh), since Q feeds into the LHAPDF FF
+# output (run_HymnD_scale_variation.sh), since Q feeds into the HymnD FF
 # grid read by the C++ side. mu_R has no such directory: alpha_s(mu_R) is
 # applied here in Python as a plain multiplicative factor in prefactor(), on
 # top of whichever mu_F directory's raw dsigma is being read -- so varying
@@ -72,22 +72,22 @@ MAX_Y_TO_PLOT = 3.0   # keeps the plot from getting too crowded
 SCALE_FACTOR_TAGS = {0.5: "0.5", 1.0: None, 2.0: "2.0"}
 SCALE_FACTORS = list(SCALE_FACTOR_TAGS)                  # [0.5, 1.0, 2.0]
 EXPECTED_SCALE_FACTORS = [tag for tag in SCALE_FACTOR_TAGS.values() if tag]  # ["0.5", "2.0"]
-# must match run_lhapdf_scale_variation.sh's SCALE_FACTORS
+# must match run_HymnD_scale_variation.sh's SCALE_FACTORS
 
 
 def _mu_f_dir(factor):
     """Raw-output directory for a given mu_F factor (see SCALE_FACTOR_TAGS)."""
     tag = SCALE_FACTOR_TAGS[factor]
-    return ".." if tag is None else f"../files/lhapdf_scale/factor_{tag}"
+    return ".." if tag is None else f"../files/HymnD_scale/factor_{tag}"
 
 # which linestyle to use for each (process, fragmentation) combination
 LINESTYLES = {
     ("diffractive", "BCFY"):          "-",
     ("diffractive", "KniehlKramer"):  "--",
-    ("diffractive", "LHAPDF"):        "-",
+    ("diffractive", "HymnD"):        "-",
     ("exclusive",   "BCFY"):          ":",
     ("exclusive",   "KniehlKramer"):  "-.",
-    ("exclusive",   "LHAPDF"):        ":",
+    ("exclusive",   "HymnD"):        ":",
 }
 
 
@@ -151,7 +151,7 @@ def prefactor(process, pt, mu_r_factor=1.0):
     alpha_s, so mu_r_factor is a no-op for exclusive.
     """
     if process == "exclusive":
-        return alphae * Nc * e_c**2 / (2 * math.pi**2 * mc**2)
+        return alphae * Nc * e_c**2 / (2 * math.pi**2)
     elif process == "diffractive":
         alphas = alphas_run(mu_r_factor * math.sqrt(pt**2 + mc**2))
         return alphas * alphae * e_c**2 * (Nc**2 - 1) / (8 * math.pi**4)
@@ -199,10 +199,10 @@ def load_results(process, frag, base_dir="..", mu_r_factor=1.0):
 
 
 def _band_from_members(process, frag, member_dir_pattern):
-    """Shared aggregation for load_lhapdf_band/load_bk_band: combine one
+    """Shared aggregation for load_hymnd_replica_band/load_bk_band: combine one
     run_many_nucleus.sh output set per member directory into a mean +/-
     standard-deviation band per rapidity (both uncertainty sources here are
-    sampled sets -- LHAPDF replicas, BK posterior samples -- not Hessian
+    sampled sets -- HymnD replicas, BK posterior samples -- not Hessian
     eigenvectors, so plain standard deviation across members is the right
     prescription, not a Hessian formula).
 
@@ -233,20 +233,20 @@ def _band_from_members(process, frag, member_dir_pattern):
     return band
 
 
-def load_lhapdf_band(process, frag="LHAPDF"):
-    """LHAPDF-fragmentation-replica band (see run_lhapdf_members_roihu.sbatch):
+def load_hymnd_replica_band(process, frag="HymnD"):
+    """HymnD-fragmentation-replica band (see run_HymnD_members_roihu.sbatch):
     dipole amplitude held fixed at the central data/Pb/mve/ set, fragmentation
     function varied across the 101 replica members. {} until
-    run_lhapdf_members_roihu.sbatch's output has been copied back into
-    ../files/lhapdf/member_*.
+    run_HymnD_members_roihu.sbatch's output has been copied back into
+    ../files/HymnD/member_*.
     """
-    return _band_from_members(process, frag, "../files/lhapdf/member_*")
+    return _band_from_members(process, frag, "../files/HymnD/member_*")
 
 
-def load_bk_band(process, frag="LHAPDF"):
+def load_bk_band(process, frag="HymnD"):
     """BK-initial-condition posterior band (see
     run_bk_posterior_members_roihu.sbatch): fragmentation function held fixed
-    at the central LHAPDF member, dipole amplitude varied across the 100
+    at the central HymnD member, dipole amplitude varied across the 100
     Bayesian BK-IC posterior samples in bk/. {} until
     run_bk_posterior_members_roihu.sbatch's output has been copied back into
     ../files/bk_posterior/member_*.
@@ -257,7 +257,7 @@ def load_bk_band(process, frag="LHAPDF"):
     return _band_from_members(process, frag, "../files/bk_posterior/member_*")
 
 
-def _summed_results(base_dir, frag="LHAPDF", mu_r_factor=1.0):
+def _summed_results(base_dir, frag="HymnD", mu_r_factor=1.0):
     """diffractive+exclusive summed per (y, pt) for one directory. Returns
     {y: [(pt, total), ...]}, or {} if neither process has data there.
     """
@@ -274,7 +274,7 @@ def _summed_results(base_dir, frag="LHAPDF", mu_r_factor=1.0):
     return totals
 
 
-def _summed_band_from_members(member_dir_pattern, frag="LHAPDF"):
+def _summed_band_from_members(member_dir_pattern, frag="HymnD"):
     """Like _band_from_members, but sums diffractive+exclusive PER MEMBER
     (via _summed_results) before aggregating -- statistically correct,
     since both processes in a given member share the same FF replica /
@@ -308,15 +308,15 @@ def _summed_band_from_members(member_dir_pattern, frag="LHAPDF"):
     return band
 
 
-def load_lhapdf_sum_band(frag="LHAPDF"):
-    """LHAPDF-replica band for the diffractive+exclusive SUM (see
-    _summed_band_from_members). {} until run_lhapdf_members_roihu.sbatch's
-    output is in ../files/lhapdf/member_*.
+def load_hymnd_replica_sum_band(frag="HymnD"):
+    """HymnD-replica band for the diffractive+exclusive SUM (see
+    _summed_band_from_members). {} until run_HymnD_members_roihu.sbatch's
+    output is in ../files/HymnD/member_*.
     """
-    return _summed_band_from_members("../files/lhapdf/member_*", frag)
+    return _summed_band_from_members("../files/HymnD/member_*", frag)
 
 
-def load_bk_sum_band(frag="LHAPDF"):
+def load_bk_sum_band(frag="HymnD"):
     """BK-IC posterior band for the diffractive+exclusive SUM (see
     _summed_band_from_members). {} until run_bk_posterior_members_roihu.sbatch's
     output is in ../files/bk_posterior/member_*.
@@ -358,16 +358,16 @@ def _envelope_from_results(results_by_combo):
     return envelope
 
 
-def load_scale_band(process, frag="LHAPDF"):
+def load_scale_band(process, frag="HymnD"):
     """Combined factorization/renormalization-scale-variation envelope: the
     restricted 7-point (mu_F, mu_R) grid (see _scale_combos), mu_F, mu_R in
     {0.5, 1, 2} * mu0 (mu0 = mT = sqrt(pD0^2+mc^2)), following e.g.
     Cacciari, Innocenti & Stasto, arXiv:2506.09893.
 
-    mu_F only affects the LHAPDF fragmentation function's evolution scale Q,
+    mu_F only affects the HymnD fragmentation function's evolution scale Q,
     which is baked into the raw dsigma files at generation time (see
     SCALE_FACTOR in src/main.cpp/main_xpom.cpp, run via
-    run_lhapdf_scale_variation.sh) -- so its two non-central values need
+    run_HymnD_scale_variation.sh) -- so its two non-central values need
     their own pre-computed run_many_nucleus.sh output directories
     (_mu_f_dir). mu_R only enters through alpha_s(mu_R) in prefactor(),
     applied here in Python on top of whichever mu_F directory's raw dsigma
@@ -376,18 +376,18 @@ def load_scale_band(process, frag="LHAPDF"):
 
     This is a scale-convention envelope (min/max over the 7 points), not a
     statistical replica sample, so it's built differently from
-    load_lhapdf_band -- min and max, not mean +/- std.
+    load_hymnd_replica_band -- min and max, not mean +/- std.
 
     Returns {y: (pt_values, lower, upper)}, or {} until BOTH non-central
-    mu_F directories exist in ../files/lhapdf_scale/ (see
+    mu_F directories exist in ../files/HymnD_scale/ (see
     EXPECTED_SCALE_FACTORS -- checking each by name rather than just
     globbing "factor_*" and using whatever's there matters here:
-    run_lhapdf_scale_variation.sh runs the two factors sequentially, so
+    run_HymnD_scale_variation.sh runs the two factors sequentially, so
     factor_2.0's directory doesn't exist on disk AT ALL until factor_0.5 has
     fully finished -- glob-and-use-whatever-exists would silently treat a
     still-running factor_0.5 alone as if it were the complete envelope).
     """
-    variation_dirs = [f"../files/lhapdf_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
+    variation_dirs = [f"../files/HymnD_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
     if not all(os.path.isdir(d) for d in variation_dirs):
         return {}
 
@@ -401,13 +401,13 @@ def load_scale_band(process, frag="LHAPDF"):
     return _envelope_from_results(results_by_combo)
 
 
-def load_scale_sum_band(frag="LHAPDF"):
+def load_scale_sum_band(frag="HymnD"):
     """Scale-variation envelope (see load_scale_band) for the diffractive+
     exclusive SUM. {} until BOTH non-central mu_F directories' output exists
     (see load_scale_band's docstring for why this checks by name rather
     than globbing).
     """
-    variation_dirs = [f"../files/lhapdf_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
+    variation_dirs = [f"../files/HymnD_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
     if not all(os.path.isdir(d) for d in variation_dirs):
         return {}
 
@@ -425,7 +425,7 @@ def _combine_in_quadrature(central, rep_band, bk_band, scale_band):
     """Shared combination for load_hymnd_band/load_hymnd_sum_band: adds
     uncertainty sources in quadrature around the plain central curve.
     Currently only the scale-variation envelope half-width is active
-    (sigma_total = sigma_scale) -- the LHAPDF-replica std and BK-IC
+    (sigma_total = sigma_scale) -- the HymnD-replica std and BK-IC
     uncertainty are both commented out of the sum below, but rep_band/
     bk_band are still threaded through so re-enabling either is a
     one-line change. Requires the (currently) active source present
@@ -461,7 +461,7 @@ def _combine_in_quadrature(central, rep_band, bk_band, scale_band):
     return combined
 
 
-def load_hymnd_band(process, frag="LHAPDF"):
+def load_hymnd_band(process, frag="HymnD"):
     """"HymnD" combined theory-uncertainty band: currently just the
     fragmentation-scale-variation uncertainty (see _combine_in_quadrature
     -- replica and BK-IC are both commented out there). {} until
@@ -469,19 +469,19 @@ def load_hymnd_band(process, frag="LHAPDF"):
     """
     return _combine_in_quadrature(
         load_results(process, frag),
-        load_lhapdf_band(process, frag),
+        load_hymnd_replica_band(process, frag),
         load_bk_band(process, frag),
         load_scale_band(process, frag),
     )
 
 
-def load_hymnd_sum_band(frag="LHAPDF"):
+def load_hymnd_sum_band(frag="HymnD"):
     """"HymnD" combined band (see load_hymnd_band) for the diffractive+
     exclusive SUM.
     """
     return _combine_in_quadrature(
         _summed_results("..", frag),
-        load_lhapdf_sum_band(frag),
+        load_hymnd_replica_sum_band(frag),
         load_bk_sum_band(frag),
         load_scale_sum_band(frag),
     )
@@ -495,16 +495,16 @@ def main():
             if results:
                 all_results[(process, frag)] = results
 
-    # If run_lhapdf_members_roihu.sbatch's / run_lhapdf_scale_variation.sh's
+    # If run_HymnD_members_roihu.sbatch's / run_HymnD_scale_variation.sh's
     # output are both present, plot the combined "HymnD" theory-uncertainty
-    # band (LHAPDF-replica and scale-variation uncertainties added in
+    # band (HymnD-replica and scale-variation uncertainties added in
     # quadrature -- see load_hymnd_band) instead of the single-member
-    # LHAPDF line.
+    # HymnD line.
     hymnd_bands = {process: load_hymnd_band(process) for process in PROCESSES}
 
     if not all_results and not any(hymnd_bands.values()):
         sys.exit(f"No files found for NUCLEUS={NUCLEUS}, CHANNEL={CHANNEL} "
-                  "in ../files/ -- run ../run_many_nucleus.sh first.")
+                  "in ../files/ -- run ../local_workflows/run_many_nucleus.sh first.")
 
     # collect every rapidity value that shows up in any of the results,
     # keeping only integer y in [MIN_Y_TO_PLOT, MAX_Y_TO_PLOT] so the plot
@@ -541,7 +541,7 @@ def main():
     for process, frag in LINESTYLES:
         linestyle = LINESTYLES[(process, frag)]
 
-        hymnd_band = hymnd_bands.get(process) if frag == "LHAPDF" else None
+        hymnd_band = hymnd_bands.get(process) if frag == "HymnD" else None
         if hymnd_band:
             for y in sorted(hymnd_band):
                 if not y_in_range(y):
@@ -603,12 +603,12 @@ def main():
 
     style_handles = []
     for process in ["exclusive", "diffractive"]:
-        for frag in ["LHAPDF", "BCFY", "KniehlKramer"]:
+        for frag in ["HymnD", "BCFY", "KniehlKramer"]:
             if (process, frag) not in LINESTYLES:
                 continue
             linestyle = LINESTYLES[(process, frag)]
-            label = process if frag == "LHAPDF" else f"{process}, {frag}"
-            if frag == "LHAPDF" and hymnd_bands.get(process):
+            label = process if frag == "HymnD" else f"{process}, {frag}"
+            if frag == "HymnD" and hymnd_bands.get(process):
                 style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))
             elif (process, frag) in all_results:
                 style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))

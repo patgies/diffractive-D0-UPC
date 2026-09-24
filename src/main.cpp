@@ -2,7 +2,9 @@
 #include "def.hpp"
 #include "gamma_aa.hpp"
 #include "fragmentation.hpp"
-#include "lhapdf_grid.hpp"
+#include "hymnd_grid.hpp"
+#include "bcfy_grid.hpp"
+#include "kk_grid.hpp"
 #include <string>
 #include <iostream>
 #include <cmath>
@@ -14,7 +16,7 @@ using namespace std;
 
 
 //  Run: ./D0 <dipole_file> <pD0> <y> [frag_type] [channel]
-//   frag_type  BCFY (default) | KniehlKramer | LHAPDF
+//   frag_type  BCFY (default) | KniehlKramer | HymnD
 //   channel    An0n (default) | Xn0n | PL(AnAn)
 
 
@@ -50,7 +52,7 @@ int main(int argc, char* argv[])
     }
 
     gsl_set_error_handler_off();
-    load_data_and_initialize("./data/Gamma_AA.dat");
+    load_data_and_initialize("./inputs/Gamma_AA.dat");
 
     parameters param;
     param.dipole   = &inst;
@@ -98,35 +100,44 @@ int main(int argc, char* argv[])
 
     if (frag_tag == "BCFY")              param.frag_type = FragmentationType::BCFY;
     else if (frag_tag == "KniehlKramer") param.frag_type = FragmentationType::KniehlKramer;
-    else if (frag_tag == "LHAPDF")       param.frag_type = FragmentationType::LHAPDF;
+    else if (frag_tag == "HymnD")       param.frag_type = FragmentationType::HymnD;
     else {
-        cerr << "Error: unknown frag_type '" << frag_tag << "'. Expected BCFY, KniehlKramer or LHAPDF." << endl;
+        cerr << "Error: unknown frag_type '" << frag_tag << "'. Expected BCFY, KniehlKramer or HymnD." << endl;
         return 1;
     }
 
-    string lhapdf_file;
-    if (getenv("LHAPDF_FILE")) lhapdf_file = getenv("LHAPDF_FILE");
-    else                       lhapdf_file = "data/prompt-D0-1-109/prompt-D0-1-109_0000.dat";
-    const int lhapdf_charm_flavor = 4;  // PDG id for the charm quark
+    string hymnD_file;
+    if (getenv("HYMND_FILE")) hymnD_file = getenv("HYMND_FILE");
+    else                       hymnD_file = "inputs/prompt-D0-1-109/prompt-D0-1-109_0000.dat";
+    const int hymnD_charm_flavor = 4;  // PDG id for the charm quark
     // Scale-variation knob: fragmentation scale Q = scale_factor * mt0,
     // mt0 = sqrt(pD0^2 + m^2) the D0 transverse mass (matching
     // inclusive-D0-UPC's convention, not just the fixed charm mass).
     // Defaults to scale_factor=1.0 (today's behavior). Set to 0.5/2.0 for
     // the conventional up/down envelope around that central scale -- a
-    // separate uncertainty source from the LHAPDF replica band, so it only
+    // separate uncertainty source from the HymnD replica band, so it only
     // needs the central member (0000), not all 101 replicas.
     double mt0 = sqrt(pD0*pD0 + param.m2);
     double scale_factor = getenv("SCALE_FACTOR") ? atof(getenv("SCALE_FACTOR")) : 1.0;
     double frag_scale = scale_factor * mt0;
     // Below the charm mass, the fragmentation function is undefined (the
-    // LHAPDF grid's charm production threshold): use the charm mass itself
+    // HymnD grid's charm production threshold): use the charm mass itself
     // as a floor rather than letting a small scale_factor push Q below it.
     if (frag_scale < param.m) frag_scale = param.m;
+    // All three frag_types are DGLAP-evolved z-interpolators at frag_scale
+    // now: BCFY/KniehlKramer from their own eko-evolved grids (see
+    // src/bcfy_grid.cpp / kk_grid.cpp, inputs/bcfy_eko/, inputs/kk_eko/ --
+    // ported from inclusive-D0-UPC's QCDNUM-based bcfy_grid.cpp/kk_grid.cpp),
+    // HymnD from the external prompt-D0 set.
     unique_ptr<Interpolator> d_frag_interp;
-    if (param.frag_type == FragmentationType::LHAPDF) {
-        d_frag_interp = MakeLHAPDFZInterpolator(lhapdf_file, lhapdf_charm_flavor, frag_scale);
-        param.D_frag_interp = d_frag_interp.get();
+    if (param.frag_type == FragmentationType::HymnD) {
+        d_frag_interp = MakeHymnDZInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);
+    } else if (param.frag_type == FragmentationType::BCFY) {
+        d_frag_interp = MakeBCFYInterpolator(frag_scale);
+    } else {
+        d_frag_interp = MakeKniehlKramerInterpolator(frag_scale);
     }
+    param.D_frag_interp = d_frag_interp.get();
 
     param.pD0 = pD0;
     param.y   = y;

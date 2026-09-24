@@ -30,15 +30,14 @@ double Jn(int nu, double x)
 // Picks the right formula depending on which fragmentation model we're using.
 static double fragmentation(double zh, parameters* par)
 {
-    double D_frag;
-    if (par->frag_type == FragmentationType::KniehlKramer) {
-        D_frag = D_kniehl_kramer(zh, par->N_kk, par->eps_kk);
-    } else if (par->frag_type == FragmentationType::LHAPDF) {
-        D_frag = par->D_frag_interp->Evaluate(zh);
-    } else {
-        // BCFY is the default
-        D_frag = Dc_to_D0(zh, par->r);
-    }
+    // All three frag_types (BCFY, KniehlKramer, HymnD) are now DGLAP-evolved
+    // z-interpolators built once per point at frag_scale=Q (see main.cpp) --
+    // BCFY/KniehlKramer from their own eko-evolved grids (src/bcfy_grid.cpp,
+    // src/kk_grid.cpp), HymnD from the external prompt-D0 set. The raw,
+    // non-evolved Dc_to_D0()/D_kniehl_kramer() (fragmentation.cpp) are still
+    // used as the mu=mc seed for that evolution, just not called directly
+    // here anymore.
+    double D_frag = par->D_frag_interp->Evaluate(zh);
     return D_frag / (zh * zh);
 }
 
@@ -126,6 +125,67 @@ double integrand_exclusive_factorized(double* vec, size_t /*dim*/, void* p)
     double g = factor * I1*I1 + I0*I0;
 
     double kernel = z1 * m*m * jac_qp * flux * g;
+
+    return kernel * fragmentation(zh, par);
+}
+
+// Exclusive integrand at the D0 level, at one FIXED x_P (par->fixed_xpo)
+// instead of integrating over q+ (u_qp dropped). Unlike the diffractive
+// channel's x_po, x_P is not an independent variable here -- it's a function
+// of q+ (and y, mt) alone, so "fixing x_P" means picking out the single q+
+// that gives it (a delta function, not holding one of several independent
+// variables fixed), and multiplying by the resulting Jacobian.
+//
+// Solve for z_* = p+/q+_* and q+_* at fixed x_P, y (mt depends on zh, so
+// this is solved fresh per zh sample):
+//   x_P = m_t/(sqrt(s_NN)) * e^-y / (1-z_*)     [see notes/ for derivation;
+//                                                 corrects a lost reciprocal
+//                                                 relative to the pasted
+//                                                 source formula]
+//   q+_* = p+ / z_*
+// Then (see e.g. Eq. 25 of the reference this was ported from):
+//   dsigma/(dy d2p dlnx_P) = dsigma/(dy d2p dq+)|_{q+=q+_*} * (q+_*)^2(1-z_*)/p+
+// To keep the SAME raw-output convention as integrand_diffractive_xpom
+// (plain x_P density, dsigma/dx_P -- see xpom_spectrum.py's "xpo *
+// dsigma_dxpo" ln-conversion step, applied uniformly to both channels),
+// this returns dsigma/dx_P, i.e. that Jacobian divided by one more power
+// of x_P.
+double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
+{
+    parameters* par = (parameters*)p;
+
+    double b  = vec[0];
+    double zh = vec[1];
+
+    double xP = par->fixed_xpo;
+    if (xP <= 0.0 || xP > 0.1) return 0.0;
+
+    double pc = par->pD0 / zh;
+    double m  = par->m;
+    double p2 = pc * pc;
+    double mt = sqrt(p2 + par->m2);
+    double pp = (mt / M_SQRT2) * exp(par->y);   // p+
+
+    double z2 = mt * exp(-par->y) / (par->ss * xP);   // 1 - z_*
+    double z1 = 1.0 - z2;
+    if (z1 <= 0.0 || z2 <= 0.0) return 0.0;   // this (pD0, y, zh) can't reach this x_P
+
+    double qp = pp / z1;   // q+_*, Eq. 19
+    if (qp > par->qpmax) return 0.0;
+
+    double flux = photon_flux(b, qp, p);
+
+    double xP_dip = min(xP, 0.01);
+    double I0, I1;
+    exclusive_radial_integrals(pc, m, xP_dip, par->dipole, I0, I1);
+
+    double factor = z1*z1 + z2*z2;
+    double g = factor * I1*I1 + I0*I0;
+
+    // (q+_*)^2 (1-z_*) / p+, divided by x_P (see docstring above)
+    double jac_xpo = qp*qp * z2 / (pp * xP);
+
+    double kernel = z1 * m*m * jac_xpo * flux * g;
 
     return kernel * fragmentation(zh, par);
 }

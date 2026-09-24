@@ -10,7 +10,7 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import LogLocator
 
 # Plots the fixed-W (no photon flux), q+=3p+ exclusive & diffractive spectra
-# vs k_perp,c written by ../run_fixedW.sh (produced by the D0_fixedW
+# vs k_perp,c written by ../local_workflows/run_fixedW.sh (produced by the D0_fixedW
 # program), one curve per rapidity.
 #
 # Normalization: diffractive already carries the full physical prefactor
@@ -45,7 +45,7 @@ sigma0 = 16.36   # dipole normalization, same convention as python/*.py
 
 # Missing prefactor for the exclusive column (diffractive already has its
 # full prefactor baked in on the C++ side, see int_diffractive.cpp).
-PREFACTOR_EXCL = alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2 * mc**2)
+PREFACTOR_EXCL = alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
 
 
 def read_y(filename):
@@ -72,7 +72,7 @@ def main():
     pattern = "../files/D0_fixedW_y*.dat"
     files = sorted(glob.glob(pattern), key=read_y)
     if not files:
-        sys.exit(f"No files found matching {pattern} -- run ../run_fixedW.sh first.")
+        sys.exit(f"No files found matching {pattern} -- run ../local_workflows/run_fixedW.sh first.")
 
     y_values = [read_y(f) for f in files]
 

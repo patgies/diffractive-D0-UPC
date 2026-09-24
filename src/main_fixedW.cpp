@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     gsl_set_error_handler_off();
     gsl_rng_env_setup();
 
-    load_data_and_initialize("./data/Gamma_AA.dat");   // unused (no flux here)
+    load_data_and_initialize("./inputs/Gamma_AA.dat");   // unused (no flux here)
 
 
     parameters param;

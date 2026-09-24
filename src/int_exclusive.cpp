@@ -74,6 +74,47 @@ double exclusiveCrossSection(void* p)
 }
 
 
+// Same as exclusiveCrossSection above, but at one fixed x_P (par->fixed_xpo)
+// instead of integrating over the photon energy q+ -- see
+// integrand_exclusive_xpom for why x_P being fixed eliminates q+ entirely
+// (unlike diffractiveCrossSection_xpom, which still integrates u_qp/q+
+// separately, since x_po there IS an independent variable). r1, r2 are
+// solved analytically (exclusive_radial_integrals), same trick as the
+// factorized high-pt integrand, so only {b, zh} are left for VEGAS.
+double exclusiveCrossSection_xpom(void* p)
+{
+    parameters* par = (parameters*)p;
+    size_t calls = par->calls_excl_factorized;
+
+    const gsl_rng_type* T = gsl_rng_default;
+    gsl_rng* r = gsl_rng_alloc(T);
+
+    gsl_monte_function F;
+    F.f      = &integrand_exclusive_xpom;
+    F.dim    = 2;
+    F.params = par;
+
+    double low[] = {par->bmin, par->zmin};
+    double up[]  = {par->bmax, par->zmax};
+
+    double res, err;
+    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
+
+    gsl_monte_vegas_integrate(&F, low, up, F.dim, calls/10, r, s, &res, &err);
+
+    int iter = 0;
+    do {
+        gsl_monte_vegas_integrate(&F, low, up, F.dim, calls, r, s, &res, &err);
+        iter++;
+    } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.25 && iter < 3);
+
+    gsl_monte_vegas_free(s);
+    gsl_rng_free(r);
+
+    return res;
+}
+
+
 // Small helper struct + function used only by exclusiveCrossSection_fixedW
 // below, to do the two simple 1D integrals over dipole size.
 struct RadialParams {

@@ -23,12 +23,12 @@ def main():
 
     missing = [y for y in Y_TO_PLOT if y not in results_diff and y not in results_excl]
     if missing:
-        sys.exit(f"No data found for rapidities {missing} -- run ../run_many_nucleus.sh first.")
+        sys.exit(f"No data found for rapidities {missing} -- run ../local_workflows/run_many_nucleus.sh first.")
 
-    # Combined "HymnD" theory-uncertainty band for the sum (LHAPDF-replica
+    # Combined "HymnD" theory-uncertainty band for the sum (HymnD-replica
     # and scale-variation uncertainties added in quadrature -- see
-    # load_hymnd_sum_band). {} until both run_lhapdf_members_roihu.sbatch /
-    # run_lhapdf_scale_variation.sh have been run and pulled back.
+    # load_hymnd_sum_band). {} until both run_HymnD_members_roihu.sbatch /
+    # run_HymnD_scale_variation.sh have been run and pulled back.
     hymnd_band = load_hymnd_sum_band(frag)
 
     # Same ColorBrewer "Blues" scale as cross_section.py.

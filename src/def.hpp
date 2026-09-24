@@ -7,7 +7,7 @@
 
 using namespace std;
 
-enum class FragmentationType { BCFY, KniehlKramer, LHAPDF };
+enum class FragmentationType { BCFY, KniehlKramer, HymnD };
 
 struct parameters
 {
@@ -34,7 +34,7 @@ struct parameters
     string channel;
     double bmin, bmax, qpmax;
 
-    // --- Fragmentation (c -> D0 meson), see fragmentation.hpp/lhapdf_grid.hpp ---
+    // --- Fragmentation (c -> D0 meson), see fragmentation.hpp/hymnd_grid.hpp ---
     // pD0 is the transverse momentum of the D0 meson we actually observe.
     // The charm quark itself carries a bigger momentum pc = pD0/zh, and we
     // integrate over zh (in [zmin, zmax]) to account for that.
@@ -43,7 +43,7 @@ struct parameters
     double N_kk, eps_kk;   // Kniehl & Kramer parameters
     FragmentationType frag_type = FragmentationType::BCFY;
     double zmin, zmax;
-    // Pointer to the LHAPDF interpolator (only used when frag_type is LHAPDF).
+    // Pointer to the HymnD interpolator (only used when frag_type is HymnD).
     // It's just a plain pointer, not a smart pointer, because this whole
     // struct gets copied around a lot and we don't want to own the memory here.
     Interpolator* D_frag_interp = nullptr;
@@ -88,6 +88,14 @@ struct parameters
 double integrand_exclusive_mc(double* vec, size_t dim, void* p);
 double integrand_exclusive_factorized(double* vec, size_t dim, void* p);
 double exclusiveCrossSection( void* p);
+
+// Same as exclusiveCrossSection, but at one fixed x_P (par->fixed_xpo)
+// instead of integrating over the photon energy q+ -- x_P isn't an
+// independent variable for the exclusive channel (unlike the diffractive
+// channel's x_po), so fixing it picks out one specific q+ via a delta
+// function (see integrand_exclusive_xpom), leaving {b, zh} for VEGAS.
+double integrand_exclusive_xpom(double* vec, size_t dim, void* p);
+double exclusiveCrossSection_xpom(void* p);
 
 // Diffractive integrand at the D0 level. Also sums over x_po (in [1e-6, 0.1])
 // and the gluon momentum k, on top of the fragmentation variable zh.

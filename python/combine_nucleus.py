@@ -11,18 +11,17 @@ sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
 # Integrates the per-b, per-(pD0,y) grid files written by
-# ../run_many_nucleus.sh (src/main.cpp / D0) over the target-nucleus
+# ../local_workflows/run_many_nucleus.sh (src/main.cpp / D0) over the target-nucleus
 # impact parameter b (Simpson's rule, weighted by b)
 #   b column = target-nucleus Glauber sample (data/<NUCLEUS>/mve/glauber_mve_<b>)
-#   exclusive:   p_e = alpha_em * Nc * e_c^2 * sigma0 / (2*pi^2)
-#   diffractive: p_d = alpha_s(mT) * alpha_em * e_c^2 * (Nc^2-1) * sigma0 / (8*pi^4)
-# and  2*pi*pD0 Jacobian
+#   exclusive:   p_e = alpha_em * Nc * e_c^2 / (2*pi^2)
+#   diffractive: p_d = alpha_s(mT) * alpha_em * e_c^2 * (Nc^2-1) / (8*pi^4)
+# (no sigma0 -- see prefactor()'s docstring) and 2*pi*pD0 Jacobian
 
 alphae = 1/137
 mc     = 1.5          # charm mass in GeV
 e_c    = 2/3
 Nc     = 3
-sigma0 = 16.36         # mb
 
 # Unit conversion GeV^-2 -> mb 
 FMGEV = 5.068
@@ -80,12 +79,16 @@ def integrate_over_b(pairs):
 
 
 def prefactor(process, pt):
-    """Physical prefactor, matching plot_pt_spectrum.py's convention."""
+    """Physical prefactor, matching cross_section.py's convention.
+    No sigma0 here: that's the GBW proton-dipole normalization, and for a
+    nucleus target the "area" is already accounted for by integrate_over_b's
+    Glauber b-integral -- applying sigma0 on top of that would double-count it.
+    """
     if process == "exclusive":
-        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2 * mc**2)
+        return alphae * Nc * e_c**2 / (2 * math.pi**2)
     elif process == "diffractive":
         alphas = alphas_run(math.sqrt(pt**2 + mc**2))
-        return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
+        return alphas * alphae * e_c**2 * (Nc**2 - 1) / (8 * math.pi**4)
     raise ValueError(f"unknown process {process}")
 
 
@@ -127,7 +130,7 @@ def main():
     results_diff = load_results("diffractive")
     if not results_excl and not results_diff:
         sys.exit(f"No files found for NUCLEUS={NUCLEUS}, FRAG_TYPE={FRAG}, CHANNEL={CHANNEL} "
-                  "in ../files/ -- run ../run_many_nucleus.sh first.")
+                  "in ../files/ -- run ../local_workflows/run_many_nucleus.sh first.")
 
     write_combined("exclusive", results_excl)
     write_combined("diffractive", results_diff)

@@ -33,16 +33,20 @@ plt.rcParams.update({
     "ytick.minor.visible": True,
 })
 
-# This script reads the data files written by ../run_many_xpom.sh (produced
+# This script reads the data files written by ../local_workflows/run_many_xpom.sh (produced
 # by the D0_xpom program), integrates them over the target-nucleus impact
 # parameter b using Simpson's rule, and plots the diffractive cross section
-# as a function of ln(x_po), for each rapidity and pD0 value.
+# (or, with SUM=1, exclusive+diffractive summed in the same x_P differential
+# -- see integrand_exclusive_xpom in src/integrand.cpp for why that needed
+# its own Jacobian, unlike diffractive's already-independent x_po) as a
+# function of ln(x_po), for each rapidity and pD0 value.
+
+SUM = os.environ.get("SUM", "0").lower() not in ("0", "", "false")
 
 alphae = 1/137
 mc     = 1.5          # charm mass in GeV
 e_c    = 2/3
 Nc     = 3
-sigma0 = 16.36         # mb
 
 # conversion factor from GeV^-2 to mb
 FMGEV = 5.068
@@ -109,14 +113,26 @@ def integrate_over_b(pairs):
 
 
 def diffractive_prefactor(pt):
-    """Physical prefactor, matching plot_pt_spectrum.py / combine_nucleus.py's convention."""
+    """Physical prefactor, matching cross_section.py's convention. No sigma0:
+    that's the GBW proton-dipole normalization, and for a nucleus target the
+    "area" is already accounted for by integrate_over_b's Glauber b-integral
+    -- applying sigma0 on top of that would double-count it."""
     alphas = alphas_run(math.sqrt(pt**2 + mc**2))
-    return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
+    return alphas * alphae * e_c**2 * (Nc**2 - 1) / (8 * math.pi**4)
 
 
-def load_results():
-    """Read all files and return {(y, pt): [(x_po, dsigma_dy_dpt_dlnxpo), ...]}."""
-    pattern = f"../files/D0_diffractive_xpom_{FRAG}_{CHANNEL}_{NUCLEUS}_y*_pt*.dat"
+def exclusive_prefactor():
+    """Physical prefactor for exclusive, matching diffractive_prefactor above
+    -- no pt/alpha_s dependence for exclusive, and no sigma0 for the same
+    reason."""
+    return alphae * Nc * e_c**2 / (2 * math.pi**2)
+
+
+def load_results(process="diffractive"):
+    """Read all files for one process ("exclusive"/"diffractive") and return
+    {(y, pt): [(x_po, dsigma_dy_dpt_dlnxpo), ...]}."""
+    prefactor = diffractive_prefactor if process == "diffractive" else (lambda pt: exclusive_prefactor())
+    pattern = f"../files/D0_{process}_xpom_{FRAG}_{CHANNEL}_{NUCLEUS}_y*_pt*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
         y, pt = read_header(filename)
@@ -128,7 +144,7 @@ def load_results():
             b_integral = integrate_over_b(pairs)
             # 2*pi*b_integral is the Glauber transverse-plane (b) integral.
             # 2*pi*pt is the Jacobian from d^2pD0 to dpD0.
-            dsigma_dxpo = (2*math.pi) * b_integral * diffractive_prefactor(pt) \
+            dsigma_dxpo = (2*math.pi) * b_integral * prefactor(pt) \
                           * (2*math.pi) * pt * GEVSQR_TO_MB
             # dln(x_po) = dx_po / x_po
             dsigma_dlnxpo = xpo * dsigma_dxpo
@@ -137,11 +153,31 @@ def load_results():
     return results
 
 
+def load_summed_results():
+    """exclusive+diffractive summed per (y, pt, x_po) -- both are now in the
+    SAME x_P differential (see integrand_exclusive_xpom's Jacobian), so
+    summing them pointwise is meaningful."""
+    diff = load_results("diffractive")
+    excl = load_results("exclusive")
+    if not diff or not excl:
+        return {}
+    results = {}
+    for key in set(diff) | set(excl):
+        diff_pts = dict(diff.get(key, []))
+        excl_pts = dict(excl.get(key, []))
+        xpo_values = sorted(set(diff_pts) | set(excl_pts))
+        results[key] = [(xpo, diff_pts.get(xpo, 0.0) + excl_pts.get(xpo, 0.0)) for xpo in xpo_values]
+    return results
+
+
 def main():
-    results = load_results()
+    if SUM:
+        results = load_summed_results()
+    else:
+        results = load_results("diffractive")
     if not results:
         sys.exit(f"No files found for NUCLEUS={NUCLEUS}, FRAG_TYPE={FRAG}, CHANNEL={CHANNEL} "
-                  "in ../files/ -- run ../run_many_xpom.sh first.")
+                  "in ../files/ -- run ../local_workflows/run_many_xpom.sh first.")
 
     # pD0 values to include in the plot:
     PT_TO_PLOT = [
@@ -190,7 +226,8 @@ def main():
     secax.set_xscale('log')
     secax.set_xlabel(r"$x_{\mathbb{P}}$", labelpad=10)
 
-    ax.set_title(f"Diffractive $D^0$, {NUCLEUS}+{NUCLEUS} UPC ({CHANNEL}, {FRAG})", pad=15)
+    title_label = "Exclusive+diffractive" if SUM else "Diffractive"
+    ax.set_title(f"{title_label} $D^0$, {NUCLEUS}+{NUCLEUS} UPC ({CHANNEL}, {FRAG})", pad=15)
 
     pt_labels = [f"$p_{{D^0\\perp}}$={pt:g} GeV" for pt in pt_values]
     pt_title = ", ".join(pt_labels)
@@ -198,7 +235,8 @@ def main():
     plt.legend(handles=y_handles, loc="upper left", fontsize=13, title=pt_title, title_fontsize=13)
 
     plt.tight_layout()
-    outname = f"../plots/xpom_spectrum_{CHANNEL}_{NUCLEUS}.pdf"
+    sum_tag = "sum_" if SUM else ""
+    outname = f"../plots/xpom_spectrum_{sum_tag}{CHANNEL}_{NUCLEUS}.pdf"
     plt.savefig(outname, dpi=150)
     print(f"Saved: {outname}")
 

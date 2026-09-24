@@ -30,7 +30,7 @@ EXCL_PT_THRESHOLD=${EXCL_PT_THRESHOLD:-4.0}
 CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 # PROCESS=exclusive|diffractive reruns just that one process. Default "both" is the original behavior.
 PROCESS=${PROCESS:-both}
-export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS LHAPDF_FILE
+export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS HYMND_FILE
 
 mkdir -p files
 excl_file="files/D0_exclusive.dat"

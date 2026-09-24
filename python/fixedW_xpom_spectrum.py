@@ -9,9 +9,9 @@ from matplotlib.lines import Line2D
 # Plots the fixed-W (no photon flux, proton target, no fragmentation)
 # diffractive cross section as a function of ln(x_po), for each rapidity
 # and K value, from ../files/D0_fixedW_xpom_y*_K*.dat (produced by
-# ../run_fixedW_xpom.sh). Same style/layout as xpom_spectrum.py, but for
+# ../local_workflows/run_fixedW_xpom.sh). Same style/layout as xpom_spectrum.py, but for
 # the fixed-W calculation (see notes there on why fixedW has no
-# LHAPDF/BCFY split or nucleus target).
+# HymnD/BCFY split or nucleus target).
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -69,7 +69,7 @@ def main():
     results = load_results()
     if not results:
         sys.exit("No files found matching ../files/D0_fixedW_xpom_y*_K*.dat -- "
-                  "run ../run_fixedW_xpom.sh first.")
+                  "run ../local_workflows/run_fixedW_xpom.sh first.")
 
     # K values to include in the plot:
     K_TO_PLOT = [2.0]

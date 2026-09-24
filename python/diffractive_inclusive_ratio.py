@@ -32,7 +32,7 @@ INCLUSIVE_FACTOR_A = alpha_em * e_charm_squared * Nc / (2 * math.pi) ** 4
 PT_MAX_PLOT = 2.0   # matches the reference figure's pT range
 
 
-def load_inclusive_results(frag="LHAPDF"):
+def load_inclusive_results(frag="HymnD"):
     """Same file format as load_results, but with inclusive-D0-UPC's own
     normalization (see that project's cross_section.py's factor_A) --
     NOT this project's exclusive/diffractive prefactor.

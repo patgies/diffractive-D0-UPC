@@ -15,7 +15,9 @@ add_executable(
     alphas_running.cpp
     gamma_aa.cpp
     fragmentation.cpp
-    lhapdf_grid.cpp
+    hymnd_grid.cpp
+    bcfy_grid.cpp
+    kk_grid.cpp
     main.cpp
     fourier.c
 )
@@ -37,7 +39,9 @@ add_executable(
     alphas_running.cpp
     gamma_aa.cpp
     fragmentation.cpp
-    lhapdf_grid.cpp
+    hymnd_grid.cpp
+    bcfy_grid.cpp
+    kk_grid.cpp
     main_xpom.cpp
     fourier.c
 )
@@ -59,7 +63,7 @@ add_executable(
     alphas_running.cpp
     gamma_aa.cpp
     fragmentation.cpp
-    lhapdf_grid.cpp
+    hymnd_grid.cpp
     main_fixedW.cpp
     fourier.c
 )
@@ -81,7 +85,7 @@ add_executable(
     alphas_running.cpp
     gamma_aa.cpp
     fragmentation.cpp
-    lhapdf_grid.cpp
+    hymnd_grid.cpp
     main_fixedW_xpom.cpp
     fourier.c
 )
