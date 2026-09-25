@@ -98,3 +98,21 @@ target_link_libraries(
     GSL::gslcblas
     OpenMP::OpenMP_CXX
 )
+
+# Diagnostic: b-integrated photon flux vs. the tabulated fluxes of
+# arXiv:2404.09731 (python/flux_comparison.py). Not part of the physics pipeline.
+add_executable(
+	scan_flux
+	scan_flux.cpp
+	gamma_aa.cpp
+)
+
+target_link_libraries(
+	scan_flux
+	PRIVATE
+	GSL::gsl
+	GSL::gslcblas
+)
+
+set_target_properties(scan_flux PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
