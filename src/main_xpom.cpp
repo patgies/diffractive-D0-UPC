@@ -1,6 +1,6 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
-#include "gamma_aa.hpp"
+#include "photon_flux.hpp"
 #include "fragmentation.hpp"
 #include "hymnd_grid.hpp"
 #include "bcfy_grid.hpp"
@@ -59,7 +59,10 @@ int main(int argc, char* argv[])
     parameters param;
     param.dipole   = &inst;
     param.datafile = datafile;
-    param.ss       = 5360.0;
+    // TARGET=pA (proton target, Sec. 6 of arXiv:2606.05469) -- see main.cpp
+    // for the full explanation.
+    param.target = getenv("TARGET") ? getenv("TARGET") : "AA";
+    param.ss     = (param.target == "pA") ? 8160.0 : 5360.0;
 
     const char* calls_default = getenv("CALLS");
     const char* calls_excl_fact = getenv("CALLS_EXCL_FACTORIZED");
@@ -79,8 +82,35 @@ int main(int argc, char* argv[])
     param.S       = pow(17.4, 2) / pow(0.197327, 2);
     param.channel = channel;
     param.bmin    = 14.2 / 0.197327;
-    param.bmax    = 650.0;
+    // FLUX_MODEL: "EFF" (default) is the effective-flux geometric
+    // convolution; "PL" is the old single-b treatment; "WS" is identical to
+    // "PL" here -- see main.cpp for the full explanation. TARGET=pA: see
+    // main.cpp for the pA flux setup (default flux_model there is "WS").
+    if (param.target == "pA") {
+        param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "WS";
+        if (param.flux_model == "EFF") {
+            cerr << "Error: FLUX_MODEL=EFF is not meaningful with TARGET=pA "
+                    "(no target-nucleus extent to convolve over). Use PL or WS." << endl;
+            return 1;
+        }
+        double sigma_NN_mb = getenv("SIGMA_NN") ? atof(getenv("SIGMA_NN")) : 99.0;
+        init_pA_flux(sigma_NN_mb);
+        if (param.flux_model == "WS") init_ws_form_factor();
+        const double RA_fm = 6.49;
+        param.bmin = (param.flux_model == "PL") ? (1.1 * RA_fm / 0.197327) : 1e-3;
+    } else {
+        param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "EFF";
+        if      (param.flux_model == "WS")  init_ws_form_factor();
+        else if (param.flux_model == "EFF") init_effective_flux(param.channel, &param);
+    }
     param.qpmax   = 800.0;
+
+    // Adaptive bmax, replacing the old fixed 650 -- see main.cpp for the
+    // derivation (same (pD0, y) kinematics here, so the same worst-case
+    // smallest-z argument applies).
+    double mt_min = sqrt(pD0*pD0 + param.m2);
+    double z_min  = mt_min * exp(y) / param.ss;
+    param.bmax    = 60.0 / (z_min * param.mn);
 
     // Fragmentation (c -> D0)
     param.r      = 0.1;
@@ -127,7 +157,8 @@ int main(int argc, char* argv[])
     param.fixed_xpo = x_po;
 
     cout << "# fragmentation : " << frag_tag << endl;
-    cout << "# channel       : " << param.channel << endl;
+    cout << "# target        : " << param.target << " (sqrt(s_NN)=" << param.ss << " GeV, flux_model=" << param.flux_model << ")" << endl;
+    cout << "# channel       : " << param.channel << (param.target == "pA" ? " (unused: no EMD for pA)" : "") << endl;
     cout << "# dipole file   : " << datafile << endl;
     cout << "# pD0  x_po  exclusive_dxpo  diffractive_dxpo" << endl;
 

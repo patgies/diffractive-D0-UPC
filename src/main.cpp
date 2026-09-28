@@ -1,6 +1,6 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
-#include "gamma_aa.hpp"
+#include "photon_flux.hpp"
 #include "fragmentation.hpp"
 #include "hymnd_grid.hpp"
 #include "bcfy_grid.hpp"
@@ -57,9 +57,13 @@ int main(int argc, char* argv[])
     parameters param;
     param.dipole   = &inst;
     param.datafile = datafile;
-    param.ss       = 5360.0;
+    // TARGET=pA (proton target, Sec. 6 of arXiv:2606.05469) switches both
+    // the collision energy and the photon-flux geometry; see the flux_model
+    // block below for the rest of the pA setup.
+    param.target = getenv("TARGET") ? getenv("TARGET") : "AA";
+    param.ss     = (param.target == "pA") ? 8160.0 : 5360.0;
 
- 
+
     const char* calls_default = getenv("CALLS");
     const char* calls_excl    = getenv("CALLS_EXCL");
     const char* calls_excl_fact = getenv("CALLS_EXCL_FACTORIZED");
@@ -88,8 +92,63 @@ int main(int argc, char* argv[])
     param.S       = pow(17.4, 2) / pow(0.197327, 2);
     param.channel = channel;
     param.bmin    = 14.2 / 0.197327;
-    param.bmax    = 650.0;
-    param.qpmax   = 800.0;
+    // FLUX_MODEL: "EFF" (default) is the target-nucleus geometric
+    // convolution (arXiv:2404.09731 Eq. 4, effective_photon_flux() in
+    // photon_flux.cpp) -- validated in scan_flux_eff.cpp/eff_flux_check.pdf
+    // and photon_flux_discrepancy.pdf to actually reproduce Paakkinen's
+    // tabulated Starlight flux, unlike the old single-b treatment. "PL" is
+    // that old single-b treatment (Eq. 1/15 of our own paper and of Guzey
+    // et al. 2606.05469), kept for comparison/reproducing old results;
+    // "WS" swaps in the Woods-Saxon bare flux (flux_density_WS()) within
+    // that same single-b treatment, but is numerically IDENTICAL to "PL"
+    // there, since par.bmin always exceeds R_A (see flux_density_WS()'s
+    // own comment) -- it's "EFF" that actually fixes the bmin-independent
+    // part of the discrepancy, not "WS".
+    // TARGET=pA: EFF doesn't apply (Sec. 6.1 of arXiv:2606.05469 uses the
+    // single-b treatment, since a proton target has no extent of its own to
+    // convolve over), so the default there is "WS" instead, with
+    // Gamma_pA(b)=exp(-sigma_NN*T_A(b)) (init_pA_flux()/GammaPA()) standing
+    // in for Gamma_AA -- see photon_flux()'s target=="pA" branch. "PL" is
+    // the sharp point-like comparison cutoff at bmin=1.1*R_A (their Fig. 11).
+    if (param.target == "pA") {
+        param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "WS";
+        if (param.flux_model == "EFF") {
+            cerr << "Error: FLUX_MODEL=EFF is not meaningful with TARGET=pA "
+                    "(no target-nucleus extent to convolve over). Use PL or WS." << endl;
+            return 1;
+        }
+        double sigma_NN_mb = getenv("SIGMA_NN") ? atof(getenv("SIGMA_NN")) : 99.0;
+        init_pA_flux(sigma_NN_mb);
+        if (param.flux_model == "WS") init_ws_form_factor();
+        const double RA_fm = 6.49;
+        param.bmin = (param.flux_model == "PL") ? (1.1 * RA_fm / 0.197327) : 1e-3;
+    } else {
+        param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "EFF";
+        if      (param.flux_model == "WS")  init_ws_form_factor();
+        else if (param.flux_model == "EFF") init_effective_flux(param.channel, &param);
+    }
+    // QPMAX override: diagnostic only, to check what fraction of the cross
+    // section comes from photon energies above a given y=2qp/sqrt(2)/ss
+    // threshold (compare a run with QPMAX=800 against one capped at the
+    // qp corresponding to that y). Defaults to the physical 800 GeV.
+    param.qpmax   = getenv("QPMAX") ? atof(getenv("QPMAX")) : 800.0;
+
+    // Adaptive upper limit for the b integral (replaces a fixed bmax=650):
+    // large enough that the photon flux (photon_flux()/flux_density() in
+    // photon_flux.cpp, which already dies off past eta=z*mn*b=50) has fully
+    // decayed before the box edge, for every point VEGAS can sample here --
+    // same idea as the bmax=60/(z*mn) used to validate the flux against
+    // arXiv:2404.09731 (src/scan_flux.cpp), but z there is the photon
+    // energy fraction, NOT this D0's rapidity y, so it can't be plugged in
+    // directly: q+ (and thus z) is itself a Monte Carlo variable sampled
+    // inside the integrand (integrand.cpp), not fixed externally like in
+    // scan_flux.cpp. Instead we use the smallest z reachable at this
+    // (pD0, y): q+ >= p+ = (mt/sqrt2)*exp(y), and mt=sqrt(pc^2+m^2) with
+    // pc=pD0/zh is smallest at zh=zmax=1 (pc=pD0), so that fixes the
+    // worst-case (smallest) z this run will ever sample.
+    double mt_min = sqrt(pD0*pD0 + param.m2);       // mt at zh=zmax=1
+    double z_min  = mt_min * exp(y) / param.ss;     // smallest photon energy fraction reachable
+    param.bmax    = 60.0 / (z_min * param.mn);
 
     // Fragmentation (c -> D0)
     param.r      = 0.1;
@@ -154,7 +213,8 @@ int main(int argc, char* argv[])
     }
 
     cout << "# fragmentation : " << frag_tag << endl;
-    cout << "# channel       : " << param.channel << endl;
+    cout << "# target        : " << param.target << " (sqrt(s_NN)=" << param.ss << " GeV, flux_model=" << param.flux_model << ")" << endl;
+    cout << "# channel       : " << param.channel << (param.target == "pA" ? " (unused: no EMD for pA)" : "") << endl;
     cout << "# dipole file   : " << datafile << endl;
     cout << "# process       : " << process_mode << endl;
     cout << "# pD0  exclusive  diffractive" << endl;

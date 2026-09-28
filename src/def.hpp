@@ -33,6 +33,20 @@ struct parameters
     double alpha, Z, mn, S;
     string channel;
     double bmin, bmax, qpmax;
+    // "AA" (default): Pb-Pb, Gamma_AA(b) tabulated survival probability +
+    // EMD channel factors (An0n/Xn0n), as everywhere above. "pA": proton
+    // target (Sec. 6 of arXiv:2606.05469) -- the SAME lead-ion flux, but
+    // Gamma_pA(b)=exp(-sigma_NN*T_A(b)) in its place (see init_pA_flux() /
+    // GammaPA() in photon_flux.cpp) and no EMD factor at all. Only affects
+    // photon_flux(); not meaningful together with flux_model=="EFF" (that
+    // convolution is over a nuclear target's own extent, which a proton
+    // target doesn't have).
+    string target = "AA";
+    // "PL" (default): point-like bare flux, K1(eta)^2 (flux_density() in
+    // photon_flux.cpp). "WS": Woods-Saxon bare flux (flux_density_WS()), the
+    // Vidovic-Greiner-Best-Soff / Krauss-Greiner-Soff form with the nuclear
+    // charge form factor folded in -- see photon_flux.hpp for the derivation.
+    string flux_model = "PL";
 
     // --- Fragmentation (c -> D0 meson), see fragmentation.hpp/hymnd_grid.hpp ---
     // pD0 is the transverse momentum of the D0 meson we actually observe.
@@ -111,7 +125,14 @@ double integrand_diffractive_xpom(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_xpom(void* p);
 
 double flux_density(double qp, double b, void* p);
+double flux_density_WS(double z, double b, void* p);
 double photon_flux(double b, double qp, void* p);
+// "Effective flux": drop-in replacement for \int db photon_flux(b,qp,par) db
+// under the geometric convolution of arXiv:2404.09731 Eq. 4 (target-nucleus
+// spatial extent folded in) instead of the single-b treatment above --
+// see photon_flux.hpp/init_effective_flux() for how it's built. Takes no b:
+// the whole b-dependence is already integrated out.
+double effective_photon_flux(double qp, void* p);
 
 // Bessel function helpers, defined in integrand.cpp. Declared here too so
 // int_exclusive.cpp can use them for the fixed-W calculation below.

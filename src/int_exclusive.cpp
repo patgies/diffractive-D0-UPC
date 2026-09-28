@@ -31,6 +31,13 @@ double exclusiveCrossSection(void* p)
     gsl_monte_function F;
     F.params = par;
 
+    // flux_model=="EFF": b is an unused placeholder (the flux no longer
+    // depends on it, see integrand.cpp), so its box is just [0,1] -- a
+    // Jacobian width of 1, contributing nothing -- rather than [bmin,bmax].
+    bool eff = (par->flux_model == "EFF");
+    double b_lo = eff ? 0.0 : par->bmin;
+    double b_hi = eff ? 1.0 : par->bmax;
+
     double low[5], up[5];
     if (factorized) {
         F.f   = &integrand_exclusive_factorized;
@@ -39,8 +46,8 @@ double exclusiveCrossSection(void* p)
         // (zh's box is the actual [zmin, zmax] range, not [0,1] like u_qp)
         // r1, r2 are not here -- they're solved analytically inside the
         // integrand (see exclusive_radial_integrals in integrand.cpp).
-        low[0] = 0.;         up[0] = 1.;
-        low[1] = par->bmin;  up[1] = par->bmax;
+        low[0] = 0.;    up[0] = 1.;
+        low[1] = b_lo;  up[1] = b_hi;
         low[2] = par->zmin;  up[2] = par->zmax;
     } else {
         F.f   = &integrand_exclusive_mc;
@@ -50,7 +57,7 @@ double exclusiveCrossSection(void* p)
         low[0] = 0.;    up[0] = rmax;
         low[1] = 0.;    up[1] = rmax;
         low[2] = 0.;    up[2] = 1.;
-        low[3] = par->bmin;  up[3] = par->bmax;
+        low[3] = b_lo;  up[3] = b_hi;
         low[4] = par->zmin;  up[4] = par->zmax;
     }
 
@@ -94,8 +101,9 @@ double exclusiveCrossSection_xpom(void* p)
     F.dim    = 2;
     F.params = par;
 
-    double low[] = {par->bmin, par->zmin};
-    double up[]  = {par->bmax, par->zmax};
+    bool eff = (par->flux_model == "EFF");   // see exclusiveCrossSection() above
+    double low[] = {eff ? 0.0 : par->bmin, par->zmin};
+    double up[]  = {eff ? 1.0 : par->bmax, par->zmax};
 
     double res, err;
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);

@@ -1,12 +1,13 @@
-// Diagnostic: b-integrated photon flux from photon_flux() (gamma_aa.cpp),
+// Diagnostic: b-integrated photon flux from photon_flux() (photon_flux.cpp),
 // as dN/dy with y = 2*omega/sqrt(s_NN), for comparison with the tabulated
 // effective fluxes of arXiv:2404.09731 (inputs/photon_flux/, see
 // python/flux_comparison.py). Not part of the physics pipeline.
 //
 // usage: ./build/bin/scan_flux > out/flux_scan.csv
-// columns: channel,bmax_GeV-1,y,dN_dy   (dN_dy = dN/domega * sqrt(s)/2)
+// columns: channel,y,dN_dy   (dN_dy = dN/domega * sqrt(s)/2)
 #include "def.hpp"
-#include "gamma_aa.hpp"
+#include "photon_flux.hpp"
+#include <gsl/gsl_errno.h>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -16,6 +17,7 @@
 
 int main()
 {
+    gsl_set_error_handler_off();
     load_data_and_initialize("./inputs/Gamma_AA.dat");
 
     parameters par;
@@ -26,30 +28,37 @@ int main()
     par.S     = std::pow(17.4, 2) / std::pow(0.197327, 2);
     const char* bm = std::getenv("BMIN_FM");   // default: same lower cut as main.cpp (14.2 fm)
     par.bmin  = (bm ? std::atof(bm) : 14.2) / 0.197327;
+    par.flux_model = std::getenv("FLUX_MODEL") ? std::getenv("FLUX_MODEL") : "PL";
+    if (par.flux_model == "WS") init_ws_form_factor();
 
-    const std::vector<std::string> channels = {"PL(AnAn)", "AnAn", "An0n"};
-    // 650 GeV^-1: the upper b limit actually used in main.cpp; 1e7: effectively unbounded
-    const std::vector<double> bmaxs = {650.0, 1.0e7};
+    const std::vector<std::string> channels = {"PL(AnAn)", "AnAn", "An0n", "Xn0n"};
 
-    std::cout << "channel,bmax,y,dN_dy\n" << std::setprecision(10);
+    std::cout << "channel,y,dN_dy\n" << std::setprecision(10);
     const int ny = 60, nb = 6000;
     for (const auto& ch : channels) {
         par.channel = ch;
-        for (double bmax : bmaxs) {
-            for (int iy = 0; iy < ny; iy++) {
-                double y  = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));
-                double qp = y * par.ss / std::sqrt(2.0);      // omega = qp/sqrt(2) = y*sqrt(s)/2
-                // integrate photon_flux(b) db on a log-b grid (Simpson in ln b)
-                double a = std::log(par.bmin), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
-                for (int i = 0; i <= nb; i++) {
-                    double b = std::exp(a + i * h);
-                    double w = (i == 0 || i == nb) ? 1.0 : (i % 2 ? 4.0 : 2.0);
-                    sum += w * photon_flux(b, qp, &par) * b;   // db = b dlnb
-                }
-                double dN_domega = sum * h / 3.0;
-                double dN_dy = dN_domega * par.ss / 2.0;
-                std::cout << ch << "," << bmax << "," << y << "," << dN_dy << "\n";
+        for (int iy = 0; iy < ny; iy++) {
+            double y    = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));
+            double qp   = y * par.ss / std::sqrt(2.0);    // omega = qp/sqrt(2) = y*sqrt(s)/2
+            // bmax = 60/(y*mn): large enough that eta=y*mn*b comfortably
+            // clears the eta>50 cutoff already built into photon_flux()
+            // (photon_flux.cpp), so this reproduces the true b->infinity
+            // integral at every y without wasting effort far past where the
+            // flux is already zero. Same choice now used for par.bmax in
+            // main.cpp/main_xpom.cpp (see there for why it has to be
+            // computed differently there: q+/y is a Monte Carlo variable in
+            // the main pipeline, not looped over externally like here).
+            double bmax = 60.0 / (y * par.mn);
+            // integrate photon_flux(b) db on a log-b grid (Simpson in ln b)
+            double a = std::log(par.bmin), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
+            for (int i = 0; i <= nb; i++) {
+                double b = std::exp(a + i * h);
+                double w = (i == 0 || i == nb) ? 1.0 : (i % 2 ? 4.0 : 2.0);
+                sum += w * photon_flux(b, qp, &par) * b;   // db = b dlnb
             }
+            double dN_domega = sum * h / 3.0;
+            double dN_dy = dN_domega * par.ss / 2.0;
+            std::cout << ch << "," << y << "," << dN_dy << "\n";
         }
     }
     return 0;

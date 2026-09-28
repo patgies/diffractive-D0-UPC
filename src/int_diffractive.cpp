@@ -30,10 +30,14 @@ double diffractiveCrossSection(void* p)
 
     // integration box for {r1, r2, u_k, u_qp, b, u_xpo, zh}
     // (u_k and u_xpo are between 0 and 1 and get log-mapped inside the
-    // integrand; zh's box is the actual [zmin, zmax] range)
+    // integrand; zh's box is the actual [zmin, zmax] range). flux_model==
+    // "EFF": b is an unused placeholder (see integrand.cpp), box is [0,1].
+    bool eff = (par->flux_model == "EFF");
+    double b_lo = eff ? 0.0 : par->bmin;
+    double b_hi = eff ? 1.0 : par->bmax;
     double rmax = 99.0;
-    double low[] = {0.,   0.,   0.,   0., par->bmin, 0.,  par->zmin};
-    double up[]  = {rmax, rmax, 1.0,  1., par->bmax, 1.,  par->zmax};
+    double low[] = {0.,   0.,   0.,   0., b_lo, 0.,  par->zmin};
+    double up[]  = {rmax, rmax, 1.0,  1., b_hi, 1.,  par->zmax};
 
     double res, err;
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
@@ -75,10 +79,14 @@ double diffractiveCrossSection_xpom(void* p)
     F.dim    = 6;
     F.params = par;
 
-    // integration box for {r1, r2, u_k, u_qp, b, zh}
+    // integration box for {r1, r2, u_k, u_qp, b, zh}. flux_model=="EFF": b
+    // is an unused placeholder (see integrand.cpp), box is [0,1].
+    bool eff = (par->flux_model == "EFF");
+    double b_lo = eff ? 0.0 : par->bmin;
+    double b_hi = eff ? 1.0 : par->bmax;
     double rmax = 99.0;
-    double low[] = {0.,   0.,   0.,   0., par->bmin, par->zmin};
-    double up[]  = {rmax, rmax, 1.0,  1., par->bmax, par->zmax};
+    double low[] = {0.,   0.,   0.,   0., b_lo, par->zmin};
+    double up[]  = {rmax, rmax, 1.0,  1., b_hi, par->zmax};
 
     double res, err;
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);

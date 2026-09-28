@@ -13,7 +13,7 @@ add_executable(
     int_exclusive.cpp
     int_diffractive.cpp
     alphas_running.cpp
-    gamma_aa.cpp
+    photon_flux.cpp
     fragmentation.cpp
     hymnd_grid.cpp
     bcfy_grid.cpp
@@ -37,7 +37,7 @@ add_executable(
     int_exclusive.cpp
     int_diffractive.cpp
     alphas_running.cpp
-    gamma_aa.cpp
+    photon_flux.cpp
     fragmentation.cpp
     hymnd_grid.cpp
     bcfy_grid.cpp
@@ -61,7 +61,7 @@ add_executable(
     int_exclusive.cpp
     int_diffractive.cpp
     alphas_running.cpp
-    gamma_aa.cpp
+    photon_flux.cpp
     fragmentation.cpp
     hymnd_grid.cpp
     main_fixedW.cpp
@@ -83,7 +83,7 @@ add_executable(
     int_exclusive.cpp
     int_diffractive.cpp
     alphas_running.cpp
-    gamma_aa.cpp
+    photon_flux.cpp
     fragmentation.cpp
     hymnd_grid.cpp
     main_fixedW_xpom.cpp
@@ -104,7 +104,7 @@ target_link_libraries(
 add_executable(
 	scan_flux
 	scan_flux.cpp
-	gamma_aa.cpp
+	photon_flux.cpp
 )
 
 target_link_libraries(
@@ -115,4 +115,23 @@ target_link_libraries(
 )
 
 set_target_properties(scan_flux PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Diagnostic: tests the "effective flux" geometric convolution (Eq. 4 of
+# arXiv:2404.09731) against Paakkinen's tabulated flux. Not part of the
+# physics pipeline.
+add_executable(
+	scan_flux_eff
+	scan_flux_eff.cpp
+	photon_flux.cpp
+)
+
+target_link_libraries(
+	scan_flux_eff
+	PRIVATE
+	GSL::gsl
+	GSL::gslcblas
+)
+
+set_target_properties(scan_flux_eff PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

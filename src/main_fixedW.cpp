@@ -1,7 +1,7 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
 #include "tools.hpp"
-#include "gamma_aa.hpp"
+#include "photon_flux.hpp"
 #include <string>
 #include <iostream>
 #include <cmath>

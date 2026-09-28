@@ -104,7 +104,12 @@ double integrand_exclusive_factorized(double* vec, size_t /*dim*/, void* p)
     if (jac_qp <= 0.0) return 0.0;
     double qp = pp + u_qp * jac_qp;
 
-    double flux = photon_flux(b, qp, p);
+    // par->flux_model=="EFF": the whole b-dependence (and target-nucleus
+    // geometric convolution, arXiv:2404.09731 Eq. 4) is already integrated
+    // out into effective_photon_flux(qp,p); the sampled "b" here is then an
+    // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
+    // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
+    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -173,7 +178,12 @@ double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
     double qp = pp / z1;   // q+_*, Eq. 19
     if (qp > par->qpmax) return 0.0;
 
-    double flux = photon_flux(b, qp, p);
+    // par->flux_model=="EFF": the whole b-dependence (and target-nucleus
+    // geometric convolution, arXiv:2404.09731 Eq. 4) is already integrated
+    // out into effective_photon_flux(qp,p); the sampled "b" here is then an
+    // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
+    // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
+    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     double xP_dip = min(xP, 0.01);
     double I0, I1;
@@ -218,7 +228,12 @@ double integrand_exclusive_mc(double* vec, size_t /*dim*/, void* p)
     if (jac_qp <= 0.0) return 0.0;
     double qp = pp + u_qp * jac_qp;
 
-    double flux = photon_flux(b, qp, p);
+    // par->flux_model=="EFF": the whole b-dependence (and target-nucleus
+    // geometric convolution, arXiv:2404.09731 Eq. 4) is already integrated
+    // out into effective_photon_flux(qp,p); the sampled "b" here is then an
+    // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
+    // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
+    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -281,7 +296,12 @@ double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
     if (jac_qp <= 0.0) return 0.0;
     double qp = pp + u_qp * jac_qp;
 
-    double flux = photon_flux(b, qp, p);
+    // par->flux_model=="EFF": the whole b-dependence (and target-nucleus
+    // geometric convolution, arXiv:2404.09731 Eq. 4) is already integrated
+    // out into effective_photon_flux(qp,p); the sampled "b" here is then an
+    // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
+    // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
+    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -352,7 +372,12 @@ double integrand_diffractive_xpom(double* vec, size_t /*dim*/, void* p)
     if (jac_qp <= 0.0) return 0.0;
     double qp = pp + u_qp * jac_qp;
 
-    double flux = photon_flux(b, qp, p);
+    // par->flux_model=="EFF": the whole b-dependence (and target-nucleus
+    // geometric convolution, arXiv:2404.09731 Eq. 4) is already integrated
+    // out into effective_photon_flux(qp,p); the sampled "b" here is then an
+    // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
+    // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
+    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
