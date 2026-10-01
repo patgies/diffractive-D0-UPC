@@ -29,6 +29,6 @@ module load gsl/2.8
 
 mkdir -p build
 cmake -S . -B build
-cmake --build build -j"$(nproc)" --target D0
+cmake --build build -j"$(nproc)" --target D0 D0_xpom
 
-echo "Build OK: build/bin/D0"
+echo "Build OK: build/bin/D0, build/bin/D0_xpom"

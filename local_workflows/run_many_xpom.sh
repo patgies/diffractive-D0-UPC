@@ -27,6 +27,9 @@
 #                      exclusiveCrossSection_xpom, so CALLS_EXCL is unused
 #                      here -- CALLS_EXCL_FACTORIZED is what matters)
 #   HYMND_FILE
+#   OUTDIR       output goes to $OUTDIR/files/ (default: the repo root)
+#   SKIP_BUILD   1 = use the existing build/bin/D0_xpom (cluster jobs: build
+#                once with build_roihu.sh instead of every job running cmake)
 
 set -e
 
@@ -38,6 +41,7 @@ XPO_MAX=${XPO_MAX:-0.1}
 XPO_N=${XPO_N:-25}
 CORES=${CORES:-$(( $(nproc) / 2 ))}
 DIPOLE_DIR=${DIPOLE_DIR:-data/$NUCLEUS/mve}
+OUTDIR=${OUTDIR:-.}
 
 frag_tag=${FRAG_TYPE:-KniehlKramer}
 channel=${CHANNEL:-An0n}
@@ -62,27 +66,31 @@ if [[ ! -d "$DIPOLE_DIR" ]]; then
 	exit 1
 fi
 
-echo "Building..."
-mkdir -p build
-cmake -S . -B build > /dev/null
-cmake --build build -j"$(nproc)" --target D0_xpom
-echo "Build OK."
+if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
+	echo "Building..."
+	mkdir -p build
+	cmake -S . -B build > /dev/null
+	cmake --build build -j"$(nproc)" --target D0_xpom
+	echo "Build OK."
+fi
 
-mkdir -p files
+mkdir -p "$OUTDIR/files"
 
-# Log-spaced x_po grid, computed once in Python 
-xpo_values=$(python3 -c "
-import numpy as np
-xs = np.exp(np.linspace(np.log($XPO_MIN), np.log($XPO_MAX), $XPO_N))
-print(' '.join(f'{x:.8e}' for x in xs))
-")
+# Log-spaced x_po grid, computed once (awk rather than python/numpy, which
+# isn't available on the cluster compute nodes without extra modules;
+# gives the same %.8e values as np.exp(np.linspace(log, log, N)))
+xpo_values=$(awk -v a="$XPO_MIN" -v b="$XPO_MAX" -v n="$XPO_N" 'BEGIN {
+	la = log(a); lb = log(b)
+	for (i = 0; i < n; i++) printf "%s%.8e", (i ? " " : ""), exp(la + (lb - la) * i / (n - 1))
+	print ""
+}')
 
 for y in $Y_VALS; do
 	ytag=$(echo "$y" | tr -d '.')
 	for pt in $PT_VALS; do
 		pttag=$(echo "$pt" | tr -d '.')
 		for process in exclusive diffractive; do
-			outfile="files/D0_${process}_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+			outfile="$OUTDIR/files/D0_${process}_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
 			{
 				echo "# ${process} D0 dsigma/(d2pD0 dy dx_po), ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
 				echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -114,8 +122,8 @@ run_one_point() {
 		echo "Warning: D0_xpom $dfile $pt $y $xpo produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$b  $xpo  $excl" >> "files/D0_exclusive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
-	echo "$b  $xpo  $diff" >> "files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+	echo "$b  $xpo  $excl" >> "$OUTDIR/files/D0_exclusive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+	echo "$b  $xpo  $diff" >> "$OUTDIR/files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
 }
 
 for dfile in "$DIPOLE_DIR"/glauber_mve_*; do

@@ -8,15 +8,16 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import LogLocator, FixedLocator, FuncFormatter, NullFormatter
 
-# make the plot look nicer (same style as cross_section.py / xpom_spectrum.py / fixed_qp_spectrum.py)
+# make the plot look nicer (same style as cross_section.py / xpom_spectrum.py / fixed_qp_spectrum.py;
+# font sizes a bit below inclusive-D0-UPC/python/fragmentation_comparison_evolved.py)
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.size": 11,
-    "axes.labelsize": 22,
+    "axes.labelsize": 28,
     "axes.titlesize": 20,
-    "xtick.labelsize": 20,
-    "ytick.labelsize": 20,
+    "xtick.labelsize": 24,
+    "ytick.labelsize": 24,
     "xtick.direction": "in",
     "ytick.direction": "in",
     "xtick.top": True,
@@ -122,7 +123,7 @@ CHANNEL_COLORS = {
 # Starlight (table) = thick pale band underneath; P_b (this code) = thin
 # short-dashed line on top. The two agree almost everywhere, so a same-width
 # solid/dashed pair just hides the dashes under the solid line.
-TABLE_STYLE = dict(ls="-", lw=3.5, alpha=0.35, solid_capstyle="butt")
+TABLE_STYLE = dict(ls="-", lw=5, alpha=0.35, solid_capstyle="butt")
 OURS_STYLE  = dict(ls=(0, (3, 1.5)), lw=1.5)
 
 if __name__ == "__main__":
@@ -142,10 +143,10 @@ if __name__ == "__main__":
 
     YMIN = 1e-3   # lower edge of the upper panel
     # Ratio lines in the same solid channel colors as the upper panel.
-    RATIO_STYLE = {"PL(AnAn)": dict(lw=1.5),
-                   "AnAn":     dict(lw=1.5),
+    # PL(AnAn) is not drawn in the ratio panel (upper panel only).
+    RATIO_STYLE = {"AnAn":     dict(lw=1.5),
                    "An0n":     dict(lw=1.5)}
-    fig, (ax, axr) = plt.subplots(2, 1, figsize=(7.5, 7.4), sharex=True, gridspec_kw={"height_ratios": [3, 0.75]})
+    fig, (ax, axr) = plt.subplots(2, 1, figsize=(8, 9.5), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
     yy = np.logspace(-4, 0, 400)
     # bmax = 60/(y*m_N) (as in the old DiffractiveD0/testFlux code, and now
     # also what main.cpp/main_xpom.cpp use, worst-case-adjusted for the
@@ -169,14 +170,15 @@ if __name__ == "__main__":
         ours = CubicSpline(np.log(y[ok]), np.log(f[ok]))
         nodes = tab["y4"] ** 4
         at = (nodes >= y[ok][0]) & (nodes <= y[ok][-1])
-        axr.plot(nodes[at], np.exp(ours(np.log(nodes[at])) - tab[key][at]),
-                 color=color, ls="-", **RATIO_STYLE[ch])
+        if ch in RATIO_STYLE:
+            axr.plot(nodes[at], np.exp(ours(np.log(nodes[at])) - tab[key][at]),
+                     color=color, ls="-", **RATIO_STYLE[ch])
         ax.plot(yy, yy * interp_flux(tab, key, yy), color=color, **TABLE_STYLE)
         ax.plot(y, y * f, color=color, **OURS_STYLE)
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_ylim(YMIN, 4e2); ax.set_xlim(1e-4, 0.12)
     ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
-    ax.text(0.95, 0.95, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=16)
+    ax.text(0.95, 0.95, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=20)
     for a in (ax, axr):
         a.xaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
         a.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
@@ -200,17 +202,17 @@ if __name__ == "__main__":
     channel_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], lw=3, ls="-", label=label) for ch, _, _, label in PAIRS]
     source_handles = [Line2D([], [], color="0.3", **OURS_STYLE, label=r"$P_b$ (Baur \textit{et al.})"),
                        Line2D([], [], color="0.3", **TABLE_STYLE, label=r"Starlight (Eskola \textit{et al.})")]
-    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0),
-                                fontsize=15, title="Channel", title_fontsize=15, frameon=False)
+    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.27),
+                                fontsize=18, title="Channel", title_fontsize=18, frameon=False)
     ax.add_artist(channel_legend)
-    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.3, 0.0),
-              fontsize=15, title="Model", title_fontsize=15, frameon=False)
+    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0),
+              fontsize=18, title="Model", title_fontsize=18, frameon=False)
     # Ratio-panel legend: one entry per ratio line, drawn in its ratio style.
     ratio_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], ls="-", **RATIO_STYLE[ch], label=label)
-                     for ch, tab, _, label in PAIRS if tab is not None]
-    axr.legend(handles=ratio_handles, loc="lower left", ncol=3, fontsize=15,
+                     for ch, _, _, label in PAIRS if ch in RATIO_STYLE]
+    axr.legend(handles=ratio_handles, loc="lower left", bbox_to_anchor=(0.0, -0.04), ncol=3, fontsize=20,
                frameon=False, handlelength=1.8, columnspacing=1.2)
-    axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/Starlight", labelpad=15, fontsize=17); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
+    axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/Starlight", labelpad=15, fontsize=20); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
     # x stops at z = 0.12 (beyond, flux < 1e-3 and the ratio is numerical
     # noise), so the ratio stays below ~1.25; y from 0.95 to 1.05 (AnAn/An0n run
     # off the top at z ~ 0.06): linear scale.

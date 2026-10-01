@@ -12,15 +12,16 @@ from scipy.integrate import simpson
 sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
-# make the plot look nicer (same style as xpom_spectrum.py / fixed_qp_spectrum.py)
+# make the plot look nicer (same style as flux_comparison.py: font sizes,
+# gray ticks with black numbers, frameless titled legends)
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.size": 11,
-    "axes.labelsize": 20,
+    "axes.labelsize": 28,
     "axes.titlesize": 20,
-    "xtick.labelsize": 18,
-    "ytick.labelsize": 18,
+    "xtick.labelsize": 24,
+    "ytick.labelsize": 24,
     "xtick.direction": "in",
     "ytick.direction": "in",
     "xtick.top": True,
@@ -31,6 +32,12 @@ plt.rcParams.update({
     "ytick.minor.size": 4,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
+    "xtick.color": "0.4",
+    "ytick.color": "0.4",
+    "xtick.labelcolor": "black",
+    "ytick.labelcolor": "black",
+    "xtick.major.pad": 8,
+    "ytick.major.pad": 4,
 })
 
 # This script reads the data files written by ../local_workflows/run_many_nucleus.sh
@@ -52,6 +59,13 @@ GEVSQR_TO_MB = GEVSQR_TO_NB * 1e-6
 
 NUCLEUS = os.environ.get("NUCLEUS", "Pb")
 CHANNEL = os.environ.get("CHANNEL", "An0n").translate(str.maketrans('', '', '() '))
+
+# Where the central D0_<process>_..._y*.dat files and the mu_F scale-variation
+# runs (SCALE_DIR/factor_<tag>/files/) live. Defaults are the original layout;
+# e.g. CENTRAL_DIR=../files/central_values for the EFF-flux rerun. The band is
+# only drawn once both factor_* directories exist under SCALE_DIR.
+CENTRAL_DIR = os.environ.get("CENTRAL_DIR", "../files")
+SCALE_DIR = os.environ.get("SCALE_DIR", "../files/HymnD_scale")
 
 PROCESSES = ["diffractive", "exclusive"]
 FRAG_TYPES = ["HymnD"]
@@ -76,9 +90,9 @@ EXPECTED_SCALE_FACTORS = [tag for tag in SCALE_FACTOR_TAGS.values() if tag]  # [
 
 
 def _mu_f_dir(factor):
-    """Raw-output directory for a given mu_F factor (see SCALE_FACTOR_TAGS)."""
+    """Directory holding the D0_*.dat files for a given mu_F factor (see SCALE_FACTOR_TAGS)."""
     tag = SCALE_FACTOR_TAGS[factor]
-    return ".." if tag is None else f"../files/HymnD_scale/factor_{tag}"
+    return CENTRAL_DIR if tag is None else f"{SCALE_DIR}/factor_{tag}/files"
 
 # which linestyle to use for each (process, fragmentation) combination
 LINESTYLES = {
@@ -87,8 +101,9 @@ LINESTYLES = {
     ("diffractive", "HymnD"):        "-",
     ("exclusive",   "BCFY"):          ":",
     ("exclusive",   "KniehlKramer"):  "-.",
-    ("exclusive",   "HymnD"):        ":",
+    ("exclusive",   "HymnD"):        (0, (3, 1.5)),   # short dashes, as P_b in flux_comparison.py
 }
+LINEWIDTH = 2.0
 
 
 def read_rapidity(filename):
@@ -158,9 +173,11 @@ def prefactor(process, pt, mu_r_factor=1.0):
     raise ValueError(f"unknown process {process}")
 
 
-def load_results(process, frag, base_dir="..", mu_r_factor=1.0):
-    """Read all files for one (process, frag) combination and return {y: [(pt, cross_section), ...]}."""
-    pattern = f"{base_dir}/files/D0_{process}_{frag}_{CHANNEL}_{NUCLEUS}_y*.dat"
+def load_results(process, frag, data_dir=None, mu_r_factor=1.0):
+    """Read all files for one (process, frag) combination in data_dir (default
+    CENTRAL_DIR) and return {y: [(pt, cross_section), ...]}."""
+    data_dir = CENTRAL_DIR if data_dir is None else data_dir
+    pattern = f"{data_dir}/D0_{process}_{frag}_{CHANNEL}_{NUCLEUS}_y*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
         y = read_rapidity(filename)
@@ -213,7 +230,7 @@ def _band_from_members(process, frag, member_dir_pattern):
     if not member_dirs:
         return {}
 
-    per_member_results = [load_results(process, frag, base_dir=member_dir) for member_dir in member_dirs]
+    per_member_results = [load_results(process, frag, data_dir=f"{member_dir}/files") for member_dir in member_dirs]
     per_member_results = [results for results in per_member_results if results]
     if not per_member_results:
         return {}
@@ -257,12 +274,12 @@ def load_bk_band(process, frag="HymnD"):
     return _band_from_members(process, frag, "../files/bk_posterior/member_*")
 
 
-def _summed_results(base_dir, frag="HymnD", mu_r_factor=1.0):
-    """diffractive+exclusive summed per (y, pt) for one directory. Returns
-    {y: [(pt, total), ...]}, or {} if neither process has data there.
+def _summed_results(data_dir, frag="HymnD", mu_r_factor=1.0):
+    """diffractive+exclusive summed per (y, pt) for one directory of D0_*.dat
+    files. Returns {y: [(pt, total), ...]}, or {} if neither process has data there.
     """
-    diff = load_results("diffractive", frag, base_dir=base_dir, mu_r_factor=mu_r_factor)
-    excl = load_results("exclusive", frag, base_dir=base_dir, mu_r_factor=mu_r_factor)
+    diff = load_results("diffractive", frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
+    excl = load_results("exclusive", frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
     if not diff and not excl:
         return {}
     totals = {}
@@ -288,7 +305,7 @@ def _summed_band_from_members(member_dir_pattern, frag="HymnD"):
     if not member_dirs:
         return {}
 
-    per_member_totals = [_summed_results(member_dir, frag) for member_dir in member_dirs]
+    per_member_totals = [_summed_results(f"{member_dir}/files", frag) for member_dir in member_dirs]
     per_member_totals = [totals for totals in per_member_totals if totals]
     if not per_member_totals:
         return {}
@@ -387,7 +404,7 @@ def load_scale_band(process, frag="HymnD"):
     fully finished -- glob-and-use-whatever-exists would silently treat a
     still-running factor_0.5 alone as if it were the complete envelope).
     """
-    variation_dirs = [f"../files/HymnD_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
+    variation_dirs = [f"{SCALE_DIR}/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
     if not all(os.path.isdir(d) for d in variation_dirs):
         return {}
 
@@ -407,7 +424,7 @@ def load_scale_sum_band(frag="HymnD"):
     (see load_scale_band's docstring for why this checks by name rather
     than globbing).
     """
-    variation_dirs = [f"../files/HymnD_scale/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
+    variation_dirs = [f"{SCALE_DIR}/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
     if not all(os.path.isdir(d) for d in variation_dirs):
         return {}
 
@@ -480,7 +497,7 @@ def load_hymnd_sum_band(frag="HymnD"):
     exclusive SUM.
     """
     return _combine_in_quadrature(
-        _summed_results("..", frag),
+        _summed_results(CENTRAL_DIR, frag),
         load_hymnd_replica_sum_band(frag),
         load_bk_sum_band(frag),
         load_scale_sum_band(frag),
@@ -523,20 +540,13 @@ def main():
                 y_values.add(y)
     y_values = sorted(y_values)
 
-    # ColorBrewer's "Blues" sequential scale (rapidity is ordered: light ->
-    # dark = increasing y). A plain hex interpolation within one hue reads as
-    # too similar step-to-step; this one is built for perceptual spacing
-    # between adjacent steps, not just even numeric spacing.
-    blue_ramp = [
-        "#deebf7", "#c6dbef", "#9ecae1", "#6baed6",
-        "#4292c6", "#2171b5", "#08519c", "#08306b",
-    ]
-    colors = {}
-    for i, y in enumerate(y_values):
-        step = round(i * (len(blue_ramp) - 1) / max(len(y_values) - 1, 1))
-        colors[y] = blue_ramp[step]
+    # Blue -> red steps (ColorBrewer RdBu: dark blue, light blue, salmon, dark
+    # red), one per rapidity in increasing y: ordered like y itself, with
+    # negative y on the cool side and positive y on the warm side.
+    palette = ["#2166ac", "#67a9cf", "#ef8a62", "#b2182b"]
+    colors = {y: palette[i % len(palette)] for i, y in enumerate(y_values)}
 
-    plt.figure(figsize=(7.5, 6.5))
+    plt.figure(figsize=(8, 7))
 
     for process, frag in LINESTYLES:
         linestyle = LINESTYLES[(process, frag)]
@@ -550,7 +560,7 @@ def main():
                 lower = [v - s for v, s in zip(central_values, sigma_total)]
                 upper = [v + s for v, s in zip(central_values, sigma_total)]
                 plt.fill_between(pt_values, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
-                plt.plot(pt_values, central_values, color=colors[y], linestyle=linestyle)
+                plt.plot(pt_values, central_values, color=colors[y], linestyle=linestyle, lw=LINEWIDTH)
             continue
 
         results = all_results.get((process, frag))
@@ -562,7 +572,7 @@ def main():
             points = sorted(results[y])
             pt_values = [pair[0] for pair in points]
             cross_section_values = [pair[1] for pair in points]
-            plt.plot(pt_values, cross_section_values, color=colors[y], linestyle=linestyle)
+            plt.plot(pt_values, cross_section_values, color=colors[y], linestyle=linestyle, lw=LINEWIDTH)
 
     plt.yscale("log")
     # Fixed range rather than autoscale: at very low pT, mt0~m_c and
@@ -571,10 +581,13 @@ def main():
     # notes/) -- that blows up the HymnD band's lower edge toward the
     # 1e-30 floor at a few low-pT points, which would otherwise stretch
     # the whole axis and make everything else unreadable.
-    plt.ylim(1e-10, 1e2)
-    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
-    plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=15)
-    plt.title(f"$D^0$ photoproduction, {NUCLEUS}+{NUCLEUS} UPC ({CHANNEL}, HymnD)", pad=15)
+    plt.ylim(1e-9, 1e1)
+    plt.xlim(0, 12)   # the pD0 grid of run_many_nucleus.sh ends at 12 GeV
+    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
+    plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)
+    # in-plot label instead of a title, as in flux_comparison.py
+    plt.text(0.95, 0.95, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\n{CHANNEL}, HymnD", transform=plt.gca().transAxes,
+             ha="right", va="top", fontsize=20, linespacing=1.4)
     # Force log-scale minor ticks (2,3,...,9 within each decade) to actually
     # show. LogLocator has an internal numticks budget that silently
     # returns NO minor ticks at all once the axis spans too many decades
@@ -590,15 +603,16 @@ def main():
     plt.gca().yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=100))
     plt.gca().yaxis.set_major_formatter(
         ticker.FuncFormatter(lambda val, pos: f"$10^{{{round(math.log10(val))}}}$"
-                              if round(math.log10(val)) % 2 == 0 else ""))
+                              if round(math.log10(val)) % 2 != 0 else ""))
 
     # Discrete per-y legend (a plain colorbar doesn't read well once y is
     # restricted to a handful of integers) -- a separate legend box from
     # the process/frag one below, added via add_artist so the second
     # plt.legend() call doesn't replace it.
-    y_handles = [Line2D([0], [0], color=colors[y], linestyle="-", linewidth=2, label=f"$y={y:g}$")
+    y_handles = [Line2D([0], [0], color=colors[y], linestyle="-", linewidth=3, label=f"$y={y:g}$")
                  for y in y_values]
-    y_legend = plt.legend(handles=y_handles, loc="upper right", fontsize=15)
+    y_legend = plt.legend(handles=y_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0), fontsize=20,
+                          frameon=False)
     plt.gca().add_artist(y_legend)
 
     style_handles = []
@@ -609,10 +623,11 @@ def main():
             linestyle = LINESTYLES[(process, frag)]
             label = process if frag == "HymnD" else f"{process}, {frag}"
             if frag == "HymnD" and hymnd_bands.get(process):
-                style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))
+                style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label.capitalize()))
             elif (process, frag) in all_results:
-                style_handles.append(Line2D([0], [0], color="black", linestyle=linestyle, label=label))
-    plt.legend(handles=style_handles, loc="lower left", fontsize=15)
+                style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label.capitalize()))
+    plt.legend(handles=style_handles, loc="lower left", bbox_to_anchor=(0.33, 0.0), fontsize=20,
+               frameon=False)
 
     plt.tight_layout()
     outname = f"../plots/cross_section_{CHANNEL}_{NUCLEUS}.pdf"

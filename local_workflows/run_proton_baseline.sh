@@ -26,6 +26,9 @@
 #   CHANNEL    An0n (default) | Xn0n | PL(AnAn)
 #   FLUX_MODEL EFF (default) | PL | WS -- must match run_many_nucleus.sh
 #   CORES      parallel D0 invocations (default nproc/2)
+#   OUTDIR     output goes to $OUTDIR/files/ (default: the repo root)
+#   SKIP_BUILD 1 = use the existing build/bin/D0 (cluster jobs: build once
+#              with build_roihu.sh instead of every job running cmake)
 #   CALLS_EXCL, CALLS_EXCL_FACTORIZED, CALLS_DIFF, EXCL_PT_THRESHOLD (see run_many_nucleus.sh)
 #   HYMND_FILE
 
@@ -35,6 +38,7 @@ Y_VALS=${Y_VALS:-"-1.0 0.0 1.0 2.0 3.0"}
 PT_VALS=${PT_VALS:-"$(seq 0.2 0.1 2.0) $(seq 2.5 0.5 12.0)"}
 CORES=${CORES:-$(( $(nproc) / 2 ))}
 DIPOLE_FILE="data/proton/mve.dat"
+OUTDIR=${OUTDIR:-.}
 
 frag_tag=${FRAG_TYPE:-HymnD}
 channel=${CHANNEL:-An0n}
@@ -55,18 +59,20 @@ if [[ ! -f "$DIPOLE_FILE" ]]; then
 	exit 1
 fi
 
-echo "Building..."
-mkdir -p build
-cmake -S . -B build > /dev/null
-cmake --build build -j"$(nproc)" --target D0
-echo "Build OK."
+if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
+	echo "Building..."
+	mkdir -p build
+	cmake -S . -B build > /dev/null
+	cmake --build build -j"$(nproc)" --target D0
+	echo "Build OK."
+fi
 
-mkdir -p files
+mkdir -p "$OUTDIR/files"
 
 for proc in exclusive diffractive; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="files/D0_proton_baseline_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
+		outfile="$OUTDIR/files/D0_proton_baseline_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
 		{
 			echo "# proton-target baseline for R_pA (same nuclear photon flux as Pb+Pb, TARGET=AA, flux_model=${FLUX_MODEL})"
 			echo "# ${proc} D0 cross section, proton target, ${frag_tag} fragmentation, ${channel_tag} channel"
@@ -92,8 +98,8 @@ run_one_point() {
 		echo "Warning: D0 $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$pt  $excl" >> "files/D0_proton_baseline_exclusive_${frag_tag}_${channel_tag}_y${ytag}.dat"
-	echo "$pt  $diff" >> "files/D0_proton_baseline_diffractive_${frag_tag}_${channel_tag}_y${ytag}.dat"
+	echo "$pt  $excl" >> "$OUTDIR/files/D0_proton_baseline_exclusive_${frag_tag}_${channel_tag}_y${ytag}.dat"
+	echo "$pt  $diff" >> "$OUTDIR/files/D0_proton_baseline_diffractive_${frag_tag}_${channel_tag}_y${ytag}.dat"
 }
 
 for y in $Y_VALS; do

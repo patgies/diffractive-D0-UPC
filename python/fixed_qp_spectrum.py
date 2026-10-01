@@ -21,10 +21,10 @@ plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.size": 11,
-    "axes.labelsize": 22,
+    "axes.labelsize": 28,
     "axes.titlesize": 20,
-    "xtick.labelsize": 20,
-    "ytick.labelsize": 20,
+    "xtick.labelsize": 24,
+    "ytick.labelsize": 24,
     "xtick.direction": "in",
     "ytick.direction": "in",
     "xtick.top": True,
@@ -36,6 +36,7 @@ plt.rcParams.update({
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
     # same tick styling as flux_comparison.py: gray ticks, black numbers
+    # (font sizes a bit below inclusive-D0-UPC/python/fragmentation_comparison_evolved.py)
     "xtick.color": "0.4",
     "ytick.color": "0.4",
     "xtick.labelcolor": "black",
@@ -98,7 +99,7 @@ def main():
 
     # Power-law behaviour of the tails, labelled next to them.
     ax.text(4.7, 4e-8, r"$\sim p_{\perp}^{-6}$", fontsize=20)
-    ax.text(11.2, 1.8e-10, r"$\sim p_{\perp}^{-4}$", fontsize=20)
+    ax.text(10.5, 3e-10, r"$\sim p_{\perp}^{-4}$", fontsize=20)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
@@ -122,7 +123,7 @@ def main():
                          bbox_to_anchor=(0.02, 0.0), frameon=False)
     ax.add_artist(y_legend)
     ax.legend(handles=style_handles, fontsize=20, loc='lower left',
-              bbox_to_anchor=(0.3, 0.0), frameon=False)
+              bbox_to_anchor=(0.38, 0.0), frameon=False)
     plt.tight_layout()
     outname = "../plots/fixed_qp_spectrum.pdf"
     plt.savefig(outname, dpi=150)
