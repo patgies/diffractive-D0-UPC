@@ -50,6 +50,16 @@ CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 
 export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS HYMND_FILE
 
+# Photon flux: EFF (default) | PL | WS, see src/main.cpp. Must match the
+# FLUX_MODEL used for run_proton_baseline.sh, otherwise the flux no longer
+# cancels in R_pA (python/nuclear_modification_factor.py). TARGET is pinned
+# to AA so a stray TARGET=pA in the environment can't switch the geometry.
+FLUX_MODEL=${FLUX_MODEL:-EFF}
+export TARGET=AA FLUX_MODEL
+# file-name tag: none for the default EFF flux (keeps the existing names),
+# "_STARLIGHT" etc. otherwise, so runs with different fluxes don't overwrite
+flux_tag=$([[ "$FLUX_MODEL" == "EFF" ]] && echo "" || echo "_${FLUX_MODEL}")
+
 
 mkdir -p "$OUTDIR/files"
 
@@ -57,7 +67,7 @@ mkdir -p "$OUTDIR/files"
 for proc in $procs; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="$OUTDIR/files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		outfile="$OUTDIR/files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 		if [[ "$proc" == "exclusive" ]]; then
 			proc_calls="${CALLS_EXCL} below ${EXCL_PT_THRESHOLD} GeV, ${CALLS_EXCL_FACTORIZED} above (see EXCL_PT_THRESHOLD)"
 		else
@@ -66,7 +76,8 @@ for proc in $procs; do
 		{
 			echo "# ${proc} D0 cross section, ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
 			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
-			echo "# calls          : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_EXCL_FACTORIZED/CALLS_DIFF)"
+			echo "# flux_model     : ${FLUX_MODEL} (TARGET=AA)"
+			echo "# calls         : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_EXCL_FACTORIZED/CALLS_DIFF)"
 			echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
 			echo "# pD0 sweep      : $(echo $PT_VALS)"
 			echo "# fixed rapidity y : ${y}"
@@ -77,7 +88,7 @@ for proc in $procs; do
 done
 
 echo "Running D0 over $DIPOLE_DIR, pD0 in [$PT_MIN,$PT_MAX] step $PT_STEP, y in {$Y_VALS} ..."
-echo "frag_type=$frag_tag channel=$channel"
+echo "frag_type=$frag_tag channel=$channel flux_model=$FLUX_MODEL"
 
 # Column 2 of D0's data line is "exclusive", column 3 is "diffractive".
 run_one_point() {
@@ -92,10 +103,10 @@ run_one_point() {
 	fi
 	# Only write the file(s) for the process actually computed this run.
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
-		echo "$b  $pt  $excl" >> "$OUTDIR/files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		echo "$b  $pt  $excl" >> "$OUTDIR/files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 	fi
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "diffractive" ]]; then
-		echo "$b  $pt  $diff" >> "$OUTDIR/files/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}.dat"
+		echo "$b  $pt  $diff" >> "$OUTDIR/files/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 	fi
 }
 

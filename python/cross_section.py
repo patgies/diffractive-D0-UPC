@@ -12,7 +12,7 @@ from scipy.integrate import simpson
 sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
-# make the plot look nicer (same style as xpom_spectrum.py / fixedW_spectrum.py)
+# make the plot look nicer (same style as xpom_spectrum.py / fixed_qp_spectrum.py)
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",

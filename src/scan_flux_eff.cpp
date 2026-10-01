@@ -11,7 +11,8 @@
 //   T_B(s)          -- nuclear thickness function, normalized to integrate
 //                       to B=208 nucleons (WSThickness below)
 //   G_channel(r,s)  = \int_0^{2pi} dphi Gamma_AB(|r-s|) P_EMD^channel(|r-s|)
-//                       Theta(|r-s| >= bmin)   (fixed-grid Simpson in phi)
+//                       (fixed-grid Simpson in phi; no extra b >= bmin cut --
+//                       Gamma_AB already removes the overlapping configurations)
 //   H_channel(r)    = \int s ds T_B(s) G_channel(r,s)  (fixed-grid Simpson
 //                       in s), which asymptotes to B*Gamma_AB(r)*P_EMD(r)
 //                       once r is well past where T_B(s) has support --
@@ -29,6 +30,7 @@
 #include "photon_flux.hpp"
 #include <gsl/gsl_errno.h>
 #include <cmath>
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
@@ -93,15 +95,17 @@ struct Thickness {
     ~Thickness() { gsl_spline_free(spline); gsl_interp_accel_free(acc); }
 };
 
-// H_channel(r) = \int_0^{s_max} s ds T_B(s) * [\int_0^{2pi} dphi Gamma_AB(|r-s|) P_EMD(|r-s|) Theta(|r-s|>=bmin)]
+// H_channel(r) = \int_0^{s_max} s ds T_B(s) * [\int_0^{2pi} dphi Gamma_AB(|r-s|) P_EMD(|r-s|)]
 // Exact asymptotic fallback for r >= r_switch: H(r) -> B*Gamma_AB(r)*P_EMD(r).
-static double H_channel(double r, const Thickness& TB, const string& channel, double S, double bmin,
+static double H_channel(double r, const Thickness& TB, const string& channel, double S,
                          double B_mass, double r_switch)
 {
     if (r >= r_switch) {
         return B_mass * gamma_aa()(r) * channel_emd_factor(channel, r, S);
     }
-    int Ns = 120, Nphi = 80;
+    // grid sizes, overridable for convergence tests (NS, NPHI env vars)
+    static const int Ns   = std::getenv("NS")   ? std::atoi(std::getenv("NS"))   : 120;
+    static const int Nphi = std::getenv("NPHI") ? std::atoi(std::getenv("NPHI")) : 80;
     double sh = TB.s_max / Ns, sum_s = 0.0;
     for (int i = 0; i <= Ns; i++) {
         double s = i * sh;
@@ -110,9 +114,8 @@ static double H_channel(double r, const Thickness& TB, const string& channel, do
         double ph = M_PI / Nphi, sum_phi = 0.0;
         for (int j = 0; j <= Nphi; j++) {
             double phi = j * ph;
-            double b = std::sqrt(r * r + s * s - 2.0 * r * s * std::cos(phi));
-            double val = 0.0;
-            if (b >= bmin) val = gamma_aa()(b) * channel_emd_factor(channel, b, S);
+            double b = std::sqrt(std::max(0.0, r * r + s * s - 2.0 * r * s * std::cos(phi)));   // max: rounding at r=s, phi=0
+            double val = gamma_aa()(b) * channel_emd_factor(channel, b, S);
             double w = (j == 0 || j == Nphi) ? 1.0 : (j % 2 ? 4.0 : 2.0);
             sum_phi += w * val;
         }
@@ -132,7 +135,7 @@ int main(int argc, char** argv)
     init_ws_form_factor();   // builds the WS bare-flux table (needed for r < R_A)
 
     parameters par;
-    par.ss    = 5360.0;
+    par.ss    = 5360.0;   // GeV, sqrt(s_NN) of the Starlight tables (inputs/photon_flux/*.dta headers)
     par.alpha = 1.0 / 137.0;
     par.Z     = 82.0;
     par.mn    = 0.938;
@@ -152,15 +155,15 @@ int main(int argc, char** argv)
     // formula smoothly (continuity check across r_switch).
     {
         double r1 = r_switch * 0.98, r2 = r_switch * 1.02;
-        double h1 = H_channel(r1, TB, channel, par.S, par.bmin, B_mass, r_switch);
-        double h2 = H_channel(r2, TB, channel, par.S, par.bmin, B_mass, r_switch);
+        double h1 = H_channel(r1, TB, channel, par.S, B_mass, r_switch);
+        double h2 = H_channel(r2, TB, channel, par.S, B_mass, r_switch);
         std::cerr << "# continuity check at r_switch=" << r_switch
                   << ": H(" << r1 << ")=" << h1 << "  H(" << r2 << ")=" << h2
                   << "  ratio=" << h1/h2 << "\n";
     }
 
     std::cout << "channel,y,dN_dy\n" << std::setprecision(10);
-    const int ny = 40;
+    const int ny = 120;
     for (int iy = 0; iy < ny; iy++) {
         double y  = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));   // z = photon energy fraction
         double qp = y * par.ss / std::sqrt(2.0);
@@ -168,12 +171,12 @@ int main(int argc, char** argv)
 
         // r-integral: log-spaced from a small r0 up to r_max, fixed Simpson in ln r
         double r0 = 1e-3;
-        int Nr = 4000;
+        static const int Nr = std::getenv("NR") ? std::atoi(std::getenv("NR")) : 4000;
         double a_ = std::log(r0), c_ = std::log(r_max), h_ = (c_ - a_) / Nr, sum = 0.0;
         for (int i = 0; i <= Nr; i++) {
             double r = std::exp(a_ + i * h_);
             double flux = flux_density_WS(y, r, &par);   // bare flux, valid down to r=0
-            double Hval = H_channel(r, TB, channel, par.S, par.bmin, B_mass, r_switch);
+            double Hval = H_channel(r, TB, channel, par.S, B_mass, r_switch);
             double w = (i == 0 || i == Nr) ? 1.0 : (i % 2 ? 4.0 : 2.0);
             sum += w * (r * flux * Hval) * r;   // extra r: dr = r dlnr
         }

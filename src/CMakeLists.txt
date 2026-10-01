@@ -56,7 +56,7 @@ target_link_libraries(
 )
 
 add_executable(
-    D0_fixedW
+    D0_fixed_qp
     integrand.cpp
     int_exclusive.cpp
     int_diffractive.cpp
@@ -64,12 +64,12 @@ add_executable(
     photon_flux.cpp
     fragmentation.cpp
     hymnd_grid.cpp
-    main_fixedW.cpp
+    main_fixed_qp.cpp
     fourier.c
 )
 
 target_link_libraries(
-    D0_fixedW
+    D0_fixed_qp
     PRIVATE
     amplitude
     GSL::gsl
@@ -78,7 +78,7 @@ target_link_libraries(
 )
 
 add_executable(
-    D0_fixedW_xpom
+    D0_fixed_qp_xpom
     integrand.cpp
     int_exclusive.cpp
     int_diffractive.cpp
@@ -86,12 +86,12 @@ add_executable(
     photon_flux.cpp
     fragmentation.cpp
     hymnd_grid.cpp
-    main_fixedW_xpom.cpp
+    main_fixed_qp_xpom.cpp
     fourier.c
 )
 
 target_link_libraries(
-    D0_fixedW_xpom
+    D0_fixed_qp_xpom
     PRIVATE
     amplitude
     GSL::gsl

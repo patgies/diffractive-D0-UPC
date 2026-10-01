@@ -5,6 +5,7 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_errno.h>
 #include <cmath>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -149,7 +150,8 @@ public:
             for (int j = 0; j < nb; j++) {
                 double b = std::exp(lb[j]);
                 double I = raw_I(z, b, mn, FA, q_max);
-                double logI2 = std::log(std::max(I * I, 1e-300));
+                // isfinite: a failed k_perp integral (seen near z=1) must not poison the spline
+                double logI2 = std::isfinite(I) ? std::log(std::max(I * I, 1e-300)) : std::log(1e-300);
                 gsl_spline2d_set(spline, grid_z.data(), i, j, logI2);
             }
         }
@@ -236,7 +238,8 @@ public:
         if (b > b_max)
             return 1.0;
  
-        return TA(b); // Directly calls the spline
+        // clamp: the cubic spline undershoots to ~-1e-32 where Gamma -> 0
+        return std::min(1.0, std::max(0.0, TA(b)));
     }
 };
 
@@ -292,8 +295,9 @@ public:
 };
 
 // H_channel(r) = \int d^2s T_B(s) Gamma_AB(|r-s|) P_EMD^channel(|r-s|)
-//                  Theta(|r-s| >= bmin)
-// = \int_0^{s_max} s ds T_B(s) [\int_0^{2pi} dphi Gamma_AB(b(r,s,phi)) P_EMD(b) Theta(b>=bmin)]
+// = \int_0^{s_max} s ds T_B(s) [\int_0^{2pi} dphi Gamma_AB(b(r,s,phi)) P_EMD(b)]
+// No extra Theta(b >= bmin) cut: Gamma_AB already removes the overlapping
+// configurations (as in Eq. 4-6 of arXiv:2404.09731).
 // Built once as an r-spline over [0, r_switch] (each grid point needs the
 // (s,phi) double integral, the expensive part); for r >= r_switch (i.e. once
 // r is many nuclear thicknesses away, s becomes negligible next to r), the
@@ -306,7 +310,7 @@ private:
     gsl_spline* spline;
     gsl_interp_accel* acc;
     double r_min_, r_switch_;
-    double B_mass, S, bmin;
+    double B_mass, S;
     std::string channel;
 
     static double channel_factor(const std::string& channel, double b, double S)
@@ -317,7 +321,7 @@ private:
         return 1.0;   // AnAn
     }
 
-    static double H_raw(double r, const WSThickness& TB, const std::string& channel, double S, double bmin)
+    static double H_raw(double r, const WSThickness& TB, const std::string& channel, double S)
     {
         int Ns = 150, Nphi = 100;
         double sh = TB.s_max() / Ns, sum_s = 0.0;
@@ -327,8 +331,8 @@ private:
             double ph = M_PI / Nphi, sum_phi = 0.0;
             for (int j = 0; j <= Nphi; j++) {
                 double phi = j * ph;
-                double b = std::sqrt(r * r + s * s - 2.0 * r * s * std::cos(phi));
-                double val = (b >= bmin) ? gamma_aa()(b) * channel_factor(channel, b, S) : 0.0;
+                double b = std::sqrt(std::max(0.0, r * r + s * s - 2.0 * r * s * std::cos(phi)));   // max: rounding at r=s, phi=0
+                double val = gamma_aa()(b) * channel_factor(channel, b, S);
                 double w = (j == 0 || j == Nphi) ? 1.0 : (j % 2 ? 4.0 : 2.0);
                 sum_phi += w * val;
             }
@@ -348,16 +352,16 @@ public:
     // (s reaches up to s_max~66, not yet negligible against r there), which
     // showed up as a visible bump/dip in f_eff(z) right where a given z's
     // r_max(z) integration bound crosses r_switch (see eff_flux_check.pdf).
-    EffFluxRadial(const WSThickness& TB, const std::string& channel_, double S_, double bmin_,
+    EffFluxRadial(const WSThickness& TB, const std::string& channel_, double S_,
                   double B_mass_, double r_switch, int nr = 400, double r0 = 0.5)
-        : r_min_(r0), r_switch_(r_switch), B_mass(B_mass_), S(S_), bmin(bmin_), channel(channel_)
+        : r_min_(r0), r_switch_(r_switch), B_mass(B_mass_), S(S_), channel(channel_)
     {
         std::vector<double> lrg(nr), Hg(nr);
         double lr0 = std::log(r0), lr1 = std::log(r_switch);
         for (int i = 0; i < nr; i++) {
             double lr = lr0 + (lr1 - lr0) * i / (nr - 1.0);
             lrg[i] = lr;
-            Hg[i] = H_raw(std::exp(lr), TB, channel, S, bmin);
+            Hg[i] = H_raw(std::exp(lr), TB, channel, S);
         }
         spline = gsl_spline_alloc(gsl_interp_cspline, nr);
         acc = gsl_interp_accel_alloc();
@@ -389,10 +393,18 @@ void init_ws_form_factor(double RA_fm = 6.49, double a_fm = 0.54, double mn = 0.
 // below then depends only on qp (equivalently z), not on b at all. Requires
 // init_ws_form_factor() to already have been called (the bare flux used
 // inside the r-integral is the WS one, needed since r ranges down to 0 here
-// -- see EffFluxRadial). par is only used for alpha/Z/mn/ss/bmin/S (same
+// -- see EffFluxRadial). par is only used for alpha/Z/mn/ss/S (same
 // struct as flux_density_WS()).
 void init_effective_flux(const std::string& channel, void* par,
                           double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
+
+// FLUX_MODEL=STARLIGHT: P. Paakkinen's tabulated WS effective flux
+// (inputs/photon_flux/log-flux-tbl-WS.dta, arXiv:2404.09731; sqrt(s_NN) =
+// 5.36 TeV, sigma_NN = 90.8533 mb, R_WS = 6.49 fm, d_WS = 0.54 fm), read
+// once here. Only AnAn and An0n are tabulated. effective_photon_flux()
+// then returns it instead of our own f_eff.
+void init_starlight_flux(const std::string& channel,
+                         const std::string& filename = "./inputs/photon_flux/log-flux-tbl-WS.dta");
 
 // Effective photon flux, i.e. f_eff(z) with the full b (and target-nucleus
 // r,s geometric convolution) already integrated out -- returns dN/domega,

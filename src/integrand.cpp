@@ -57,7 +57,7 @@ static double excl_radial_integrand(double r, void* params)
 
 // For fixed pc, m and x_dip, the exclusive integrand's r1 and r2 dependence
 // factorizes into two separate 1D integrals I0, I1 (same trick as
-// exclusiveCrossSection_fixedW in int_exclusive.cpp). Solving them here with
+// exclusiveCrossSection_fixed_qp in int_exclusive.cpp). Solving them here with
 // deterministic adaptive quadrature avoids handing r1, r2 to the Monte Carlo
 // routine, where the oscillating Bessel functions converge very slowly at
 // high pt. 
@@ -109,7 +109,7 @@ double integrand_exclusive_factorized(double* vec, size_t /*dim*/, void* p)
     // out into effective_photon_flux(qp,p); the sampled "b" here is then an
     // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
     // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
-    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
+    double flux = is_effective_flux(par) ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -183,7 +183,7 @@ double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
     // out into effective_photon_flux(qp,p); the sampled "b" here is then an
     // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
     // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
-    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
+    double flux = is_effective_flux(par) ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     double xP_dip = min(xP, 0.01);
     double I0, I1;
@@ -233,7 +233,7 @@ double integrand_exclusive_mc(double* vec, size_t /*dim*/, void* p)
     // out into effective_photon_flux(qp,p); the sampled "b" here is then an
     // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
     // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
-    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
+    double flux = is_effective_flux(par) ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -301,7 +301,7 @@ double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
     // out into effective_photon_flux(qp,p); the sampled "b" here is then an
     // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
     // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
-    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
+    double flux = is_effective_flux(par) ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -377,7 +377,7 @@ double integrand_diffractive_xpom(double* vec, size_t /*dim*/, void* p)
     // out into effective_photon_flux(qp,p); the sampled "b" here is then an
     // unused placeholder (its VEGAS box is set to [0,1] in int_exclusive.cpp/
     // int_diffractive.cpp for this mode, contributing a no-op Jacobian).
-    double flux = (par->flux_model == "EFF") ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
+    double flux = is_effective_flux(par) ? effective_photon_flux(qp, p) : photon_flux(b, qp, p);
 
     // light-cone momentum fractions
     double z1 = pp / qp;
@@ -417,11 +417,11 @@ double integrand_diffractive_xpom(double* vec, size_t /*dim*/, void* p)
     return kernel * fragmentation(zh, par);
 }
 
-// "Fixed W, no photon flux" diffractive integrand. Here q+ is set to 3*p+
-// by hand (so z1 = 1/3 always) and pc is just par->p directly. There's no
+// "Fixed q+, no photon flux" diffractive integrand. Here q+ is set to 2*p+
+// by hand (so z1 = 1/2 always) and pc is just par->p directly. There's no
 // fragmentation step. Only 4 random numbers this time: {r1, r2, u_k, u_xpo}.
 
-double integrand_diffractive_fixedW(double* vec, size_t /*dim*/, void* p)
+double integrand_diffractive_fixed_qp(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
 
@@ -436,11 +436,11 @@ double integrand_diffractive_fixedW(double* vec, size_t /*dim*/, void* p)
 
     if (k > par->p) return 0.0;   
 
-    double z1 = 1.0 / 3.0;   // q+ = 3p+, so p+/q+ = 1/3
+    double z1 = 0.5;   // q+ = 2p+, so p+/q+ = 1/2
     double z2 = 1.0 - z1;
 
     double pp = (par->mt / M_SQRT2) * exp(par->y);
-    double qp = 3.0 * pp;
+    double qp = 2.0 * pp;
     double w2   = M_SQRT2 * qp * par->ss;
     double Mqq2 = (par->p2 + par->m2) / (z1 * z2);
     double x    = Mqq2 / (x_po * w2);
@@ -471,12 +471,12 @@ double integrand_diffractive_fixedW(double* vec, size_t /*dim*/, void* p)
     return kernel;
 }
 
-// Same as integrand_diffractive_fixedW above, but x_po is fixed at
+// Same as integrand_diffractive_fixed_qp above, but x_po is fixed at
 // par->fixed_xpo instead of being one of the random integration
 // variables (dropping u_xpo and its log-mapping Jacobian) -- gives
-// dsigma_fixedW/(d2K dx_po) at one specific x_po, integrated over the
+// dsigma_fixed_qp/(d2K dx_po) at one specific x_po, integrated over the
 // remaining 3 variables {r1, r2, u_k}.
-double integrand_diffractive_fixedW_xpom(double* vec, size_t /*dim*/, void* p)
+double integrand_diffractive_fixed_qp_xpom(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
 

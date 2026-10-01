@@ -32,8 +32,8 @@ double diffractiveCrossSection(void* p)
     // (u_k and u_xpo are between 0 and 1 and get log-mapped inside the
     // integrand; zh's box is the actual [zmin, zmax] range). flux_model==
     // "EFF": b is an unused placeholder (see integrand.cpp), box is [0,1].
-    bool eff = (par->flux_model == "EFF");
-    double b_lo = eff ? 0.0 : par->bmin;
+    bool eff = is_effective_flux(par);
+    double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
     double rmax = 99.0;
     double low[] = {0.,   0.,   0.,   0., b_lo, 0.,  par->zmin};
@@ -81,8 +81,8 @@ double diffractiveCrossSection_xpom(void* p)
 
     // integration box for {r1, r2, u_k, u_qp, b, zh}. flux_model=="EFF": b
     // is an unused placeholder (see integrand.cpp), box is [0,1].
-    bool eff = (par->flux_model == "EFF");
-    double b_lo = eff ? 0.0 : par->bmin;
+    bool eff = is_effective_flux(par);
+    double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
     double rmax = 99.0;
     double low[] = {0.,   0.,   0.,   0., b_lo, par->zmin};
@@ -105,9 +105,9 @@ double diffractiveCrossSection_xpom(void* p)
     return res;
 }
 
-// "Fixed W, no photon flux" diffractive cross section: a 4-dimensional
+// "Fixed q+, no photon flux" diffractive cross section: a 4-dimensional
 // integral over {r1, r2, u_k, u_xpo}.
-// There's no {u_qp, b, zh} here because q+ = 3p+ is fixed by hand, there's
+// There's no {u_qp, b, zh} here because q+ = 2p+ is fixed by hand, there's
 // no photon flux to integrate over, and pc is just par->p directly (no
 // fragmentation). par->k_upper needs to already be set by the caller.
 //
@@ -115,7 +115,7 @@ double diffractiveCrossSection_xpom(void* p)
 // one multiplies in the full physical prefactor at the end (including
 // alpha_s), that's possible here because mT (used for alpha_s) is fixed for this whole
 // calculation, rather than changing every time zh is sampled.
-double diffractiveCrossSection_fixedW(void* p)
+double diffractiveCrossSection_fixed_qp(void* p)
 {
     parameters* par = (parameters*)p;
     size_t calls = par->calls_diff;
@@ -127,7 +127,7 @@ double diffractiveCrossSection_fixedW(void* p)
     gsl_rng* r = gsl_rng_alloc(T);
 
     gsl_monte_function F;
-    F.f      = &integrand_diffractive_fixedW;
+    F.f      = &integrand_diffractive_fixed_qp;
     F.dim    = 4;
     F.params = par;
 
@@ -161,11 +161,11 @@ double diffractiveCrossSection_fixedW(void* p)
     return res * prefactor;
 }
 
-// Same as diffractiveCrossSection_fixedW above, but x_po is fixed at
+// Same as diffractiveCrossSection_fixed_qp above, but x_po is fixed at
 // par->fixed_xpo instead of being one of the random integration
 // variables -- a 3-dimensional integral over {r1, r2, u_k}, giving
-// dsigma_fixedW/(d2K dx_po) at that one value of x_po.
-double diffractiveCrossSection_fixedW_xpom(void* p)
+// dsigma_fixed_qp/(d2K dx_po) at that one value of x_po.
+double diffractiveCrossSection_fixed_qp_xpom(void* p)
 {
     parameters* par = (parameters*)p;
     size_t calls = par->calls_diff;
@@ -177,7 +177,7 @@ double diffractiveCrossSection_fixedW_xpom(void* p)
     gsl_rng* r = gsl_rng_alloc(T);
 
     gsl_monte_function F;
-    F.f      = &integrand_diffractive_fixedW_xpom;
+    F.f      = &integrand_diffractive_fixed_qp_xpom;
     F.dim    = 3;
     F.params = par;
 

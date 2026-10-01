@@ -34,8 +34,8 @@ double exclusiveCrossSection(void* p)
     // flux_model=="EFF": b is an unused placeholder (the flux no longer
     // depends on it, see integrand.cpp), so its box is just [0,1] -- a
     // Jacobian width of 1, contributing nothing -- rather than [bmin,bmax].
-    bool eff = (par->flux_model == "EFF");
-    double b_lo = eff ? 0.0 : par->bmin;
+    bool eff = is_effective_flux(par);
+    double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
 
     double low[5], up[5];
@@ -101,8 +101,8 @@ double exclusiveCrossSection_xpom(void* p)
     F.dim    = 2;
     F.params = par;
 
-    bool eff = (par->flux_model == "EFF");   // see exclusiveCrossSection() above
-    double low[] = {eff ? 0.0 : par->bmin, par->zmin};
+    bool eff = is_effective_flux(par);   // see exclusiveCrossSection() above
+    double low[] = {b_integration_min(par), par->zmin};
     double up[]  = {eff ? 1.0 : par->bmax, par->zmax};
 
     double res, err;
@@ -123,7 +123,7 @@ double exclusiveCrossSection_xpom(void* p)
 }
 
 
-// Small helper struct + function used only by exclusiveCrossSection_fixedW
+// Small helper struct + function used only by exclusiveCrossSection_fixed_qp
 // below, to do the two simple 1D integrals over dipole size.
 struct RadialParams {
     double pc;
@@ -139,21 +139,21 @@ static double radial_integrand(double r, void* params)
     return r * Jn(rp->nu, rp->pc * r) * Kn(rp->nu, rp->m * r) * rp->dipole->N(r, rp->x_dip);
 }
 
-// "Fixed W, no photon flux" exclusive cross section. Here q+ = 3p+ is fixed
-// by hand (z1 = 1/3) and pc is just par->p (no fragmentation step). Because
+// "Fixed q+, no photon flux" exclusive cross section. Here q+ = 2p+ is fixed
+// by hand (z1 = 1/2) and pc is just par->p (no fragmentation step). Because
 // par->p doesn't change during this calculation, the usual double integral
 // over the two dipole sizes r1 and r2 splits into two separate, identical
 // 1D integrals (I0 and I1). So instead of a Monte Carlo integration, we can
 // just compute these two integrals directly with GSL and combine them.
-double exclusiveCrossSection_fixedW(void* p)
+double exclusiveCrossSection_fixed_qp(void* p)
 {
     parameters* par = (parameters*)p;
 
-    double z1 = 1.0 / 3.0;   // q+ = 3p+, so p+/q+ = 1/3
+    double z1 = 0.5;   // q+ = 2p+, so p+/q+ = 1/2
     double z2 = 1.0 - z1;
 
     double pp   = (par->mt / M_SQRT2) * exp(par->y);
-    double qp   = 3.0 * pp;
+    double qp   = 2.0 * pp;
     double w2   = M_SQRT2 * qp * par->ss;
     double Mqq2 = (par->p2 + par->m2) / (z1 * z2);
     double xP   = Mqq2 / w2;

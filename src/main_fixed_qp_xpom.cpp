@@ -9,17 +9,17 @@
 
 using namespace std;
 
-// Fixed-W (no photon-flux), x_po-differential diffractive spectrum, as a
+// Fixed-q+ (no photon-flux), x_po-differential diffractive spectrum, as a
 // function of x_po, at a fixed rapidity y and observed quark transverse
-// momentum K. Same "q+ = 3p+ fixed by hand" trick as main_fixedW.cpp, but
+// momentum K. Same "q+ = 3p+ fixed by hand" trick as main_fixed_qp.cpp, but
 // x_po is fixed per point (like main_xpom.cpp) instead of being integrated
-// over -- the fixed-W analogue of D0_xpom.
+// over -- the fixed-q+ analogue of D0_xpom.
 //
-// Run: ./D0_fixedW_xpom <y> <K> <x_po> [calls]
+// Run: ./D0_fixed_qp_xpom <y> <K> <x_po> [calls]
 //
 // Exclusive doesn't depend on x_po (no rapidity-gap variable in that
-// process), so it's printed unchanged from exclusiveCrossSection_fixedW
-// for reference, same "missing prefactor" convention as main_fixedW.cpp.
+// process), so it's printed unchanged from exclusiveCrossSection_fixed_qp
+// for reference, same "missing prefactor" convention as main_fixed_qp.cpp.
 
 int main(int argc, char* argv[])
 {
@@ -62,15 +62,15 @@ int main(int argc, char* argv[])
     param.mt   = sqrt(p2m2);
     param.k_upper = param.kmax;
 
-    double result_excl = exclusiveCrossSection_fixedW(static_cast<void*>(&param));
-    double result_diff = diffractiveCrossSection_fixedW_xpom(static_cast<void*>(&param));
+    double result_excl = exclusiveCrossSection_fixed_qp(static_cast<void*>(&param));
+    double result_diff = diffractiveCrossSection_fixed_qp_xpom(static_cast<void*>(&param));
 
-    cout << "# Fixed-W (no photon flux), x_po-differential diffractive dsigma/(d2K dx_po)" << endl;
+    cout << "# Fixed-q+ (no photon flux), x_po-differential diffractive dsigma/(d2K dx_po)" << endl;
     cout << "# y (fixed)  =  " << param.y << endl;
     cout << "# K (fixed)  =  " << K << endl;
     cout << "# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2), independent of x_po" << endl;
     cout << "# diffractive column: full physical cross section at this x_po" << endl;
-    cout << "# x_po  exclusive_fixedW  diffractive_fixedW_dxpo" << endl;
+    cout << "# x_po  exclusive_fixed_qp  diffractive_fixed_qp_dxpo" << endl;
     cout << param.fixed_xpo << "  " << result_excl << "  " << result_diff << endl;
 
     return 0;

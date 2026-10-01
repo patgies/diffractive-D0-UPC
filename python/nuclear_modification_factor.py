@@ -16,14 +16,14 @@ from alphas_running import alphas_run
 # DIRECTLY (already in mb, no separate GEVSQR_TO_MB natural-units
 # conversion needed), unlike the Pb+Pb case where the Glauber b-integral
 # supplies the area instead and DOES need GEVSQR_TO_MB (see
-# notes/hymnd_band_construction.tex-adjacent discussion / fixedW_spectrum.py's
+# notes/hymnd_band_construction.tex-adjacent discussion / fixed_qp_spectrum.py's
 # identical convention).
 sigma0 = 16.36   # mb
 
 
 def proton_prefactor(process, pt):
     """Physical prefactor for a PROTON target, matching
-    fixedW_spectrum.py's PREFACTOR_EXCL / diffractiveCrossSection_fixedW's
+    fixed_qp_spectrum.py's PREFACTOR_EXCL / diffractiveCrossSection_fixed_qp's
     C++ prefactor exactly -- sigma0 included directly (no GEVSQR_TO_MB).
     """
     if process == "exclusive":
@@ -42,8 +42,10 @@ def proton_prefactor(process, pt):
 # Numerator: this project's Pb+Pb exclusive+diffractive sum (already
 # correctly normalized, from cross_section.py's _summed_results).
 # Denominator: a proton-target baseline computed with the SAME nuclear
-# photon flux as Pb+Pb (Z=82, bmin=2R_Pb -- both hardcoded in src/main.cpp
-# regardless of dipole file), from ../local_workflows/run_proton_baseline.sh's output. No
+# photon flux as Pb+Pb (TARGET=AA and the same FLUX_MODEL, EFF by default,
+# pinned in both run_many_nucleus.sh and run_proton_baseline.sh so the flux
+# cancels in the ratio -- check the "flux_model" line in both files'
+# headers), from ../local_workflows/run_proton_baseline.sh's output. No
 # Glauber b-average applies here (a single proton has no nucleon-position
 # ensemble to sample), so unlike the nuclear "2*pi*b_integral" step, the
 # raw D0 output is used directly -- just the standard prefactor and

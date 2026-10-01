@@ -51,6 +51,12 @@ CALLS_EXCL_FACTORIZED=${CALLS_EXCL_FACTORIZED:-1e3}
 
 export CALLS CALLS_DIFF CALLS_EXCL_FACTORIZED HYMND_FILE
 
+# Photon flux: EFF (default, our effective flux) or STARLIGHT (Paakkinen's
+# table, AnAn/An0n only); tagged in the file names as in run_many_nucleus.sh
+FLUX_MODEL=${FLUX_MODEL:-EFF}
+export FLUX_MODEL
+flux_tag=$([[ "$FLUX_MODEL" == "EFF" ]] && echo "" || echo "_${FLUX_MODEL}")
+
 if [[ ! -d "$DIPOLE_DIR" ]]; then
 	echo "Error: $DIPOLE_DIR does not exist (expected Glauber samples glauber_mve_<b>)." >&2
 	exit 1
@@ -76,12 +82,13 @@ for y in $Y_VALS; do
 	for pt in $PT_VALS; do
 		pttag=$(echo "$pt" | tr -d '.')
 		for process in exclusive diffractive; do
-			outfile="files/D0_${process}_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}_pt${pttag}.dat"
+			outfile="files/D0_${process}_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
 			{
 				echo "# ${process} D0 dsigma/(d2pD0 dy dx_po), ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
 				echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
 				echo "# calls          : ${CALLS_EXCL_FACTORIZED} (exclusive) / ${CALLS_DIFF} (diffractive) VEGAS calls per point"
 				echo "# dipole samples : ${DIPOLE_DIR}/glauber_mve_<b>"
+				echo "# flux_model     : ${FLUX_MODEL}"
 				echo "# x_po grid      : ${XPO_MIN} to ${XPO_MAX}, ${XPO_N} log-spaced points"
 				echo "# fixed rapidity y : ${y}"
 				echo "# fixed pD0        : ${pt}"
@@ -107,8 +114,8 @@ run_one_point() {
 		echo "Warning: D0_xpom $dfile $pt $y $xpo produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$b  $xpo  $excl" >> "files/D0_exclusive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}_pt${pttag}.dat"
-	echo "$b  $xpo  $diff" >> "files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}_y${ytag}_pt${pttag}.dat"
+	echo "$b  $xpo  $excl" >> "files/D0_exclusive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+	echo "$b  $xpo  $diff" >> "files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
 }
 
 for dfile in "$DIPOLE_DIR"/glauber_mve_*; do

@@ -41,7 +41,7 @@ def main():
         step = round(i * (len(blue_ramp) - 1) / max(len(Y_TO_PLOT) - 1, 1))
         colors[y] = blue_ramp[step]
 
-    # Color AND linestyle both cycle with y (see fixedW_xpom_spectrum.py) --
+    # Color AND linestyle both cycle with y (see fixed_qp_xpom_spectrum.py) --
     # makes adjacent/crossing curves easier to tell apart than color alone.
     linestyle_cycle = ['-', '--', ':', '-.']
     y_linestyles = {}

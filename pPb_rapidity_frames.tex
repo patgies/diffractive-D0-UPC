@@ -1,0 +1,160 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{Rapidity frames in $p$Pb and PbPb ultraperipheral collisions:\\
+the $\Delta y = 0.465$ shift}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+
+In $p$Pb collisions at the LHC the two beams carry different energies per
+nucleon, so the nucleon--nucleon (NN) centre-of-mass frame moves in the
+laboratory with rapidity $|\Delta y| = \tfrac12\ln(208/82)\simeq0.465$ towards
+the proton. Theory calculations (this code, and Guzey, Innocenti, Sta\'sto
+and Strikman, arXiv:2606.05469) are done in the NN centre-of-mass frame,
+while detectors measure laboratory rapidities. Comparing the two therefore
+requires shifting by $0.465$. In PbPb both beams have the same energy per
+nucleon, the centre-of-mass frame is at rest in the laboratory, and no shift
+is needed.
+
+\section{Origin of the shift}
+
+The LHC bends both beams with the same magnets on the same orbit, so both
+have the same momentum per unit charge (magnetic rigidity). Per nucleon,
+this gives
+\begin{equation}
+  E_{\rm Pb}/{\rm nucleon} = \frac{Z}{A}\,E_p .
+\end{equation}
+For the 8.16~TeV $p$Pb run: $E_p = 6.5$~TeV and
+$E_{\rm Pb}/{\rm nucleon} = 6.5\times82/208 \simeq 2.56$~TeV. For
+ultrarelativistic beams,
+\begin{equation}
+  \sqrt{s_{NN}} = 2\sqrt{E_p\,E_{\rm Pb}} \simeq 2\sqrt{6.5\times2.56}~{\rm TeV}
+  \simeq 8.16~{\rm TeV},
+\end{equation}
+the value used in the code (\texttt{param.ss = 8160} for \texttt{TARGET=pA}).
+
+Take the lead beam along $+z$ and the proton along $-z$. The total light-cone
+momenta per nucleon pair are $P^+\propto E_{\rm Pb}$ and $P^-\propto E_p$, so
+the rapidity of the NN centre of mass in the laboratory is
+\begin{equation}
+  Y_{\rm CM} = \frac12\ln\frac{P^+}{P^-} = \frac12\ln\frac{E_{\rm Pb}}{E_p}
+  = -\frac12\ln\frac{A}{Z} = -\frac12\ln\frac{208}{82} \simeq -0.465 .
+\end{equation}
+The centre of mass moves towards the proton, the beam with more momentum per
+nucleon.
+
+Rapidity is additive under boosts along the beam axis, so every particle's
+rapidity changes by the same constant between the two frames:
+\begin{equation}
+  y_{\rm lab} = y_{\rm CM} + Y_{\rm CM}.
+\end{equation}
+The shape of $d\sigma/dy$ is unchanged; the whole distribution is only
+translated by $0.465$ units.
+
+\section{Why the calculation lives in the centre-of-mass frame}
+
+The kinematics in the code assume a symmetric NN frame:
+\begin{itemize}
+  \item The photon energy fraction $z = 2\omega/\sqrt{s_{NN}}$ uses the lead
+    Lorentz factor $\gamma = \sqrt{s_{NN}}/(2m_N)$. This is the lead's boost
+    in the NN centre-of-mass frame, not in the laboratory.
+  \item The $D^0$ rapidity enters through
+    $p^+ = m_T e^{y}/\sqrt2$, and the smallest reachable photon energy
+    fraction is $z_{\min} = m_T e^{y}/\sqrt{s_{NN}}$
+    (\texttt{src/main.cpp}). Both are centre-of-mass quantities.
+  \item The momentum fractions probed in the target,
+    $x \sim (m_T/\sqrt{s_{NN}})\,e^{-y}$, are likewise centre-of-mass
+    expressions.
+\end{itemize}
+So the $y$ passed to \texttt{D0} and written to the output files is
+$y_{\rm CM}$.
+
+\section{Why PbPb needs no shift}
+
+In PbPb both beams have the same $Z/A$, hence the same energy per nucleon
+(2.68~TeV each at $\sqrt{s_{NN}}=5.36$~TeV). Then $P^+=P^-$,
+$Y_{\rm CM}=0$ and $y_{\rm lab}=y_{\rm CM}$. The same holds for $pp$. The
+shift appears only for asymmetric systems ($p$Pb, $p$O, O--Pb, \dots), where
+$Z_1/A_1 \neq Z_2/A_2$.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+System & $E_1$/nucleon & $E_2$/nucleon & $|Y_{\rm CM}|$ \\
+\midrule
+PbPb, 5.36 TeV & 2.68 TeV & 2.68 TeV & 0 \\
+$p$Pb, 8.16 TeV & 6.5 TeV ($p$) & 2.56 TeV (Pb) & $\tfrac12\ln(208/82)\simeq0.465$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Sign conventions}
+
+The size of the shift is fixed; its sign depends on which beam defines
+$+y$. There are two conventions to keep apart.
+
+\paragraph{This code and arXiv:2606.05469.} Positive rapidity is the
+direction of the photon-emitting lead nucleus; the proton target moves
+towards negative rapidity. In the code this follows from
+$z_{\min}\propto e^{y}$: larger $y$ requires a more energetic photon, i.e.\
+the $D^0$ goes along the photon (lead) direction. The paper states the same
+convention explicitly in Sec.~6 and in the captions of its $p$Pb figures
+(``the nucleus moves in the positive-rapidity direction and the proton in
+the negative-rapidity direction'').
+
+\paragraph{Experiments.} LHC experiments usually take the proton direction
+as $+y$ and often quote the two beam configurations ($p$--Pb and Pb--$p$)
+separately. Each measurement must be checked for its own convention.
+
+\paragraph{Conversion.} With the proton along $+y$ in the experiment, a
+measured laboratory rapidity $y_{\rm lab}^{\rm exp}$ corresponds to
+\begin{equation}
+  y_{\rm CM}^{\rm exp} = y_{\rm lab}^{\rm exp} - 0.465
+  \qquad\text{(proton still along $+y$)},
+\end{equation}
+and, flipping to the code's orientation (lead along $+y$),
+\begin{equation}
+  y_{\rm code} = -\left(y_{\rm lab}^{\rm exp} - 0.465\right).
+\end{equation}
+A data bin $a<y_{\rm lab}^{\rm exp}<b$ therefore corresponds to
+$-(b-0.465) < y_{\rm code} < -(a-0.465)$.
+
+\section{Does arXiv:2606.05469 apply the shift?}
+
+No. In the LaTeX source of Guzey, Innocenti, Sta\'sto and Strikman,
+``Diffractive open charm photoproduction in ultraperipheral lead-lead and
+proton-lead collisions at the LHC'' (arXiv:2606.05469), the $p$Pb section
+gives predictions at $\sqrt{s_{NN}}=8.16$~TeV for $-2<y<2$ with the nucleus
+along $+y$. The rapidity shift, laboratory versus centre-of-mass frames and
+the value $0.465$ are never mentioned. Their $y$ is therefore the NN
+centre-of-mass rapidity, the same as ours.
+
+This is consistent: a theory prediction does not need the shift on its own.
+Consequences for this project:
+\begin{itemize}
+  \item Our $p$Pb output (\texttt{run\_pA.sh}) can be compared with their
+    $p$Pb figures directly, bin by bin, with no shift, since both use the
+    centre-of-mass frame with lead along $+y$.
+  \item The shift is needed only when comparing either calculation with
+    measured $p$Pb data quoted in laboratory rapidity.
+\end{itemize}
+
+\section{Which nucleus emits the photon}
+
+The photon flux scales as $Z^2$, so in $p$Pb UPCs the lead emits essentially
+all photons and the proton acts as the target; the proton-emitted
+contribution ($Z=1$) is suppressed by $1/82^2$ and neglected. The
+distribution is then asymmetric in $y$, which is why the orientation above
+matters. In PbPb either nucleus can emit, the measured distribution is
+symmetric in $y$, and the physical cross section is the sum of the two
+emitter configurations, evaluated at $+y$ and $-y$.
+
+\end{document}

@@ -24,8 +24,8 @@ set_target_properties(D0 PROPERTIES
 set_target_properties(D0_xpom PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set_target_properties(D0_fixedW PROPERTIES
+set_target_properties(D0_fixed_qp PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set_target_properties(D0_fixedW_xpom PROPERTIES
+set_target_properties(D0_fixed_qp_xpom PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

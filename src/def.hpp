@@ -76,15 +76,34 @@ struct parameters
     // us the cross section at one specific value of x_po.
     double fixed_xpo;
 
-    // Used only in the "fixed W, no photon flux" mode (see main_fixedW.cpp).
-    // Here q+ is fixed to 3*p+ instead of being integrated over the photon
+    // Used only in the "fixed q+, no photon flux" mode (see main_fixed_qp.cpp).
+    // Here q+ is fixed (2*p+ in D0_fixed_qp, 3*p+ in D0_fixed_qp_xpom) instead of the photon
     // flux, and there is no fragmentation step -- p is directly the charm
     // quark's transverse momentum K. Since these don't change during the
     // integration, we compute them once outside and just reuse them.
     double p, p2, mt;                             // K, K^2, sqrt(K^2 + m^2)
     double kmax, k_upper, log_k;                  // range for the gluon momentum k
-    double denom4, p4m4, two_m2p2m2, inv_denom8;  // pieces used to build H^2 (see integrand_diffractive_fixedW)
+    double denom4, p4m4, two_m2p2m2, inv_denom8;  // pieces used to build H^2 (see integrand_diffractive_fixed_qp)
 };
+
+// Lower edge of the b integration. Only the point-like PL(AnAn) channel
+// (and the pA "PL" comparison) has a sharp cut at bmin, since there
+// Gamma = 1; every channel with a hadronic survival factor Gamma_AA(b)
+// starts at b = 0 -- Gamma already removes the overlapping configurations.
+// "EFF"/"STARLIGHT": b is an unused placeholder in [0,1].
+inline bool is_effective_flux(const parameters* par)
+{
+    // b already integrated out: our own effective flux ("EFF") or
+    // Paakkinen's tabulated one ("STARLIGHT", see init_starlight_flux())
+    return par->flux_model == "EFF" || par->flux_model == "STARLIGHT";
+}
+
+inline double b_integration_min(const parameters* par)
+{
+    if (is_effective_flux(par)) return 0.0;
+    if (par->target == "pA" || par->channel == "PL(AnAn)") return par->bmin;
+    return 0.0;
+}
 
 // D0-level (fragmented) exclusive integrand: dsigma/(d2pD0 dy), evaluated
 // at the charm quark momentum pc=par->pD0/zh, with an extra fragmentation
@@ -135,13 +154,13 @@ double photon_flux(double b, double qp, void* p);
 double effective_photon_flux(double qp, void* p);
 
 // Bessel function helpers, defined in integrand.cpp. Declared here too so
-// int_exclusive.cpp can use them for the fixed-W calculation below.
+// int_exclusive.cpp can use them for the fixed-q+ calculation below.
 double Jn(int nu, double x);
 double Kn(int nu, double x);
 
-// "Fixed W, no photon flux" mode: q+ is set to 3*p+ by hand instead of being
+// "Fixed q+, no photon flux" mode: q+ is set by hand (2*p+, or 3*p+ for _xpom) instead of being
 // integrated over the photon flux, and pc is just par->p directly (no
-// fragmentation step). See main_fixedW.cpp for how these are used.
+// fragmentation step). See main_fixed_qp.cpp for how these are used.
 //   exclusive:   computed directly with two 1D integrals (see int_exclusive.cpp),
 //                still missing the overall prefactor alpha_em*Nc*e_c^2*sigma0/(2pi^2),
 //                same as exclusiveCrossSection above.
@@ -149,15 +168,15 @@ double Kn(int nu, double x);
 //                the full prefactor alpha_s(mT)*alpha_em*e_c^2*(Nc^2-1)*sigma0/(8pi^4)
 //                multiplied in, so nothing else needs to be applied later
 //                (except converting GeV^-2 to mb).
-double exclusiveCrossSection_fixedW(void* p);
-double integrand_diffractive_fixedW(double* vec, size_t dim, void* p);
-double diffractiveCrossSection_fixedW(void* p);
+double exclusiveCrossSection_fixed_qp(void* p);
+double integrand_diffractive_fixed_qp(double* vec, size_t dim, void* p);
+double diffractiveCrossSection_fixed_qp(void* p);
 
-// Same as the fixedW pair above, but x_po is fixed at par->fixed_xpo
+// Same as the fixed_qp pair above, but x_po is fixed at par->fixed_xpo
 // instead of being integrated over (dropping u_xpo), giving
-// dsigma_fixedW/(d2K dx_po) at one specific x_po -- the fixed-W analogue
+// dsigma_fixed_qp/(d2K dx_po) at one specific x_po -- the fixed-q+ analogue
 // of diffractiveCrossSection_xpom.
-double integrand_diffractive_fixedW_xpom(double* vec, size_t dim, void* p);
-double diffractiveCrossSection_fixedW_xpom(void* p);
+double integrand_diffractive_fixed_qp_xpom(double* vec, size_t dim, void* p);
+double diffractiveCrossSection_fixed_qp_xpom(void* p);
 
 #endif

@@ -1,21 +1,22 @@
 import csv
 import os
 import numpy as np
+from scipy.interpolate import CubicSpline
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.ticker import LogLocator, FixedLocator, NullFormatter, FuncFormatter
+from matplotlib.ticker import LogLocator, FixedLocator, FuncFormatter, NullFormatter
 
-# make the plot look nicer (same style as cross_section.py / xpom_spectrum.py / fixedW_spectrum.py)
+# make the plot look nicer (same style as cross_section.py / xpom_spectrum.py / fixed_qp_spectrum.py)
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.size": 11,
-    "axes.labelsize": 20,
+    "axes.labelsize": 22,
     "axes.titlesize": 20,
-    "xtick.labelsize": 18,
-    "ytick.labelsize": 18,
+    "xtick.labelsize": 20,
+    "ytick.labelsize": 20,
     "xtick.direction": "in",
     "ytick.direction": "in",
     "xtick.top": True,
@@ -44,11 +45,14 @@ plt.rcParams.update({
 # table by up to 33x at large y). PL(AnAn) is the deliberate point-like
 # baseline, not the effective flux, so it still comes from the simple scan
 # (src/scan_flux.cpp -> out/flux_scan.csv).
-# Regenerate with, from python/:
-#   ../build/bin/scan_flux > ../out/flux_scan.csv
-#   ../build/bin/scan_flux_eff AnAn > ../out/flux_scan_eff_AnAn.csv
-#   ../build/bin/scan_flux_eff An0n > ../out/flux_scan_eff_An0n.csv
-#   ../build/bin/scan_flux_eff Xn0n > ../out/flux_scan_eff_Xn0n.csv
+# The effective fluxes use sigma_NN = 90.8533 mb (inputs/Gamma_AA_sigma90.85.dat),
+# the value behind the Starlight table (see its header: sqrt(s_NN) = 5.36 TeV);
+# the physics pipeline uses 92 mb (inputs/Gamma_AA.dat).
+# Regenerate with, from the repository root:
+#   ./build/bin/scan_flux > out/flux_scan.csv
+#   for ch in AnAn An0n Xn0n; do
+#     GAMMA_AA_FILE=./inputs/Gamma_AA_sigma90.85.dat ./build/bin/scan_flux_eff $ch > out/flux_scan_eff_$ch.csv
+#   done
 
 TABLE_DIR = "../inputs/photon_flux"
 OUT_DIR = "../out"
@@ -97,7 +101,7 @@ for ch in ["AnAn", "An0n", "Xn0n"]:
 XN0N_ENTRY = ("Xn0n", None, None, r"$Xn0n$")
 
 # (our channel, table, table key, label) -- color now carries the channel
-# identity; linestyle (TABLE_LS/OURS_LS below) carries the model.
+# identity; line style (TABLE_STYLE/OURS_STYLE below) carries the model.
 PAIRS = [
     ("PL(AnAn)", PL, "AnAn", r"PL$(AnAn)$"),
     ("AnAn",     WS, "AnAn", r"$AnAn$"),
@@ -107,14 +111,19 @@ PAIRS = [
 # dataviz skill categorical slots 1-4, fixed order (adjacent-pair CVD deltaE
 # 9.1/8.4 light/dark, normal-vision 19.6/19.3 -- validated for the line-chart
 # adjacent pairlist, not the stricter all-pairs one).
+# PL(AnAn) is the point-like baseline, not a nuclear channel -> neutral ink,
+# so it doesn't compete with (and get confused with) the AnAn hue it overlaps.
 CHANNEL_COLORS = {
-    "PL(AnAn)": "#2a78d6",  # slot 1, blue
-    "AnAn":     "#eb6834",  # slot 2, orange
-    "An0n":     "#1baf7a",  # slot 3, aqua
-    "Xn0n":     "#eda100",  # slot 4, yellow
+    "PL(AnAn)": "#333333",  # neutral baseline
+    "AnAn":     "#d62728",  # red
+    "An0n":     "#2563b8",  # medium-dark blue
+    "Xn0n":     "#1a7f4b",  # dark green
 }
-TABLE_LS = "-"   # Starlight (table)
-OURS_LS  = "--"  # P_b (this code)
+# Starlight (table) = thick pale band underneath; P_b (this code) = thin
+# short-dashed line on top. The two agree almost everywhere, so a same-width
+# solid/dashed pair just hides the dashes under the solid line.
+TABLE_STYLE = dict(ls="-", lw=3.5, alpha=0.35, solid_capstyle="butt")
+OURS_STYLE  = dict(ls=(0, (3, 1.5)), lw=1.5)
 
 if __name__ == "__main__":
     TABLED = [p for p in PAIRS if p[1] is not None]   # Xn0n has no table to compare
@@ -123,11 +132,20 @@ if __name__ == "__main__":
         line = f"{yy:9.1e} "
         for ch, tab, key, _label in TABLED:
             y, f = scan[ch]
-            ours = np.interp(np.log(yy), np.log(y), np.log(f))
-            line += f"{np.exp(ours) / interp_flux(tab, key, yy)[0]:16.3f} "
+            # Interpolate the ratio (smooth, ~1), not the flux itself: the
+            # scan grid is too coarse for log-log interpolation of the
+            # steeply falling flux at large y, which fakes a deficit
+            # (e.g. 0.84 instead of 1.03 for PL(AnAn) at y=0.5).
+            ratio = f / interp_flux(tab, key, y)
+            line += f"{np.interp(np.log(yy), np.log(y), ratio):16.3f} "
         print(line)
 
-    fig, (ax, axr) = plt.subplots(2, 1, figsize=(7.5, 7), sharex=True, gridspec_kw={"height_ratios": [6, 1]})
+    YMIN = 1e-3   # lower edge of the upper panel
+    # Ratio lines in the same solid channel colors as the upper panel.
+    RATIO_STYLE = {"PL(AnAn)": dict(lw=1.5),
+                   "AnAn":     dict(lw=1.5),
+                   "An0n":     dict(lw=1.5)}
+    fig, (ax, axr) = plt.subplots(2, 1, figsize=(7.5, 7.4), sharex=True, gridspec_kw={"height_ratios": [3, 0.75]})
     yy = np.logspace(-4, 0, 400)
     # bmax = 60/(y*m_N) (as in the old DiffractiveD0/testFlux code, and now
     # also what main.cpp/main_xpom.cpp use, worst-case-adjusted for the
@@ -138,15 +156,25 @@ if __name__ == "__main__":
         color = CHANNEL_COLORS[ch]
         if tab is None:
             # No table for Xn0n at all: mine-only, no ratio-panel line.
-            ax.plot(y, y * f, color=color, ls=OURS_LS, lw=1.5)
+            ax.plot(y, y * f, color=color, **OURS_STYLE)
             continue
         # Lower panel: P_b / Starlight, i.e. how well this code reproduces
         # the tabulated flux, for every channel (including PL(AnAn)).
-        axr.plot(y, f / interp_flux(tab, key, y), color=color, ls="-", lw=1.5)
-        ax.plot(yy, yy * interp_flux(tab, key, yy), color=color, ls=TABLE_LS, lw=2)
-        ax.plot(y, y * f, color=color, ls=OURS_LS, lw=1.5)
+        # Evaluated only at the table's own Chebyshev nodes, where the
+        # reference is exact: in between, its barycentric interpolation
+        # (Eq. 34 of arXiv:2404.09731) is off by up to ~0.5% at z > 0.05,
+        # which showed up as a spurious wiggle. Our flux is densely sampled
+        # and smooth, so a cubic spline in (log z, log f) is exact enough.
+        ok = (f > 0) & (y < 0.7)   # PL scan underflows to 0 at y > 0.8
+        ours = CubicSpline(np.log(y[ok]), np.log(f[ok]))
+        nodes = tab["y4"] ** 4
+        at = (nodes >= y[ok][0]) & (nodes <= y[ok][-1])
+        axr.plot(nodes[at], np.exp(ours(np.log(nodes[at])) - tab[key][at]),
+                 color=color, ls="-", **RATIO_STYLE[ch])
+        ax.plot(yy, yy * interp_flux(tab, key, yy), color=color, **TABLE_STYLE)
+        ax.plot(y, y * f, color=color, **OURS_STYLE)
     ax.set_xscale("log"); ax.set_yscale("log")
-    ax.set_ylim(1e-3, 4e2); ax.set_xlim(1e-4, 0.5)
+    ax.set_ylim(YMIN, 4e2); ax.set_xlim(1e-4, 0.12)
     ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
     ax.text(0.95, 0.95, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=16)
     for a in (ax, axr):
@@ -169,19 +197,26 @@ if __name__ == "__main__":
     # Two separate legends, stacked in the lower-left corner (channel above
     # source -- the citation labels are too long to sit side by side at
     # this font size).
-    channel_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], lw=2, ls="-", label=label) for ch, _, _, label in PAIRS]
-    source_handles = [Line2D([], [], color="k", lw=2, ls=TABLE_LS, label=r"Starlight (Eskola \textit{et al.})"),
-                       Line2D([], [], color="k", lw=2, ls=OURS_LS, label=r"$P_b$ (Baur \textit{et al.})")]
-    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.22),
-                                fontsize=13, title="Channel", title_fontsize=13, frameon=False)
+    channel_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], lw=3, ls="-", label=label) for ch, _, _, label in PAIRS]
+    source_handles = [Line2D([], [], color="0.3", **OURS_STYLE, label=r"$P_b$ (Baur \textit{et al.})"),
+                       Line2D([], [], color="0.3", **TABLE_STYLE, label=r"Starlight (Eskola \textit{et al.})")]
+    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0),
+                                fontsize=15, title="Channel", title_fontsize=15, frameon=False)
     ax.add_artist(channel_legend)
-    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0),
-              fontsize=13, title="Model", title_fontsize=13, frameon=False)
-    axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/Starlight", labelpad=15, fontsize=15); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
-    axr.set_yscale("log"); axr.set_ylim(5e-1, 3.0)
-    # Plain-decimal ticks on the ratio panel: the default log minor-tick
-    # labels (2x,3x,4x,6x...) crowd and overlap over a <1-decade range.
-    axr.yaxis.set_major_locator(FixedLocator([0.5, 1, 2]))
+    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.3, 0.0),
+              fontsize=15, title="Model", title_fontsize=15, frameon=False)
+    # Ratio-panel legend: one entry per ratio line, drawn in its ratio style.
+    ratio_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], ls="-", **RATIO_STYLE[ch], label=label)
+                     for ch, tab, _, label in PAIRS if tab is not None]
+    axr.legend(handles=ratio_handles, loc="lower left", ncol=3, fontsize=15,
+               frameon=False, handlelength=1.8, columnspacing=1.2)
+    axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/Starlight", labelpad=15, fontsize=17); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
+    # x stops at z = 0.12 (beyond, flux < 1e-3 and the ratio is numerical
+    # noise), so the ratio stays below ~1.25; y from 0.95 to 1.05 (AnAn/An0n run
+    # off the top at z ~ 0.06): linear scale.
+    axr.set_yscale("linear"); axr.set_ylim(0.95, 1.05)
+    axr.yaxis.set_major_locator(FixedLocator([0.95, 1.0, 1.05]))
+    axr.yaxis.set_minor_locator(FixedLocator(np.arange(0.95, 1.051, 0.01)))
     axr.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
     axr.yaxis.set_minor_formatter(NullFormatter())
     fig.align_ylabels([ax, axr])

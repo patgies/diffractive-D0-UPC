@@ -14,9 +14,9 @@
 
 using namespace std;
 
-// Fixed-W (no photon-flux) exclusive and diffractive spectra, as a function
+// Fixed-q+ (no photon-flux) exclusive and diffractive spectra, as a function
 // of the observed quark's transverse momentum K, at a fixed rapidity y.
-// "Fixed W" means we set the photon energy qp to 3*pp by hand (so z1=1/3).
+// "Fixed q+" means we set the photon energy qp to 2*pp by hand (so z1=1/2).
 
 int main(int argc, char* argv[])
 {
@@ -51,8 +51,8 @@ int main(int argc, char* argv[])
 
     cout << "# ============================================================" << endl;
     cout << "# Date        =  " << date_buf << endl;
-    cout << "# Fixed-W (no photon flux) exclusive & diffractive dsigma/d2K" << endl;
-    cout << "# W^2 = sqrt(2)*ss*3*pp fixed via qp=3*pp (z1=1/3); y fixed" << endl;
+    cout << "# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2K" << endl;
+    cout << "# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z1=1/2); y fixed" << endl;
     cout << "# x_pom > 0.1 forced to 0 on both sides" << endl;
     cout << "# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)" << endl;
     cout << "# diffractive column: full physical cross section" << endl;
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     cout << "# pt grid     =  " << n_pt << " pts in [" << pt_min << ", " << pt_max << "] GeV (log)" << endl;
     cout << "# VEGAS calls =  " << param.calls_diff << " (diffractive only; exclusive is deterministic)" << endl;
     cout << "# ============================================================" << endl;
-    cout << "# K  exclusive_fixedW  diffractive_fixedW" << endl;
+    cout << "# K  exclusive_fixed_qp  diffractive_fixed_qp" << endl;
 
     vector<double> K_grid(n_pt), out_excl(n_pt), out_diff(n_pt);
     double log_lo = log(pt_min), log_hi = log(pt_max);
@@ -89,10 +89,10 @@ int main(int argc, char* argv[])
         p.inv_denom8 = 1.0 / (p.denom4 * p.denom4);
         p.mt   = sqrt(p2m2);
 
-        out_excl[idx] = exclusiveCrossSection_fixedW(static_cast<void*>(&p));
+        out_excl[idx] = exclusiveCrossSection_fixed_qp(static_cast<void*>(&p));
 
         p.k_upper = p.kmax;
-        out_diff[idx] = diffractiveCrossSection_fixedW(static_cast<void*>(&p));
+        out_diff[idx] = diffractiveCrossSection_fixed_qp(static_cast<void*>(&p));
     }
 
     auto t_end = std::chrono::steady_clock::now();

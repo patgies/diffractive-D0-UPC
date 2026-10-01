@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
-# Plots the fixed-W (no photon flux, proton target, no fragmentation)
+# Plots the fixed-q+ (no photon flux, proton target, no fragmentation)
 # diffractive cross section as a function of ln(x_po), for each rapidity
-# and K value, from ../files/D0_fixedW_xpom_y*_K*.dat (produced by
-# ../local_workflows/run_fixedW_xpom.sh). Same style/layout as xpom_spectrum.py, but for
-# the fixed-W calculation (see notes there on why fixedW has no
+# and K value, from ../files/D0_fixed_qp_xpom_y*_K*.dat (produced by
+# ../local_workflows/run_fixed_qp_xpom.sh). Same style/layout as xpom_spectrum.py, but for
+# the fixed-q+ calculation (see notes there on why fixed_qp has no
 # HymnD/BCFY split or nucleus target).
 
 plt.rcParams.update({
@@ -52,7 +52,7 @@ def read_header(filename):
 
 def load_results():
     """Read all files and return {(y, K): [(x_po, dsigma_dlnxpo), ...]}."""
-    pattern = "../files/D0_fixedW_xpom_y*_K*.dat"
+    pattern = "../files/D0_fixed_qp_xpom_y*_K*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
         y, K = read_header(filename)
@@ -68,15 +68,15 @@ def load_results():
 def main():
     results = load_results()
     if not results:
-        sys.exit("No files found matching ../files/D0_fixedW_xpom_y*_K*.dat -- "
-                  "run ../local_workflows/run_fixedW_xpom.sh first.")
+        sys.exit("No files found matching ../files/D0_fixed_qp_xpom_y*_K*.dat -- "
+                  "run ../local_workflows/run_fixed_qp_xpom.sh first.")
 
     # K values to include in the plot:
     K_TO_PLOT = [2.0]
     filtered_results = {(y, K): pts for (y, K), pts in results.items() if K in K_TO_PLOT}
     results = filtered_results
     if not results:
-        sys.exit(f"No data for K in {K_TO_PLOT} -- check ../files/D0_fixedW_xpom_y*_K*.dat.")
+        sys.exit(f"No data for K in {K_TO_PLOT} -- check ../files/D0_fixed_qp_xpom_y*_K*.dat.")
 
     y_values = sorted(set(y for y, K in results))
     K_values = sorted(set(K for y, K in results))
@@ -120,7 +120,7 @@ def main():
     plt.legend(handles=y_handles, loc="upper left", fontsize=13, title=K_title, title_fontsize=13)
 
     plt.tight_layout()
-    outname = "../plots/fixedW_xpom_spectrum.pdf"
+    outname = "../plots/fixed_qp_xpom_spectrum.pdf"
     plt.savefig(outname, dpi=150)
     print(f"Saved: {outname}")
 

@@ -21,13 +21,16 @@ int main()
     load_data_and_initialize("./inputs/Gamma_AA.dat");
 
     parameters par;
-    par.ss    = 5360.0;
+    par.ss    = 5360.0;   // GeV, sqrt(s_NN) of the Starlight tables (inputs/photon_flux/*.dta headers)
     par.alpha = 1.0/137.0;
     par.Z     = 82.0;
     par.mn    = 0.938;
     par.S     = std::pow(17.4, 2) / std::pow(0.197327, 2);
-    const char* bm = std::getenv("BMIN_FM");   // default: same lower cut as main.cpp (14.2 fm)
-    par.bmin  = (bm ? std::atof(bm) : 14.2) / 0.197327;
+    // default: b_min = 14.205 fm, matched to the arXiv:2404.09731 PL table
+    // (ratio = 1 to <0.1% up to y = 0.6) -- 14.2 fm (main.cpp) gives an
+    // exp(0.047 y) excess over the table at large y, 72 GeV^-1 a deficit.
+    const char* bm = std::getenv("BMIN_FM");
+    par.bmin  = (bm ? std::atof(bm) : 14.205) / 0.197327;
     par.flux_model = std::getenv("FLUX_MODEL") ? std::getenv("FLUX_MODEL") : "PL";
     if (par.flux_model == "WS") init_ws_form_factor();
 
@@ -50,7 +53,10 @@ int main()
             // the main pipeline, not looped over externally like here).
             double bmax = 60.0 / (y * par.mn);
             // integrate photon_flux(b) db on a log-b grid (Simpson in ln b)
-            double a = std::log(par.bmin), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
+            // sharp bmin cut only for the point-like channel; the others
+            // start (effectively) at b = 0, Gamma_AA does the suppression
+            double b_lo = (ch == "PL(AnAn)") ? par.bmin : 1e-3;
+            double a = std::log(b_lo), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
             for (int i = 0; i <= nb; i++) {
                 double b = std::exp(a + i * h);
                 double w = (i == 0 || i == nb) ? 1.0 : (i % 2 ? 4.0 : 2.0);

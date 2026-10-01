@@ -112,8 +112,8 @@ int main(int argc, char* argv[])
     // the sharp point-like comparison cutoff at bmin=1.1*R_A (their Fig. 11).
     if (param.target == "pA") {
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "WS";
-        if (param.flux_model == "EFF") {
-            cerr << "Error: FLUX_MODEL=EFF is not meaningful with TARGET=pA "
+        if (param.flux_model == "EFF" || param.flux_model == "STARLIGHT") {
+            cerr << "Error: FLUX_MODEL=" << param.flux_model << " is not meaningful with TARGET=pA "
                     "(no target-nucleus extent to convolve over). Use PL or WS." << endl;
             return 1;
         }
@@ -126,6 +126,7 @@ int main(int argc, char* argv[])
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "EFF";
         if      (param.flux_model == "WS")  init_ws_form_factor();
         else if (param.flux_model == "EFF") init_effective_flux(param.channel, &param);
+        else if (param.flux_model == "STARLIGHT") init_starlight_flux(param.channel);
     }
     // QPMAX override: diagnostic only, to check what fraction of the cross
     // section comes from photon energies above a given y=2qp/sqrt(2)/ss

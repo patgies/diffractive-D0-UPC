@@ -5,11 +5,13 @@
 #
 # Computes the R_pA nuclear-modification-factor baseline: dsigma_pA(B_perp >
 # 2R), i.e. exclusive+diffractive D0 production off a BARE PROTON, but using
-# the SAME nuclear photon flux as the Pb+Pb calculation (Z=82, bmin=2R_Pb,
-# bmax, S -- all hardcoded in src/main.cpp regardless of which dipole file
-# is given). This is what the R_pA formula's "not directly measurable"
-# baseline means: same photon source geometry as Pb+Pb, but a proton
-# target instead of the nucleus.
+# the SAME nuclear photon flux as the Pb+Pb calculation (TARGET=AA: Z=82,
+# sqrt(s_NN)=5.36 TeV, Gamma_AA, EMD channel factor, and the same FLUX_MODEL
+# as run_many_nucleus.sh -- EFF by default). This is what the R_pA formula's
+# "not directly measurable" baseline means: same photon source geometry as
+# Pb+Pb, but a proton target instead of the nucleus, so the flux cancels in
+# the ratio. Do NOT use TARGET=pA here: that is the physical p-Pb flux
+# (run_pA.sh), which would not cancel against the Pb+Pb numerator.
 #
 # Unlike run_many_nucleus.sh, there's no Glauber b-average here: a single
 # proton has no ensemble of nucleon positions to sample over (the internal
@@ -22,6 +24,7 @@
 #   PT_VALS  pD0 values to scan, GeV (default matches run_many_nucleus.sh)
 #   FRAG_TYPE  BCFY | KniehlKramer | HymnD (default HymnD)
 #   CHANNEL    An0n (default) | Xn0n | PL(AnAn)
+#   FLUX_MODEL EFF (default) | PL | WS -- must match run_many_nucleus.sh
 #   CORES      parallel D0 invocations (default nproc/2)
 #   CALLS_EXCL, CALLS_EXCL_FACTORIZED, CALLS_DIFF, EXCL_PT_THRESHOLD (see run_many_nucleus.sh)
 #   HYMND_FILE
@@ -42,7 +45,10 @@ CALLS_EXCL_FACTORIZED=${CALLS_EXCL_FACTORIZED:-1e3}
 EXCL_PT_THRESHOLD=${EXCL_PT_THRESHOLD:-3.0}
 CALLS_DIFF=${CALLS_DIFF:-1e5}
 
+FLUX_MODEL=${FLUX_MODEL:-EFF}
+
 export CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF HYMND_FILE
+export TARGET=AA FLUX_MODEL
 
 if [[ ! -f "$DIPOLE_FILE" ]]; then
 	echo "Error: $DIPOLE_FILE does not exist." >&2
@@ -62,7 +68,7 @@ for proc in exclusive diffractive; do
 		ytag=$(echo "$y" | tr -d '.')
 		outfile="files/D0_proton_baseline_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
 		{
-			echo "# proton-target baseline for R_pA (same nuclear photon flux as Pb+Pb, Z=82, bmin=2R_Pb)"
+			echo "# proton-target baseline for R_pA (same nuclear photon flux as Pb+Pb, TARGET=AA, flux_model=${FLUX_MODEL})"
 			echo "# ${proc} D0 cross section, proton target, ${frag_tag} fragmentation, ${channel_tag} channel"
 			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
 			echo "# dipole file    : ${DIPOLE_FILE}"
