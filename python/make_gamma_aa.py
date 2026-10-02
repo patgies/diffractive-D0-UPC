@@ -2,27 +2,14 @@ import argparse
 import datetime
 import numpy as np
 
-# Generates the Pb-Pb hadronic survival table read by
-# load_data_and_initialize() (src/photon_flux.cpp):
-#   Gamma_AA(b) = exp[-sigma_NN T_AA(b)],  T_AA(b) = int d2s T_A(s) T_A(|b-s|),
-# the optical-Glauber form of Eq. (14)-(16) of arXiv:2404.09731 and Eq. (17)
-# of arXiv:2606.05469, with T_A from a two-parameter Woods-Saxon density
-# normalized to A nucleons.
-#
-# sigma_NN choices used in this project:
-#   92 mb -- sqrt(s_NN)=5.36 TeV (PDG total, arXiv:2606.05469): physics pipeline
-#   90.8533 mb -- the value of Paakkinen's Starlight table (5.36 TeV, see its
-#                 header): only for the comparison in flux_comparison.py
-#
-# usage, from python/:
-#   python make_gamma_aa.py --sigma 92 --out ../inputs/Gamma_AA.dat
-#   python make_gamma_aa.py --sigma 90.8533 --out ../inputs/Gamma_AA_sigma90.85.dat
+# Gamma_AA(b) = exp[-sigma_NN T_AA(b)], optical Glauber. sigma_NN: 92 mb (physics), 90.8533 mb (Starlight).
+# usage: python make_gamma_aa.py --sigma 92 --out ../inputs/WS_photon_flux/Gamma_AA.dat
 
-HBARC = 0.197327  # GeV fm
+HBARC = 0.197327
 
 
 def thickness(R, a, A, s):
-    """T_A(s) [fm^-2], line-of-sight integral of the WS density, int d2s T_A = A."""
+    """T_A(s) [fm^-2]: integral of the WS density along z. int d2s T_A = A."""
     z = np.linspace(-40.0, 40.0, 4001)
     TA = np.array([np.trapezoid(1.0 / (1.0 + np.exp((np.sqrt(z**2 + ss**2) - R) / a)), z) for ss in s])
     return TA * A / np.trapezoid(2 * np.pi * s * TA, s)
@@ -53,10 +40,10 @@ def main():
     ap.add_argument("--nb", type=int, default=100)
     args = ap.parse_args()
 
-    b = np.linspace(0.0, args.bmax, args.nb)             # GeV^-1, same grid as before
+    b = np.linspace(0.0, args.bmax, args.nb)
     s = np.linspace(0.0, 40.0, 4001)
     TAA = overlap(s, thickness(args.R, args.a, args.A, s), b * HBARC)
-    gamma = np.exp(-args.sigma * 0.1 * TAA)              # 1 mb = 0.1 fm^2
+    gamma = np.exp(-args.sigma * 0.1 * TAA)
     gamma[b == 0.0] = 0.0
 
     header = "\n".join([

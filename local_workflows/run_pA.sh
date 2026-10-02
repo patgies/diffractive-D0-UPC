@@ -1,39 +1,7 @@
 #!/bin/bash
 
-# Usage: ./local_workflows/run_pA.sh
-#        Y_VALS="0.0 2.0" PT_VALS="1.0 4.0" ./local_workflows/run_pA.sh
-#
-# Computes exclusive+diffractive D0 production for a REAL p-Pb UPC: the lead
-# ion emits the quasi-real photon and a proton is the hadronic target, using
-# the actual pA flux geometry of Sec. 6.1 of arXiv:2606.05469 -- sqrt(s_NN) =
-# 8.16 TeV, Gamma_pA(b) = exp(-sigma_NN*T_A(b)) in place of Gamma_AA, and no
-# EMD factor (all set via TARGET=pA in src/main.cpp/photon_flux.cpp).
-#
-# This is NOT the same thing as run_proton_baseline.sh: that script computes
-# the R_pA "denominator" baseline, which deliberately keeps the SAME nuclear
-# photon flux as Pb+Pb (Z=82, bmin=2R_Pb, sqrt(s_NN)=5.36 TeV) with a proton
-# target, purely for the R_pA ratio's definition. This script instead uses
-# the physically correct pA flux/kinematics -- use it for actual p-Pb
-# predictions, not for the R_pA baseline.
-#
-# The proton dipole amplitude (data/proton/mve.dat) is used as-is: sigma0 in
-# its GBW normalization already represents the target proton's transverse
-# area (see python/RpA.py's proton_prefactor()),
-# which is the correct convention here too, since the target is a proton in
-# both cases -- python/RpA.py's proton_prefactor()
-# applies unchanged to this script's output (sigma0 included, no
-# GEVSQR_TO_MB, no Glauber b-integral: raw D0 output is used directly).
-#
-# Env vars:
-#   Y_VALS     rapidities to scan (default matches D0_sum.py's Y_TO_PLOT)
-#   PT_VALS    pD0 values to scan, GeV (default matches run_many_nucleus.sh)
-#   FRAG_TYPE  BCFY | KniehlKramer | HymnD (default HymnD)
-#   CHANNEL    An0n (default) | Xn0n | 0n0n | PL(AnAn) -- unused for TARGET=pA (no EMD), kept only for the output filename tag
-#   FLUX_MODEL WS (default, realistic Gamma_pA) | PL (sharp cutoff at bmin=1.1*R_A, comparison only)
-#   SIGMA_NN   total pp cross section in mb (default 99, sqrt(s_NN)=8.16 TeV value from arXiv:2606.05469)
-#   CORES      parallel D0 invocations (default nproc/2)
-#   CALLS_EXCL, CALLS_EXCL_FACTORIZED, CALLS_DIFF, EXCL_PT_THRESHOLD (see run_many_nucleus.sh)
-#   HYMND_FILE
+# Usage: Y_VALS="0.0 2.0" PT_VALS="1.0 4.0" ./local_workflows/run_pA.sh
+# Real p-Pb UPC (TARGET=pA: 8.16 TeV, Gamma_pA, no EMD). This is not the R_pA baseline (see run_proton_baseline.sh).
 
 set -e
 

@@ -14,7 +14,6 @@ add_executable(
     int_diffractive.cpp
     alphas_running.cpp
     photon_flux.cpp
-    fragmentation.cpp
     hymnd_grid.cpp
     bcfy_grid.cpp
     kk_grid.cpp
@@ -38,7 +37,6 @@ add_executable(
     int_diffractive.cpp
     alphas_running.cpp
     photon_flux.cpp
-    fragmentation.cpp
     hymnd_grid.cpp
     bcfy_grid.cpp
     kk_grid.cpp
@@ -62,8 +60,6 @@ add_executable(
     int_diffractive.cpp
     alphas_running.cpp
     photon_flux.cpp
-    fragmentation.cpp
-    hymnd_grid.cpp
     main_fixed_qp.cpp
     fourier.c
 )
@@ -77,8 +73,8 @@ target_link_libraries(
     OpenMP::OpenMP_CXX
 )
 
-# Diagnostic: b-integrated photon flux vs. the tabulated fluxes of
-# arXiv:2404.09731 (python/flux_comparison.py). Not part of the physics pipeline.
+# Test tool: photon flux integrated over b, to compare with the tables of
+# arXiv:2404.09731 (python/flux_comparison.py). Not used for the physics results.
 add_executable(
 	scan_flux
 	scan_flux.cpp
@@ -95,9 +91,8 @@ target_link_libraries(
 set_target_properties(scan_flux PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Diagnostic: tests the "effective flux" geometric convolution (Eq. 4 of
-# arXiv:2404.09731) against Paakkinen's tabulated flux. Not part of the
-# physics pipeline.
+# Test tool: effective flux (Eq. 4 of arXiv:2404.09731) for
+# python/flux_comparison.py. Not used for the physics results.
 add_executable(
 	scan_flux_eff
 	scan_flux_eff.cpp

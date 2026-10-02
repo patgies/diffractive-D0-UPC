@@ -9,21 +9,8 @@
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 
-# Generic Roihu wrapper: runs ONE local workflow script (run_many_nucleus.sh,
-# run_proton_baseline.sh, run_many_xpom.sh, ...) as a single job, with the
-# module environment loaded and CORES set to the job's CPU count. All the
-# settings (FRAG_TYPE, Y_VALS, OUTDIR, FLUX_MODEL, ...) are passed as
-# environment variables, exactly as when running the script locally:
-#
-#   sbatch --job-name=D0_central_BCFY \
-#          --export=ALL,FRAG_TYPE=BCFY,PROCESS=both,OUTDIR=/scratch/lappi/patricia/xyz \
-#          local_workflows/run_workflow_roihu.sbatch local_workflows/run_many_nucleus.sh
-#
-# --time/--cpus-per-task given on the sbatch command line override the
-# defaults above. Run from the repo root, after build_roihu.sh (this does
-# NOT build; SKIP_BUILD=1 below stops run_proton_baseline.sh/run_many_xpom.sh
-# from running cmake in parallel jobs on the same build/ directory).
-# See submit_rerun_roihu.sh for the full set of production runs.
+# Runs one workflow script as a Roihu job. Settings are given as environment variables:
+#   sbatch --job-name=<name> --export=ALL,FRAG_TYPE=BCFY,OUTDIR=<dir> local_workflows/run_workflow_roihu.sbatch <script>
 
 set -e
 
@@ -32,7 +19,7 @@ if [[ $# -lt 1 ]]; then
 	exit 1
 fi
 
-# build/bin/D0 is dynamically linked against libgsl -- load it in the job too
+# build/bin/D0 needs libgsl: load the module in the job too
 source /usr/share/lmod/lmod/init/bash
 module purge
 module use /appl/modulefiles

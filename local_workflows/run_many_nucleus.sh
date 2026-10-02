@@ -7,25 +7,18 @@ Y_VALS=${Y_VALS:-"0.0 1.0 2.0 3.0 4.0"}
 PT_MIN=${PT_MIN:-0.2}
 PT_STEP=${PT_STEP:-0.5}
 PT_MAX=${PT_MAX:-12.0}
-# PT_VALS lets you pass an explicit list of pD0 points (e.g. a finer grid at
-# low pT and a coarser one at high pT) instead of one uniform PT_MIN/STEP/MAX
-# sweep. If unset, falls back to the uniform seq as before.
+# PT_VALS: list of pD0 points. If not set, use the grid PT_MIN, PT_STEP, PT_MAX.
 PT_VALS=${PT_VALS:-$(seq "$PT_MIN" "$PT_STEP" "$PT_MAX")}
 CORES=${CORES:-$(( $(nproc) / 2 ))}
 DIPOLE_DIR=${DIPOLE_DIR:-data/$NUCLEUS/mve}
-# Where output files land: OUTDIR/output/D0_<process>_..._y<Y>.dat. Defaults to
-# the current directory (same as before OUTDIR existed). Useful for e.g. a
-# SLURM array job giving each task its own OUTDIR so tasks don't clobber
-# each other's output.
+# Output files go to OUTDIR/output/ (default: the current folder).
 OUTDIR=${OUTDIR:-.}
 
 frag_tag=${FRAG_TYPE:-BCFY}
 channel=${CHANNEL:-An0n}
 channel_tag=$(echo "$channel" | tr -d '() ')
 
-# PROCESS=exclusive|diffractive reruns just that one process (e.g. with a
-# bumped CALLS_EXCL) without recomputing  or touching the output file of 
-# the other. Default "both" is the original behavior.
+# PROCESS=exclusive|diffractive|both: which process to run.
 PROCESS=${PROCESS:-exclusive}
 if [[ "$PROCESS" == "both" ]]; then
 	procs="exclusive diffractive"
@@ -33,14 +26,8 @@ else
 	procs="$PROCESS"
 fi
 
-# VEGAS call counts: CALLS_EXCL/CALLS_DIFF each fall back
-# to CALLS if unset, so a bare CALLS=1e6 still applies to both as before.
-# CALLS_EXCL used to need to be huge (5e7) because the exclusive integrand
-# handed the oscillating r1, r2 Bessel integrals to VEGAS at every pt, which
-# barely converged at high pt no matter how many calls were set.
-# exclusiveCrossSection now switches, at EXCL_PT_THRESHOLD (default 4 GeV),
-# from the 5D integrand to a factorized 3D one that solves
-# r1, r2 analytically per point instead.
+# Number of VEGAS calls: CALLS_EXCL and CALLS_DIFF use CALLS if not set. From EXCL_PT_THRESHOLD
+# the exclusive part uses the 3D version (CALLS_EXCL_FACTORIZED calls).
 
 CALLS=${CALLS:-1e5}
 CALLS_EXCL=${CALLS_EXCL:-1e5}
@@ -50,14 +37,12 @@ CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 
 export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS HYMND_FILE
 
-# Photon flux: EFF (default) | PL | WS, see src/main.cpp. Must match the
-# FLUX_MODEL used for run_proton_baseline.sh, otherwise the flux no longer
-# cancels in R_pA (python/RpA.py). TARGET is pinned
-# to AA so a stray TARGET=pA in the environment can't switch the geometry.
+# Photon flux: EFF (default) | PL | WS. Use the same as in run_proton_baseline.sh so the flux
+# cancels in R_pA. TARGET is always AA.
 FLUX_MODEL=${FLUX_MODEL:-EFF}
 export TARGET=AA FLUX_MODEL
-# file-name tag: none for the default EFF flux (keeps the existing names),
-# "_STARLIGHT" etc. otherwise, so runs with different fluxes don't overwrite
+# tag in the file names: nothing for the default EFF flux,
+# "_STARLIGHT" etc. for the others, so runs with different fluxes keep separate files
 flux_tag=$([[ "$FLUX_MODEL" == "EFF" ]] && echo "" || echo "_${FLUX_MODEL}")
 
 
@@ -101,7 +86,7 @@ run_one_point() {
 		echo "Warning: D0 $dfile $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	# Only write the file(s) for the process actually computed this run.
+	# Only write the files of the process that was run.
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
 		echo "$b  $pt  $excl" >> "$OUTDIR/output/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 	fi

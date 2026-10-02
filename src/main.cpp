@@ -1,7 +1,6 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
 #include "photon_flux.hpp"
-#include "fragmentation.hpp"
 #include "hymnd_grid.hpp"
 #include "bcfy_grid.hpp"
 #include "kk_grid.hpp"
@@ -15,9 +14,8 @@
 using namespace std;
 
 
-//  Run: ./D0 <dipole_file> <pD0> <y> [frag_type] [channel]
-//   frag_type  BCFY (default) | KniehlKramer | HymnD
-//   channel    An0n (default) | Xn0n | 0n0n | PL(AnAn)
+// Run: ./D0 <dipole_file> <pD0> <y> [frag_type] [channel]
+// frag_type: BCFY | KniehlKramer | HymnD;  channel: An0n | Xn0n | 0n0n | PL(AnAn)
 
 
 int main(int argc, char* argv[])
@@ -41,25 +39,17 @@ int main(int argc, char* argv[])
     inst.SetOutOfRangeErrors(false);
     inst.SetInterpolationMethod(LINEAR_LINEAR);
 
-    // Some BK solver output (e.g. the rcbk-produced BK-initial-condition
-    // posterior-sample dipole files under bk/) leaves x0 out of the header,
-    // which DataFile reads as an "invalid x0" and resets to 0 -- fix that up
-    // here rather than editing the data files. Only takes effect if
-    // explicitly requested, so it's a no-op for every other dataset's
-    // already-correct header value.
+    // DIPOLE_X0 sets x0 for dipole files that do not have it in the header.
     if (getenv("DIPOLE_X0")) {
         inst.SetX0(atof(getenv("DIPOLE_X0")));
     }
 
     gsl_set_error_handler_off();
-    load_data_and_initialize("./inputs/Gamma_AA.dat");
+    load_data_and_initialize("./inputs/WS_photon_flux/Gamma_AA.dat");
 
     parameters param;
     param.dipole   = &inst;
-    param.datafile = datafile;
-    // TARGET=pA (proton target, Sec. 6 of arXiv:2606.05469) switches both
-    // the collision energy and the photon-flux geometry; see the flux_model
-    // block below for the rest of the pA setup.
+    // TARGET=pA: proton target. It changes the collision energy and the photon flux.
     param.target = getenv("TARGET") ? getenv("TARGET") : "AA";
     param.ss     = (param.target == "pA") ? 8160.0 : 5360.0;
 
@@ -92,24 +82,8 @@ int main(int argc, char* argv[])
     param.S       = pow(17.4, 2) / pow(0.197327, 2);
     param.channel = channel;
     param.bmin    = 14.2 / 0.197327;
-    // FLUX_MODEL: "EFF" (default) is the target-nucleus geometric
-    // convolution (arXiv:2404.09731 Eq. 4, effective_photon_flux() in
-    // photon_flux.cpp) -- validated in scan_flux_eff.cpp and
-    // photon_flux_discrepancy.pdf to actually reproduce Paakkinen's
-    // tabulated Starlight flux, unlike the old single-b treatment. "PL" is
-    // that old single-b treatment (Eq. 1/15 of our own paper and of Guzey
-    // et al. 2606.05469), kept for comparison/reproducing old results;
-    // "WS" swaps in the Woods-Saxon bare flux (flux_density_WS()) within
-    // that same single-b treatment, but is numerically IDENTICAL to "PL"
-    // there, since par.bmin always exceeds R_A (see flux_density_WS()'s
-    // own comment) -- it's "EFF" that actually fixes the bmin-independent
-    // part of the discrepancy, not "WS".
-    // TARGET=pA: EFF doesn't apply (Sec. 6.1 of arXiv:2606.05469 uses the
-    // single-b treatment, since a proton target has no extent of its own to
-    // convolve over), so the default there is "WS" instead, with
-    // Gamma_pA(b)=exp(-sigma_NN*T_A(b)) (init_pA_flux()/GammaPA()) standing
-    // in for Gamma_AA -- see photon_flux()'s target=="pA" branch. "PL" is
-    // the sharp point-like comparison cutoff at bmin=1.1*R_A (their Fig. 11).
+    // FLUX_MODEL: EFF (default, effective flux), PL or WS (flux at one b),
+    // STARLIGHT (from a table). For TARGET=pA: WS (default) or PL.
     if (param.target == "pA") {
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "WS";
         if (param.flux_model == "EFF" || param.flux_model == "STARLIGHT") {
@@ -128,33 +102,16 @@ int main(int argc, char* argv[])
         else if (param.flux_model == "EFF") init_effective_flux(param.channel, &param);
         else if (param.flux_model == "STARLIGHT") init_starlight_flux(param.channel);
     }
-    // QPMAX override: diagnostic only, to check what fraction of the cross
-    // section comes from photon energies above a given y=2qp/sqrt(2)/ss
-    // threshold (compare a run with QPMAX=800 against one capped at the
-    // qp corresponding to that y). Defaults to the physical 800 GeV.
+    // QPMAX: largest photon energy, only for tests (default 800 GeV).
     param.qpmax   = getenv("QPMAX") ? atof(getenv("QPMAX")) : 800.0;
 
-    // Adaptive upper limit for the b integral (replaces a fixed bmax=650):
-    // large enough that the photon flux (photon_flux()/flux_density() in
-    // photon_flux.cpp, which already dies off past eta=z*mn*b=50) has fully
-    // decayed before the box edge, for every point VEGAS can sample here --
-    // same idea as the bmax=60/(z*mn) used to validate the flux against
-    // arXiv:2404.09731 (src/scan_flux.cpp), but z there is the photon
-    // energy fraction, NOT this D0's rapidity y, so it can't be plugged in
-    // directly: q+ (and thus z) is itself a Monte Carlo variable sampled
-    // inside the integrand (integrand.cpp), not fixed externally like in
-    // scan_flux.cpp. Instead we use the smallest z reachable at this
-    // (pD0, y): q+ >= p+ = (mt/sqrt2)*exp(y), and mt=sqrt(pc^2+m^2) with
-    // pc=pD0/zh is smallest at zh=zmax=1 (pc=pD0), so that fixes the
-    // worst-case (smallest) z this run will ever sample.
+    // Upper limit of the b integral, 60/(z_min*mn), where z_min is the smallest
+    // photon energy fraction possible at this (pD0, y).
     double mt_min = sqrt(pD0*pD0 + param.m2);       // mt at zh=zmax=1
-    double z_min  = mt_min * exp(y) / param.ss;     // smallest photon energy fraction reachable
+    double z_min  = mt_min * exp(y) / param.ss;     // smallest photon energy fraction possible
     param.bmax    = 60.0 / (z_min * param.mn);
 
     // Fragmentation (c -> D0)
-    param.r      = 0.1;
-    param.N_kk   = 0.694;
-    param.eps_kk = 0.101;
     param.zmin   = 0.05;
     param.zmax   = 1.0;
 
@@ -168,27 +125,15 @@ int main(int argc, char* argv[])
 
     string hymnD_file;
     if (getenv("HYMND_FILE")) hymnD_file = getenv("HYMND_FILE");
-    else                       hymnD_file = "inputs/prompt-D0-1-109/prompt-D0-1-109_0000.dat";
+    else                       hymnD_file = "inputs/HymnD/prompt-D0-1-109_0000.dat";
     const int hymnD_charm_flavor = 4;  // PDG id for the charm quark
-    // Scale-variation knob: fragmentation scale Q = scale_factor * mt0,
-    // mt0 = sqrt(pD0^2 + m^2) the D0 transverse mass (matching
-    // inclusive-D0-UPC's convention, not just the fixed charm mass).
-    // Defaults to scale_factor=1.0 (today's behavior). Set to 0.5/2.0 for
-    // the conventional up/down envelope around that central scale -- a
-    // separate uncertainty source from the HymnD replica band, so it only
-    // needs the central member (0000), not all 101 replicas.
+    // Fragmentation scale Q = SCALE_FACTOR * mt0, mt0 = sqrt(pD0^2 + m^2).
     double mt0 = sqrt(pD0*pD0 + param.m2);
     double scale_factor = getenv("SCALE_FACTOR") ? atof(getenv("SCALE_FACTOR")) : 1.0;
     double frag_scale = scale_factor * mt0;
-    // Below the charm mass, the fragmentation function is undefined (the
-    // HymnD grid's charm production threshold): use the charm mass itself
-    // as a floor rather than letting a small scale_factor push Q below it.
+    // the fragmentation scale cannot be below the charm mass
     if (frag_scale < param.m) frag_scale = param.m;
-    // All three frag_types are DGLAP-evolved z-interpolators at frag_scale
-    // now: BCFY/KniehlKramer from their own eko-evolved grids (see
-    // src/bcfy_grid.cpp / kk_grid.cpp, inputs/bcfy_eko/, inputs/kk_eko/ --
-    // ported from inclusive-D0-UPC's QCDNUM-based bcfy_grid.cpp/kk_grid.cpp),
-    // HymnD from the external prompt-D0 set.
+    // D(z) at the fragmentation scale for the chosen frag_type.
     unique_ptr<Interpolator> d_frag_interp;
     if (param.frag_type == FragmentationType::HymnD) {
         d_frag_interp = MakeHymnDZInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);

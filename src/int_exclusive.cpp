@@ -10,13 +10,8 @@
 using namespace std;
 
 
-// Computes the exclusive cross section with a Monte Carlo integral over the
-// integrand defined in integrand.cpp. Below par->excl_pt_threshold, uses the
-// original, cheap-per-call 5D integrand (r1, r2 handed to VEGAS along with
-// u_qp, b, zh); at or above it, switches to the factorized 3D one (r1, r2
-// solved analytically per point, see integrand_exclusive_factorized), which
-// converges properly at high pt but costs much more per call -- not worth
-// paying for at low/mid pt, where the 5D version already converges fine.
+// Exclusive cross section: 5D integral below par->excl_pt_threshold,
+// 3D integral at or above it.
 double exclusiveCrossSection(void* p)
 {
     parameters* par = (parameters*)p;
@@ -31,9 +26,7 @@ double exclusiveCrossSection(void* p)
     gsl_monte_function F;
     F.params = par;
 
-    // flux_model=="EFF": b is an unused placeholder (the flux no longer
-    // depends on it, see integrand.cpp), so its box is just [0,1] -- a
-    // Jacobian width of 1, contributing nothing -- rather than [bmin,bmax].
+    // effective flux: b is not used, its range is [0,1]
     bool eff = is_effective_flux(par);
     double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
@@ -42,17 +35,14 @@ double exclusiveCrossSection(void* p)
     if (factorized) {
         F.f   = &integrand_exclusive_factorized;
         F.dim = 3;
-        // integration box for {u_qp, b, zh}
-        // (zh's box is the actual [zmin, zmax] range, not [0,1] like u_qp)
-        // r1, r2 are not here -- they're solved analytically inside the
-        // integrand (see exclusive_radial_integrals in integrand.cpp).
+        // integration limits for {u_qp, b, zh}
         low[0] = 0.;    up[0] = 1.;
         low[1] = b_lo;  up[1] = b_hi;
         low[2] = par->zmin;  up[2] = par->zmax;
     } else {
         F.f   = &integrand_exclusive_mc;
         F.dim = 5;
-        // integration box for {r1, r2, u_qp, b, zh}
+        // integration limits for {r1, r2, u_qp, b, zh}
         double rmax = 99.0;
         low[0] = 0.;    up[0] = rmax;
         low[1] = 0.;    up[1] = rmax;
@@ -64,10 +54,10 @@ double exclusiveCrossSection(void* p)
     double res, err;
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
 
-    // warm-up run so VEGAS can adapt its grid before the real integration
+    // short first run so VEGAS can adapt its grid
     gsl_monte_vegas_integrate(&F, low, up, F.dim, calls/10, r, s, &res, &err);
 
-    // keep integrating until it converges (chi-square close to 1), or give up after 3 tries
+    // repeat until chi-square is close to 1, at most 3 times
     int iter = 0;
     do {
         gsl_monte_vegas_integrate(&F, low, up, F.dim, calls, r, s, &res, &err);
@@ -81,13 +71,7 @@ double exclusiveCrossSection(void* p)
 }
 
 
-// Same as exclusiveCrossSection above, but at one fixed x_P (par->fixed_xpo)
-// instead of integrating over the photon energy q+ -- see
-// integrand_exclusive_xpom for why x_P being fixed eliminates q+ entirely
-// (unlike diffractiveCrossSection_xpom, which still integrates u_qp/q+
-// separately, since x_po there IS an independent variable). r1, r2 are
-// solved analytically (exclusive_radial_integrals), same trick as the
-// factorized high-pt integrand, so only {b, zh} are left for VEGAS.
+// Exclusive cross section at fixed x_P (par->fixed_xpo): VEGAS over {b, zh}.
 double exclusiveCrossSection_xpom(void* p)
 {
     parameters* par = (parameters*)p;
@@ -123,8 +107,7 @@ double exclusiveCrossSection_xpom(void* p)
 }
 
 
-// Small helper struct + function used only by exclusiveCrossSection_fixed_qp
-// below, to do the two simple 1D integrals over dipole size.
+// Used for the two 1D integrals over r in exclusiveCrossSection_fixed_qp.
 struct RadialParams {
     double pc;
     double m;
@@ -139,12 +122,8 @@ static double radial_integrand(double r, void* params)
     return r * Jn(rp->nu, rp->pc * r) * Kn(rp->nu, rp->m * r) * rp->dipole->N(r, rp->x_dip);
 }
 
-// "Fixed q+, no photon flux" exclusive cross section. Here q+ = 2p+ is fixed
-// by hand (z1 = 1/2) and pc is just par->p (no fragmentation step). Because
-// par->p doesn't change during this calculation, the usual double integral
-// over the two dipole sizes r1 and r2 splits into two separate, identical
-// 1D integrals (I0 and I1). So instead of a Monte Carlo integration, we can
-// just compute these two integrals directly with GSL and combine them.
+// Exclusive cross section at fixed q+ (q+ = 2p+, no flux, no fragmentation):
+// two 1D integrals over r, I0 and I1. No Monte Carlo.
 double exclusiveCrossSection_fixed_qp(void* p)
 {
     parameters* par = (parameters*)p;

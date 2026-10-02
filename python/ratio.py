@@ -6,37 +6,24 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Reuses D0.py's file-reading/b-integration helpers (both
-# projects write the same "# b  pD0  dsigma_dyd2pD0" format) and its
-# "fancy" rcParams styling, but NOT its load_results (that one bakes in
-# this project's own diffractive/exclusive prefactor -- inclusive-D0-UPC
-# uses a different normalization, reproduced below to match its own
-# D0.py exactly).
 from D0 import (
     read_rapidity, read_data_file, group_by_pt, integrate_over_b,
     load_results, _summed_results, GEVSQR_TO_MB, NUCLEUS, CHANNEL, CENTRAL_DIR,
 )
 
-# Single contour plot of this project's (diffractive+exclusive)/inclusive
-# D0 cross-section ratio in the (y, pT) plane (x_pom integrated up to 0.1
-# -- already true of this project's standard diffractiveCrossSection, no
-# special mode needed). diffractive/exclusive sides come from CENTRAL_DIR,
-# inclusive side from ../inputs/inclusive/ (copied from inclusive-D0-UPC's
-# own files/).
+# Contour plot of (diffractive+exclusive)/inclusive D0 in the (y, pT) plane.
+# Inclusive files: ../inputs/inclusive/.
 
-alpha_em = 1 / 137
-e_charm_squared = 4 / 9  # (2/3)^2, electric charge of the charm quark
+alpha_em = 1/137
+e_charm_squared = 4/9
 Nc = 3
 INCLUSIVE_FACTOR_A = alpha_em * e_charm_squared * Nc / (2 * math.pi) ** 4
 
-PT_MAX_PLOT = 2.0   # matches the reference figure's pT range
+PT_MAX_PLOT = 2.0
 
 
 def load_inclusive_results(frag="HymnD"):
-    """Same file format as load_results, but with inclusive-D0-UPC's own
-    normalization (see that project's cross_section.py's factor_A) --
-    NOT this project's exclusive/diffractive prefactor.
-    """
+    """Same file format as load_results, but with inclusive-D0-UPC's own normalization."""
     pattern = f"../inputs/inclusive/D0_incl_{frag}_{CHANNEL}_{NUCLEUS}_y*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
@@ -56,12 +43,8 @@ def load_inclusive_results(frag="HymnD"):
 
 
 def compute_ratio_grid(process_results, incl_results, y_values, pt_grid):
-    """process_results/incl_results: {y: [(pt, cross_section), ...]}.
-    Returns a (len(pt_grid), len(y_values)) array of process/inclusive,
-    with inclusive log-log-interpolated onto pt_grid (both are smooth,
-    steeply-falling spectra, so log-log linear interpolation matches how
-    these cross sections actually behave point-to-point).
-    """
+    """Returns a (len(pt_grid), len(y_values)) array of process/inclusive, with the
+    inclusive spectrum interpolated (in log-log) to pt_grid."""
     ratio_grid = np.full((len(pt_grid), len(y_values)), np.nan)
     for iy, y in enumerate(y_values):
         proc_points = dict(process_results[y])

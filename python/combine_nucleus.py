@@ -10,20 +10,14 @@ from scipy.integrate import simpson
 sys.path.insert(0, os.path.dirname(__file__))
 from alphas_running import alphas_run
 
-# Integrates the per-b, per-(pD0,y) grid files written by
-# ../local_workflows/run_many_nucleus.sh (src/main.cpp / D0) over the target-nucleus
-# impact parameter b (Simpson's rule, weighted by b)
-#   b column = target-nucleus Glauber sample (data/<NUCLEUS>/mve/glauber_mve_<b>)
-#   exclusive:   p_e = alpha_em * Nc * e_c^2 / (2*pi^2)
-#   diffractive: p_d = alpha_s(mT) * alpha_em * e_c^2 * (Nc^2-1) / (8*pi^4)
-# (no sigma0 -- see prefactor()'s docstring) and 2*pi*pD0 Jacobian
+# Integrates the run_many_nucleus.sh output over the impact parameter b
+# (Simpson rule, with weight b) and multiplies by the prefactor and by 2*pi*pD0.
 
 alphae = 1/137
-mc     = 1.5          # charm mass in GeV
+mc     = 1.5
 e_c    = 2/3
 Nc     = 3
 
-# Unit conversion GeV^-2 -> mb 
 FMGEV = 5.068
 GEVSQR_TO_NB = 1.0e7 / (FMGEV * FMGEV)
 GEVSQR_TO_MB = GEVSQR_TO_NB * 1e-6
@@ -66,8 +60,8 @@ def group_by_pt(b_list, pt_list, dsigma_list):
 
 
 def integrate_over_b(pairs):
-    """int b*dsigma(b) db via Simpson's rule (the radial Glauber-b measure)."""
-    pairs = sorted(pairs)   # sorts by b first since these are (b, dsigma) tuples
+    """Integral of b*dsigma(b) db with Simpson's rule."""
+    pairs = sorted(pairs)
     if pairs[0][0] < 0:
         raise ValueError(
             "Negative b found -- datafile wasn't a Glauber sample "
@@ -79,11 +73,7 @@ def integrate_over_b(pairs):
 
 
 def prefactor(process, pt):
-    """Physical prefactor, matching D0.py's convention.
-    No sigma0 here: that's the GBW proton-dipole normalization, and for a
-    nucleus target the "area" is already accounted for by integrate_over_b's
-    Glauber b-integral -- applying sigma0 on top of that would double-count it.
-    """
+    """Prefactor of the cross section. No sigma0: the b integral already gives the area."""
     if process == "exclusive":
         return alphae * Nc * e_c**2 / (2 * math.pi**2)
     elif process == "diffractive":
@@ -103,8 +93,6 @@ def load_results(process):
         results[y] = []
         for pt, pairs in sorted(pt_groups.items()):
             b_integral = integrate_over_b(pairs)
-            # 2*pi*b_integral: Glauber transverse-plane (b) integral.
-            # 2*pi*pt: d^2pD0 -> dpD0 "kt-spectrum" Jacobian (see plot_pt_spectrum.py).
             cross_section = (2*math.pi) * b_integral * prefactor(process, pt) \
                             * (2*math.pi) * pt * GEVSQR_TO_MB
             results[y].append((pt, cross_section))

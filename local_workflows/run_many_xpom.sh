@@ -1,35 +1,7 @@
 #!/bin/bash
 
-# Usage: NUCLEUS=Pb ./local_workflows/run_many_xpom.sh
-#        PT_VALS="1.0 4.0" Y_VALS="0.0 2.0" ./local_workflows/run_many_xpom.sh
-#
-# Loops D0_xpom (one point at a time: one dipole file, one pD0, one y,
-# one x_po) over every Glauber-sampled dipole file in data/<NUCLEUS>/mve/,
-# every pD0 in PT_VALS, every y in Y_VALS, and every x_po in a log-spaced
-# grid in [XPO_MIN, XPO_MAX] -- giving both channels' dsigma/(d2pD0 dy dx_po)
-# differential, unlike run_many_nucleus.sh's D0 which integrates x_po out.
-# For diffractive x_po is a genuinely independent variable; for exclusive
-# x_P isn't (it's a function of q+ and y), so "fixed x_P" there picks out
-# one q+ via a delta function and applies the corresponding Jacobian -- see
-# integrand_exclusive_xpom in src/integrand.cpp.
-#
-# Env vars:
-#   NUCLEUS      Pb (default) | Au -- selects data/<NUCLEUS>/mve/glauber_mve_*
-#   Y_VALS       rapidities to scan (default "0.0 1.0 2.0")
-#   PT_VALS      pD0 values to scan, GeV (default "1.0 2.0 4.0 8.0")
-#   XPO_MIN,XPO_MAX,XPO_N  log-spaced x_po grid (default 1e-6, 0.1, 25)
-#   CORES        parallel D0_xpom invocations (default nproc/2)
-#   FRAG_TYPE    BCFY (default) | KniehlKramer | HymnD
-#   CHANNEL      An0n (default) | Xn0n | 0n0n | PL(AnAn)
-#   CALLS, CALLS_DIFF, CALLS_EXCL_FACTORIZED (CALLS_DIFF overrides CALLS for
-#                      the diffractive integrand; the exclusive one always
-#                      uses the factorized analytic-r1,r2 integrand, see
-#                      exclusiveCrossSection_xpom, so CALLS_EXCL is unused
-#                      here -- CALLS_EXCL_FACTORIZED is what matters)
-#   HYMND_FILE
-#   OUTDIR       output goes to $OUTDIR/output/ (default: the repo root)
-#   SKIP_BUILD   1 = use the existing build/bin/D0_xpom (cluster jobs: build
-#                once with build_roihu.sh instead of every job running cmake)
+# Usage: NUCLEUS=Pb PT_VALS="1.0 4.0" Y_VALS="0.0 2.0" ./local_workflows/run_many_xpom.sh
+# Runs D0_xpom over every Glauber dipole file, pD0, y and x_po (grid from XPO_MIN to XPO_MAX, evenly spaced in log).
 
 set -e
 
@@ -56,7 +28,7 @@ CALLS_EXCL_FACTORIZED=${CALLS_EXCL_FACTORIZED:-1e3}
 export CALLS CALLS_DIFF CALLS_EXCL_FACTORIZED HYMND_FILE
 
 # Photon flux: EFF (default, our effective flux) or STARLIGHT (Paakkinen's
-# table, AnAn/An0n only); tagged in the file names as in run_many_nucleus.sh
+# table, AnAn/An0n only). The file names get a tag as in run_many_nucleus.sh
 FLUX_MODEL=${FLUX_MODEL:-EFF}
 export FLUX_MODEL
 flux_tag=$([[ "$FLUX_MODEL" == "EFF" ]] && echo "" || echo "_${FLUX_MODEL}")
@@ -76,9 +48,7 @@ fi
 
 mkdir -p "$OUTDIR/output"
 
-# Log-spaced x_po grid, computed once (awk rather than python/numpy, which
-# isn't available on the cluster compute nodes without extra modules;
-# gives the same %.8e values as np.exp(np.linspace(log, log, N)))
+# x_po grid evenly spaced in log (made with awk: the cluster nodes have no numpy).
 xpo_values=$(awk -v a="$XPO_MIN" -v b="$XPO_MAX" -v n="$XPO_N" 'BEGIN {
 	la = log(a); lb = log(b)
 	for (i = 0; i < n; i++) printf "%s%.8e", (i ? " " : ""), exp(la + (lb - la) * i / (n - 1))
@@ -111,7 +81,7 @@ echo "Running D0_xpom over $DIPOLE_DIR, pD0 in {$PT_VALS}, y in {$Y_VALS}, x_po 
 echo "frag_type=$frag_tag channel=$channel"
 
 # D0_xpom's stdout data line is "pD0  x_po  exclusive_dxpo  diffractive_dxpo"
-# (columns 3, 4) -- see src/main_xpom.cpp.
+# (columns 3, 4), see src/main_xpom.cpp.
 run_one_point() {
 	local dfile="$1" b="$2" pt="$3" y="$4" ytag="$5" pttag="$6" xpo="$7"
 	local result excl diff

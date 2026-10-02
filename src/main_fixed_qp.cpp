@@ -1,7 +1,5 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
-#include "tools.hpp"
-#include "photon_flux.hpp"
 #include <string>
 #include <iostream>
 #include <cmath>
@@ -14,9 +12,8 @@
 
 using namespace std;
 
-// Fixed-q+ (no photon-flux) exclusive and diffractive spectra, as a function
-// of the observed quark's transverse momentum K, at a fixed rapidity y.
-// "Fixed q+" means we set the photon energy qp to 2*pp by hand (so z1=1/2).
+// Exclusive and diffractive spectra at fixed q+ (qp = 2*pp, no photon flux),
+// as a function of the quark transverse momentum K, at fixed rapidity y.
 
 int main(int argc, char* argv[])
 {
@@ -28,15 +25,10 @@ int main(int argc, char* argv[])
     gsl_set_error_handler_off();
     gsl_rng_env_setup();
 
-    load_data_and_initialize("./inputs/Gamma_AA.dat");   // unused (no flux here)
-
-
     parameters param;
     param.dipole   = &inst;
-    param.datafile = datafile;
     param.ss       = 5360.0;
     param.calls_diff = (argc > 3) ? (size_t)atof(argv[3]) : (size_t)1e5;
-    param.calls_excl = param.calls_diff;
     param.m        = 1.5;
     param.m2       = param.m * param.m;
     param.y        = (argc > 1) ? atof(argv[1]) : 0.0;

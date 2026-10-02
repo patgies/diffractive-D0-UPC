@@ -13,20 +13,11 @@ from D0 import (
 )
 from alphas_running import alphas_run
 
-# GBW proton-dipole normalization -- for a PROTON target this is applied
-# DIRECTLY (already in mb, no separate GEVSQR_TO_MB natural-units
-# conversion needed), unlike the Pb+Pb case where the Glauber b-integral
-# supplies the area instead and DOES need GEVSQR_TO_MB (see
-# notes/hymnd_band_construction.tex-adjacent discussion / charm_fixed_qp.py's
-# identical convention).
-sigma0 = 16.36   # mb
+sigma0 = 16.36
 
 
 def proton_prefactor(process, pt):
-    """Physical prefactor for a PROTON target, matching
-    charm_fixed_qp.py's PREFACTOR_EXCL / diffractiveCrossSection_fixed_qp's
-    C++ prefactor exactly -- sigma0 included directly (no GEVSQR_TO_MB).
-    """
+    """Prefactor for a proton target. sigma0 is already in mb (no GEVSQR_TO_MB)."""
     if process == "exclusive":
         return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
     elif process == "diffractive":
@@ -34,38 +25,17 @@ def proton_prefactor(process, pt):
         return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
     raise ValueError(f"unknown process {process}")
 
-# R_pA nuclear modification factor:
-#
-#              dsigma_AA / (d2k_Dperp dy_D)
-#   R_pA = -------------------------------------
-#           A * dsigma_pA(B_perp>2R) / (d2k_Dperp dy_D)
-#
-# Numerator: this project's Pb+Pb exclusive+diffractive sum (already
-# correctly normalized, from D0.py's _summed_results).
-# Denominator: a proton-target baseline computed with the SAME nuclear
-# photon flux as Pb+Pb (TARGET=AA and the same FLUX_MODEL, EFF by default,
-# pinned in both run_many_nucleus.sh and run_proton_baseline.sh so the flux
-# cancels in the ratio -- check the "flux_model" line in both files'
-# headers), from ../local_workflows/run_proton_baseline.sh's output. No
-# Glauber b-average applies here (a single proton has no nucleon-position
-# ensemble to sample), so unlike the nuclear "2*pi*b_integral" step, the
-# raw D0 output is used directly -- just the standard prefactor and
-# d2k_Dperp -> dk_Dperp Jacobian, no extra Glauber-transverse-plane (2*pi)
-# factor (see D0.py's load_results for comparison).
-#
-# In the dilute (large pT) limit, saturation effects vanish and R_pA -> 1.
+# R_pA = dsigma_AA / (A * dsigma_pA), both with the same nuclear photon flux. Numerator:
+# Pb+Pb sum (D0.py); denominator: run_proton_baseline.sh output, no b integral.
 
-A_PB = 208   # Pb mass number
+A_PB = 208
 
-# run_proton_baseline.sh output, next to the Pb central values (CENTRAL_DIR)
 PROTON_DIR = os.environ.get("PROTON_DIR", f"../output/{CHANNEL}/proton_baseline")
 
 
 def load_proton_baseline(process, frag="HymnD"):
-    """Read PROTON_DIR/D0_proton_baseline_<process>_<frag>_<channel>_y*.dat
-    (no b column -- single proton, no Glauber average) and return
-    {y: [(pt, dsigma_pA_dy_dpt), ...]} for that one process.
-    """
+    """Read PROTON_DIR/D0_proton_baseline_<process>_<frag>_<channel>_y*.dat (no b column)
+    and return {y: [(pt, dsigma_pA_dy_dpt), ...]}."""
     results = {}
     pattern = f"{PROTON_DIR}/D0_proton_baseline_{process}_{frag}_{CHANNEL}_y*.dat"
     for filename in sorted(glob.glob(pattern)):
@@ -109,14 +79,6 @@ def make_plot(process):
         pa_results = load_proton_baseline(process, "HymnD")
         bk_band = load_bk_band(process, "HymnD")
         label = process
-
-    # BK initial-condition posterior uncertainty (100 Pb-target dipole-
-    # amplitude samples) -- only available/meaningful for the Pb+Pb
-    # (numerator) side, since these BK-IC samples were fit specifically
-    # for the Pb-208 nuclear dipole; there's no analogous posterior for
-    # the proton-baseline denominator, so its relative uncertainty is
-    # propagated straight through into R_pA (sigma_RpA/RpA = sigma_AA/AA),
-    # treating the denominator as fixed.
 
     y_values = sorted(set(aa_results) & set(pa_results))
     if not y_values:

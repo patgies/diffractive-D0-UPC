@@ -4,9 +4,8 @@
 #include <memory>
 #include "interpolation.hpp"
 
-// Builds a z-interpolator for the DGLAP-evolved Braaten-Cheung-Fleming-Yuan
-// (BCFY) c -> D0 fragmentation function at a fixed factorisation scale Q
-// (GeV). 
+// BCFY c -> D0 fragmentation function D(z), evolved with DGLAP,
+// at the scale Q (GeV).
 
 std::unique_ptr<Interpolator> MakeBCFYInterpolator(double Q);
 

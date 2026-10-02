@@ -12,25 +12,8 @@
 #include <fstream>
 
 
-// Woods-Saxon (Fermi-model) nuclear charge form factor F_A(q), the exact
-// closed form of Maximon & Schrack, "The form factor of the Fermi model
-// spatial distribution," J. Res. Natl. Bur. Stand. B 70, 85 (1966) --
-// referenced in the technical appendix of arXiv:2404.09731 as the method
-// used for their own tabulated flux (in place of a brute-force numerical
-// Fourier transform, which is what this class used to do; the switch away
-// from that is what this comment is about). For
-//   rho_A(r) = rho0/(1+exp((r-c)/a))   (c = R_A, the half-density radius),
-// their Eq. (20) gives (their Eq. (9) substitution qa=beta is not needed
-// here -- this is the final, re-substituted result):
-//   F(q) = [4 pi^2 rho0 a^3 / ((qa)^2 sinh^2(pi q a))]
-//            * [pi q a cosh(pi q a) sin(qc) - qc cos(qc) sinh(pi q a)]
-//          + 8 pi rho0 a^3 sum_{n=1}^inf (-1)^{n-1} n e^{-n c/a} / (n^2+(qa)^2)^2 ,
-// with rho0 fixed by their Eq. (21) so that F(0)=1 exactly (no separate
-// normalization step needed, unlike the old numerical version). The series
-// converges extremely fast for realistic c/a (~12 for lead): a handful of
-// terms is already far below double precision, so unlike the old version
-// this needs no grid or spline at all -- it's evaluated in closed form
-// every time, which is both exact (up to truncating the series) and cheap.
+// Woods-Saxon charge form factor F_A(q), formula of Maximon & Schrack,
+// J. Res. Natl. Bur. Stand. B 70, 85 (1966). F(0) = 1.
 class WSFormFactor {
 private:
     double c_, a_, q_max_, rho0_;
@@ -59,11 +42,9 @@ private:
     }
 
 public:
-    // RA, a in the same length units as the b/r used elsewhere in this code
-    // (GeV^-1 here -- convert from fm with hbarc=0.197327 before calling).
+    // RA and a in GeV^-1, q_max in GeV.
     WSFormFactor(double RA, double a, double q_max) : c_(RA), a_(a), q_max_(q_max)
     {
-        // Eq. (21): rho0 = { (4 pi c/3)[(pi a)^2+c^2] + 8 pi a^3 * series_cube(c,a) }^-1
         double bracket = (4.0 * M_PI * c_ / 3.0) * (M_PI * a_ * M_PI * a_ + c_ * c_)
                         + 8.0 * M_PI * a_ * a_ * a_ * series_cube(c_, a_);
         rho0_ = 1.0 / bracket;
@@ -74,8 +55,8 @@ public:
 
     double operator()(double q) const
     {
-        if (q >= q_max_) return 0.0;      // fully decayed well before q_max by construction
-        if (q < 1e-6) return 1.0;         // F(0)=1; removable 0/0 in the elementary term below
+        if (q >= q_max_) return 0.0;      // F is already zero before q_max
+        if (q < 1e-6) return 1.0;         // F(0)=1. This avoids 0/0 in the formula below
         double qa  = q * a_;
         double pqa = M_PI * qa;
         double sh = std::sinh(pqa), ch = std::cosh(pqa);
@@ -89,18 +70,8 @@ public:
 #include <gsl/gsl_spline2d.h>
 #include <gsl/gsl_sf_result.h>
 
-// Precomputed table of the Woods-Saxon bare-flux k_perp integral,
-//   I(z,b) = \int_0^{q_max} dk_perp k_perp^2 F_A(sqrt(k_perp^2+z^2 mN^2))
-//                            / (k_perp^2+z^2 mN^2) * J_1(k_perp b) ,
-// so that f_{gamma/A}^WS(z,b) = (alpha_em Z^2 / (pi^2 z)) * I(z,b)^2 (Eq. 16
-// of arXiv:2606.05469 / Eq. 11 of arXiv:2404.09731). J_1(k_perp b) oscillates
-// too fast to integrate live at every Monte Carlo point once b is more than
-// a few tens of GeV^-1, so I(z,b) is tabulated once (log z, log b grid) and
-// looked up via a 2D spline -- same reason Petja Paakkinen's own tables
-// (inputs/photon_flux/) are precomputed rather than evaluated on the fly.
-// Only ever needed for b <= ~5*R_A (flux_density_WS() falls back to the
-// point-like flux beyond that), which keeps the b-range -- and thus the
-// number of J_1 oscillations per grid point -- manageable.
+// Table of the k_perp integral I(z,b) of the Woods-Saxon flux, on a grid in (log z, log b).
+// f_WS(z,b) = alpha Z^2/(pi^2 z) * I(z,b)^2 (arXiv:2404.09731 Eq. 11).
 class WSFluxTable {
 private:
     gsl_spline2d* spline;
@@ -144,13 +115,13 @@ public:
         for (int j = 0; j < nb; j++) lb[j] = lb_min + (lb_max - lb_min) * j / (nb - 1.0);
 
         spline = gsl_spline2d_alloc(gsl_interp2d_bicubic, nz, nb);
-        std::vector<double> grid_z(nz * nb);   // gsl_spline2d's own flattened layout
+        std::vector<double> grid_z(nz * nb);   // 1D array in the order gsl_spline2d needs
         for (int i = 0; i < nz; i++) {
             double z = std::exp(lz[i]);
             for (int j = 0; j < nb; j++) {
                 double b = std::exp(lb[j]);
                 double I = raw_I(z, b, mn, FA, q_max);
-                // isfinite: a failed k_perp integral (seen near z=1) must not poison the spline
+                // if the k_perp integral fails (it can near z=1), store a tiny value so the spline still works
                 double logI2 = std::isfinite(I) ? std::log(std::max(I * I, 1e-300)) : std::log(1e-300);
                 gsl_spline2d_set(spline, grid_z.data(), i, j, logI2);
             }
@@ -163,7 +134,7 @@ public:
     WSFluxTable(const WSFluxTable&) = delete;
     WSFluxTable& operator=(const WSFluxTable&) = delete;
 
-    // Returns I(z,b)^2 (not yet multiplied by the alpha_em Z^2/(pi^2 z) prefactor).
+    // Returns I(z,b)^2, without the alpha Z^2/(pi^2 z) prefactor.
     double I2(double z, double b) const
     {
         double lz_ = std::log(z), lb_ = std::log(b);
@@ -238,17 +209,15 @@ public:
         if (b > b_max)
             return 1.0;
  
-        // clamp: the cubic spline undershoots to ~-1e-32 where Gamma -> 0
+        // keep the value between 0 and 1: the spline can give ~-1e-32 where Gamma -> 0
         return std::min(1.0, std::max(0.0, TA(b)));
     }
 };
 
-GammaAA& gamma_aa();   // forward-declared here so EffFluxRadial below can use it
+GammaAA& gamma_aa();   // declared here so EffFluxRadial below can use it
 
-// Nuclear thickness function T_B(s): line-of-sight integral of the
-// Woods-Saxon density, normalized so that 2*pi*\int_0^infty T_B(s) s ds =
-// B_mass (number of nucleons). Needed for the "effective flux" geometric
-// convolution (EffFluxRadial below) -- Eq. 4 of arXiv:2404.09731.
+// Nuclear thickness function T_B(s) from the Woods-Saxon density,
+// scaled so that it adds up to B_mass nucleons.
 class WSThickness {
 private:
     gsl_spline* spline;
@@ -272,7 +241,7 @@ public:
                 double w = (k == 0 || k == M) ? 1.0 : (k % 2 ? 4.0 : 2.0);
                 sum += w * rho;
             }
-            raw[i] = 2.0 * sum * h / 3.0;   // 2x: line-of-sight integral is symmetric in z'
+            raw[i] = 2.0 * sum * h / 3.0;   // times 2: the integral is the same for z' > 0 and z' < 0
         }
         double h2 = sg[1] - sg[0], sum2 = 0.0;
         for (int i = 0; i < n; i++) {
@@ -294,17 +263,8 @@ public:
     ~WSThickness() { gsl_spline_free(spline); gsl_interp_accel_free(acc); }
 };
 
-// H_channel(r) = \int d^2s T_B(s) Gamma_AB(|r-s|) P_EMD^channel(|r-s|)
-// = \int_0^{s_max} s ds T_B(s) [\int_0^{2pi} dphi Gamma_AB(b(r,s,phi)) P_EMD(b)]
-// No extra Theta(b >= bmin) cut: Gamma_AB already removes the overlapping
-// configurations (as in Eq. 4-6 of arXiv:2404.09731).
-// Built once as an r-spline over [0, r_switch] (each grid point needs the
-// (s,phi) double integral, the expensive part); for r >= r_switch (i.e. once
-// r is many nuclear thicknesses away, s becomes negligible next to r), the
-// exact asymptotic form B_mass*Gamma_AB(r)*P_EMD(r) is used directly instead
-// of extending the grid -- continuity across r_switch is a good self-check
-// (see scan_flux_eff.cpp, where this was validated before being productionized
-// here).
+// H_channel(r) = \int d^2s T_B(s) Gamma_AB(|r-s|) P_EMD(|r-s|), stored as a spline in r up to
+// r_switch. For larger r we use B_mass*Gamma_AB(r)*P_EMD(r).
 class EffFluxRadial {
 private:
     gsl_spline* spline;
@@ -332,12 +292,12 @@ private:
             double ph = M_PI / Nphi, sum_phi = 0.0;
             for (int j = 0; j <= Nphi; j++) {
                 double phi = j * ph;
-                double b = std::sqrt(std::max(0.0, r * r + s * s - 2.0 * r * s * std::cos(phi)));   // max: rounding at r=s, phi=0
+                double b = std::sqrt(std::max(0.0, r * r + s * s - 2.0 * r * s * std::cos(phi)));   // max avoids a tiny negative number at r=s, phi=0
                 double val = gamma_aa()(b) * channel_factor(channel, b, S);
                 double w = (j == 0 || j == Nphi) ? 1.0 : (j % 2 ? 4.0 : 2.0);
                 sum_phi += w * val;
             }
-            double phi_integral = 2.0 * (sum_phi * ph / 3.0);   // x2: [0,2pi] via symmetry about phi=pi
+            double phi_integral = 2.0 * (sum_phi * ph / 3.0);   // times 2: phi from pi to 2pi gives the same as 0 to pi
             double w = (i == 0 || i == Ns) ? 1.0 : (i % 2 ? 4.0 : 2.0);
             sum_s += w * s * Tval * phi_integral;
         }
@@ -345,14 +305,7 @@ private:
     }
 
 public:
-    // r-grid is log-spaced from r0 to r_switch: H(r) varies fastest near
-    // R_A (~33 GeV^-1) and needs resolution there, not just far out where
-    // it's flat. r_switch itself was found to need pushing well past R_A
-    // for a clean match to the asymptotic formula: the EMD-bearing channels
-    // (An0n, Xn0n) still carry a percent-level s/r correction at r=300
-    // (s reaches up to s_max~66, not yet negligible against r there), which
-    // showed up as a visible bump/dip in f_eff(z) right where a given z's
-    // r_max(z) integration bound crosses r_switch (see photon_flux_discrepancy.pdf).
+    // The r grid is evenly spaced in log r. r_switch must be much larger than R_A (see EFF_R_SWITCH).
     EffFluxRadial(const WSThickness& TB, const std::string& channel_, double S_,
                   double B_mass_, double r_switch, int nr = 400, double r0 = 0.5)
         : r_min_(r0), r_switch_(r_switch), B_mass(B_mass_), S(S_), channel(channel_)
@@ -384,49 +337,25 @@ public:
 
 void load_data_and_initialize(const std::string& filename);
 
-// Builds the Woods-Saxon form factor spline (module-level, like gamma_aa()
-// below). Must be called before flux_density_WS()/photon_flux() with
-// par->flux_model=="WS" is used. Safe to call more than once (rebuilds).
+// Builds the Woods-Saxon flux table. Call it before using flux_model "WS".
 void init_ws_form_factor(double RA_fm = 6.49, double a_fm = 0.54, double mn = 0.938);
 
-// Builds the "effective flux" table (Eq. 4 of arXiv:2404.09731) for the
-// given channel, replacing the b-integral entirely: effective_photon_flux()
-// below then depends only on qp (equivalently z), not on b at all. Requires
-// init_ws_form_factor() to already have been called (the bare flux used
-// inside the r-integral is the WS one, needed since r ranges down to 0 here
-// -- see EffFluxRadial). par is only used for alpha/Z/mn/ss/S (same
-// struct as flux_density_WS()).
+// Builds the effective flux f_eff(z) for the given channel (arXiv:2404.09731 Eq. 4).
 void init_effective_flux(const std::string& channel, void* par,
                           double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
 
-// FLUX_MODEL=STARLIGHT: P. Paakkinen's tabulated WS effective flux
-// (inputs/photon_flux/log-flux-tbl-WS.dta, arXiv:2404.09731; sqrt(s_NN) =
-// 5.36 TeV, sigma_NN = 90.8533 mb, R_WS = 6.49 fm, d_WS = 0.54 fm), read
-// once here. Only AnAn and An0n are tabulated. effective_photon_flux()
-// then returns it instead of our own f_eff.
+// FLUX_MODEL=STARLIGHT: reads the effective flux table of P. Paakkinen
+// (arXiv:2404.09731). The table only has AnAn and An0n.
 void init_starlight_flux(const std::string& channel,
-                         const std::string& filename = "./inputs/photon_flux/log-flux-tbl-WS.dta");
+                         const std::string& filename = "./inputs/Starlight_photon_flux/log-flux-tbl-WS.dta");
 
-// Effective photon flux, i.e. f_eff(z) with the full b (and target-nucleus
-// r,s geometric convolution) already integrated out -- returns dN/domega,
-// the same convention as \int db photon_flux(b,qp,par) would give under the
-// old single-b treatment, so it's a drop-in replacement for that integral,
-// not for photon_flux() itself (there is no b left to pass in).
+// Effective flux dN/domega. The sum over b is already done.
 double effective_photon_flux(double qp, void* par);
 
 GammaAA& gamma_aa();
 
-// Proton-target (pA) hadronic survival factor, Eq. 26 of arXiv:2606.05469:
-// Gamma_pA(b) = exp(-sigma_NN * T_A(b)), the optical-limit probability that
-// the proton does NOT interact hadronically with the (lead) nucleus emitting
-// the photon, at impact parameter b. Unlike Gamma_AA (nucleus-nucleus, read
-// from a precomputed Glauber table), this is a simple analytic exponential
-// of the SAME Woods-Saxon thickness function T_A used by the effective-flux
-// convolution above -- built directly here rather than tabulated, since the
-// proton itself contributes no extended structure to convolve over (it's the
-// pointlike target in this survival factor, unlike the emitting nucleus).
-// par->target=="pA" selects this inside photon_flux() (photon_flux.cpp);
-// no EMD suppression is applied for pA (see Sec. 6.1 of that paper).
+// Proton target: Gamma_pA(b) = exp(-sigma_NN * T_A(b)),
+// Eq. 26 of arXiv:2606.05469. There is no EMD factor for pA.
 void init_pA_flux(double sigma_NN_mb, double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
 double GammaPA(double b);
 

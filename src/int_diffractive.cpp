@@ -9,8 +9,7 @@
 using namespace std;
 
 
-// Computes the diffractive cross section with a 7-dimensional Monte Carlo
-// integral over the integrand defined in integrand.cpp.
+// Diffractive cross section: 7D VEGAS integral.
 double diffractiveCrossSection(void* p)
 {
     parameters* par = (parameters*)p;
@@ -28,10 +27,7 @@ double diffractiveCrossSection(void* p)
     F.dim    = 7;
     F.params = par;
 
-    // integration box for {r1, r2, u_k, u_qp, b, u_xpo, zh}
-    // (u_k and u_xpo are between 0 and 1 and get log-mapped inside the
-    // integrand; zh's box is the actual [zmin, zmax] range). flux_model==
-    // "EFF": b is an unused placeholder (see integrand.cpp), box is [0,1].
+    // integration limits for {r1, r2, u_k, u_qp, b, u_xpo, zh}
     bool eff = is_effective_flux(par);
     double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
@@ -42,10 +38,10 @@ double diffractiveCrossSection(void* p)
     double res, err;
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
 
-    // warm-up run so VEGAS can adapt its grid before the real integration
+    // short first run so VEGAS can adapt its grid
     gsl_monte_vegas_integrate(&F, low, up, F.dim, calls/10, r, s, &res, &err);
 
-    // keep integrating until it converges (chi-square close to 1), or give up after 3 tries
+    // repeat until chi-square is close to 1, at most 3 times
     int iter = 0;
     do {
         gsl_monte_vegas_integrate(&F, low, up, F.dim, calls, r, s, &res, &err);
@@ -58,10 +54,7 @@ double diffractiveCrossSection(void* p)
     return res;
 }
 
-// Same as diffractiveCrossSection above, but x_po is fixed at par->fixed_xpo
-// instead of being one of the random integration variables. So this is a
-// 6-dimensional integral over {r1, r2, u_k, u_qp, b, zh}, and gives
-// dsigma/(d2pD0 dy dx_po) at that one value of x_po.
+// Diffractive cross section at fixed x_po (par->fixed_xpo): 6D VEGAS integral.
 double diffractiveCrossSection_xpom(void* p)
 {
     parameters* par = (parameters*)p;
@@ -79,8 +72,7 @@ double diffractiveCrossSection_xpom(void* p)
     F.dim    = 6;
     F.params = par;
 
-    // integration box for {r1, r2, u_k, u_qp, b, zh}. flux_model=="EFF": b
-    // is an unused placeholder (see integrand.cpp), box is [0,1].
+    // integration limits for {r1, r2, u_k, u_qp, b, zh}
     bool eff = is_effective_flux(par);
     double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
@@ -105,16 +97,8 @@ double diffractiveCrossSection_xpom(void* p)
     return res;
 }
 
-// "Fixed q+, no photon flux" diffractive cross section: a 4-dimensional
-// integral over {r1, r2, u_k, u_xpo}.
-// There's no {u_qp, b, zh} here because q+ = 2p+ is fixed by hand, there's
-// no photon flux to integrate over, and pc is just par->p directly (no
-// fragmentation). par->k_upper needs to already be set by the caller.
-//
-// Unlike diffractiveCrossSection/diffractiveCrossSection_xpom above, this
-// one multiplies in the full physical prefactor at the end (including
-// alpha_s), that's possible here because mT (used for alpha_s) is fixed for this whole
-// calculation, rather than changing every time zh is sampled.
+// Diffractive cross section at fixed q+: 4D VEGAS integral over {r1, r2, u_k, u_xpo}.
+// The result has the full prefactor. Set par->k_upper before calling.
 double diffractiveCrossSection_fixed_qp(void* p)
 {
     parameters* par = (parameters*)p;
@@ -131,7 +115,7 @@ double diffractiveCrossSection_fixed_qp(void* p)
     F.dim    = 4;
     F.params = par;
 
-    // integration box for {r1, r2, u_k, u_xpo}
+    // integration limits for {r1, r2, u_k, u_xpo}
     double rmax = 99.0;
     double low[] = {0.,   0.,   0., 0.};
     double up[]  = {rmax, rmax, 1., 1.};
@@ -150,11 +134,11 @@ double diffractiveCrossSection_fixed_qp(void* p)
     gsl_monte_vegas_free(s);
     gsl_rng_free(r);
 
-    // physics prefactor: alpha_s * alpha_em * e_c^2 * (Nc^2-1) * sigma0 / (8*pi^4)
+    // prefactor: alpha_s * alpha_em * e_c^2 * (Nc^2-1) * sigma0 / (8*pi^4)
     double alphae = 1.0 / 137.0;
     double e_c    = 2.0 / 3.0;
     double Nc     = 3.0;
-    double sigma0 = 16.36;   // dipole normalization, same value used in the python scripts
+    double sigma0 = 16.36;   // dipole normalization, same value as in the python scripts
     double prefactor = alphas_run(par->mt) * alphae * e_c*e_c * (Nc*Nc - 1.0) * sigma0
                         / (8.0 * M_PI*M_PI*M_PI*M_PI);
 

@@ -3,14 +3,13 @@
 #include <cstdlib>
 
 namespace {
-const char* DefaultGridPath() { return "inputs/kk_eko/kk_eko_0000.dat"; }
+const char* DefaultGridPath() { return "inputs/KK_EKO/kk_eko_0000.dat"; }
 const int kCharmPid = 4;
 }
 
 std::unique_ptr<Interpolator> MakeKniehlKramerInterpolator(double Q)
 {
-    // KK_EKO_FILE lets a member/replica grid override the default, same
-    // convention as HYMND_FILE for frag_type=HymnD.
+    // KK_EKO_FILE: use another grid file.
     const char* path = std::getenv("KK_EKO_FILE");
     return MakeHymnDZInterpolator(path ? path : DefaultGridPath(), kCharmPid, Q);
 }

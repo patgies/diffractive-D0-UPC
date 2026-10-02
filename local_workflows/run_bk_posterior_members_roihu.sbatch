@@ -10,41 +10,12 @@
 #SBATCH --output=logs/bk_%A_%a.out
 #SBATCH --error=logs/bk_%A_%a.err
 
-# Usage (run build_roihu.sh and ./local_workflows/setup_bk_posterior_links.sh first --
-# this script does NOT build or set up symlinks):
-#   sbatch run_bk_posterior_members_roihu.sbatch
-#   sbatch --array=0-9 run_bk_posterior_members_roihu.sbatch   # quick subset test
-#
-# Counterpart to run_HymnD_members_roihu.sbatch, but for the *other*
-# uncertainty source: instead of varying the fragmentation function while
-# holding the dipole amplitude fixed, this holds the fragmentation scheme
-# fixed (FRAG_TYPE=HymnD, central member 0000 -- matching the plotted
-# central HymnD curve) and varies the dipole amplitude across 100 posterior
-# samples of the BK initial-condition fit ("LOmvefit": Q_{s,0}^2, e_c, C^2,
-# sigma0/2 -- see bk/posteriorsamples_100_LOmvefit.dat). This isolates the
-# BK-initial-condition uncertainty as a second, independent band -- meant to
-# be combined with the HymnD-replica band in quadrature, not cross-produced
-# with it (that would be 100x101 runs for no real precision gain).
-#
-# data/Pb/bk_posterior/member_<NNNN>/glauber_mve_<b> are symlinks into
-# bk/bks_Pbtargets_1/bks/<NNNN>/ic_208_<b>.dat (see
-# setup_bk_posterior_links.sh). Those files leave x0 out of their header,
-# which DataFile reads as "invalid x0" and resets to 0 -- DIPOLE_X0=0.01
-# below works around that via src/main.cpp's SetX0() override (0.01 matches
-# both data/Pb/mve/'s header and the standard HERA-fit convention this
-# family of Bayesian MVe fits uses).
-#
-# Output for member NNNN goes to $OUTDIR/member_NNNN/output/D0_*_HymnD_*.dat
-# under /scratch. Bring the member_* directories back to this project's
-# output/bk_posterior/ locally (e.g. via rsync) before running
-# D0.py's load_bk_band().
+# Usage (after build_roihu.sh and setup_bk_posterior_links.sh): sbatch run_bk_posterior_members_roihu.sbatch
+# One job per BK posterior dipole sample, with the central HymnD member. Output in $OUTDIR/member_NNNN/output/.
 
 set -e
 
-# build/bin/D0 is dynamically linked against libgsl -- module load it here
-# too, or every array task fails with "libgsl.so.28: cannot open shared
-# object file" (the module loaded during build_roihu.sh doesn't carry over
-# to a separate job's environment).
+# build/bin/D0 needs libgsl: load the module in the job too.
 source /usr/share/lmod/lmod/init/bash
 module purge
 module use /appl/modulefiles
@@ -53,7 +24,7 @@ module load gsl/2.8
 
 BK_DIR=${BK_DIR:-data/Pb/bk_posterior}
 OUTDIR=${OUTDIR:-/scratch/lappi/patricia/D0_bk_band}
-HYMND_FILE=${HYMND_FILE:-inputs/prompt-D0-1-109/prompt-D0-1-109_0000.dat}
+HYMND_FILE=${HYMND_FILE:-inputs/HymnD/prompt-D0-1-109_0000.dat}
 
 member_tag=$(printf '%04d' "$SLURM_ARRAY_TASK_ID")
 member_dir="$BK_DIR/member_${member_tag}"

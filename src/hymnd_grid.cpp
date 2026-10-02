@@ -26,7 +26,7 @@ std::vector<int> ParseInts(const std::string& line)
 struct QGridBlock {
     std::vector<double> xgrid;
     std::vector<double> qgrid;
-    std::vector<std::vector<double>> values;  // [ix][iq], already selected flavor column
+    std::vector<std::vector<double>> values;  // [ix][iq], only the flavor we need
 };
 
 }
@@ -86,11 +86,7 @@ std::unique_ptr<Interpolator> MakeHymnDZInterpolator(
     if (blocks.empty())
         throw std::runtime_error("MakeHymnDZInterpolator: no Q subgrids found in " + member_file);
 
-    // HymnD subgrids are contiguous and increasing in Q; clamp an
-    // out-of-range Q to the grid edges (frozen extrapolation, matching
-    // standard PDF evolution behavior below Q0/above Qmax) instead of
-    // failing hard. This matters for scale-variation studies (e.g.
-    // Q = mt0/2) that can dip below QMin for low-pT points.
+    // If Q is outside the grid, use the closest grid value.
     double q_clamped = Q;
     if (q_clamped < blocks.front().qgrid.front()) q_clamped = blocks.front().qgrid.front();
     if (q_clamped > blocks.back().qgrid.back()) q_clamped = blocks.back().qgrid.back();
@@ -110,7 +106,7 @@ std::unique_ptr<Interpolator> MakeHymnDZInterpolator(
         for (size_t ix = 0; ix < nx; ix++) {
             double xf = block.values[ix][iq_lo] * (1.0 - t) + block.values[ix][iq_hi] * t;
             zvals[ix] = block.xgrid[ix];
-            dvals[ix] = xf / zvals[ix];   // grid stores x*f(x,Q) -> convert to D(z,Q)
+            dvals[ix] = xf / zvals[ix];   // the grid has x*f(x,Q), so divide by x to get D(z,Q)
         }
 
         return std::unique_ptr<Interpolator>(new Interpolator(zvals, dvals));

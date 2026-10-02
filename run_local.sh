@@ -17,18 +17,14 @@ else
     y_values="0.0 1.0 2.0 3.0 4.0"
 fi
 
-# VEGAS call counts: CALLS_EXCL/CALLS_DIFF each fall back
-# to CALLS if unset, so a bare CALLS=1e6 still applies to both as before.
-# Above EXCL_PT_THRESHOLD (default 4 GeV), the exclusive integrand switches
-# to a factorized version that's much more reliable at high pt but costs
-# more per call, so it uses its own (smaller) call count,
-# CALLS_EXCL_FACTORIZED, instead of CALLS_EXCL.
+# Number of VEGAS calls: CALLS_EXCL and CALLS_DIFF use CALLS if not set. Above EXCL_PT_THRESHOLD
+# the exclusive part uses the 3D version, with CALLS_EXCL_FACTORIZED calls.
 CALLS=${CALLS:-1e5}
 CALLS_EXCL=${CALLS_EXCL:-$CALLS}
 CALLS_EXCL_FACTORIZED=${CALLS_EXCL_FACTORIZED:-1e3}
 EXCL_PT_THRESHOLD=${EXCL_PT_THRESHOLD:-4.0}
 CALLS_DIFF=${CALLS_DIFF:-$CALLS}
-# PROCESS=exclusive|diffractive reruns just that one process. Default "both" is the original behavior.
+# PROCESS=exclusive|diffractive runs only that process. The default "both" runs the two.
 PROCESS=${PROCESS:-both}
 export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS HYMND_FILE
 

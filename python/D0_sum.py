@@ -6,14 +6,13 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib import ticker
 
-# Reuses D0.py's data-loading (and picks up its "fancy" rcParams
-# styling too, since that's set at import time). Plots the *total* D0 cross
-# section (diffractive + exclusive added together) for a few rapidities.
+# Total D0 cross section (diffractive + exclusive) for some rapidities,
+# using D0.py's data loading and plot style.
 from D0 import (
     load_results, load_hymnd_sum_band, NUCLEUS, CHANNEL, FRAG_TYPES, LINEWIDTH,
 )
 
-Y_TO_PLOT = [-1.0, 0.0, 1.0, 2.0]   # the EFF rerun's Pb grid stops at y=2
+Y_TO_PLOT = [-1.0, 0.0, 1.0, 2.0]   
 
 
 def main():
@@ -25,18 +24,10 @@ def main():
     if missing:
         sys.exit(f"No data found for rapidities {missing} -- run ../local_workflows/run_many_nucleus.sh first.")
 
-    # Combined "HymnD" theory-uncertainty band for the sum (HymnD-replica
-    # and scale-variation uncertainties added in quadrature -- see
-    # load_hymnd_sum_band). {} until both run_HymnD_members_roihu.sbatch /
-    # run_HymnD_scale_variation.sh have been run and pulled back.
     hymnd_band = load_hymnd_sum_band(frag)
 
-    # Same blue -> red ColorBrewer RdBu steps as D0.py, one per
-    # rapidity in increasing y.
     palette = ["#2166ac", "#67a9cf", "#ef8a62", "#b2182b"]
     colors = {y: palette[i % len(palette)] for i, y in enumerate(Y_TO_PLOT)}
-    # Linestyle also changes with y, so curves stay distinguishable where
-    # they overlap (e.g. y=-1 and y=0) and in black-and-white print.
     linestyle_cycle = ["-", "--", ":", "-."]
     linestyles = {y: linestyle_cycle[i % len(linestyle_cycle)] for i, y in enumerate(Y_TO_PLOT)}
 
@@ -58,21 +49,13 @@ def main():
         plt.plot(pt_values, totals, color=colors[y], linestyle=linestyles[y], lw=LINEWIDTH)
 
     plt.yscale("log")
-    # Fixed range rather than autoscale -- see D0.py's comment:
-    # the HymnD band's lower edge crashes toward the 1e-30 floor at a few
-    # very-low-pT points (charm-mass threshold effect in the scale
-    # variation), which would otherwise stretch the whole axis.
-    plt.ylim(1e-8, 1e1)
-    plt.xlim(0, 12)   # the pD0 grid of run_many_nucleus.sh ends at 12 GeV
+    plt.ylim(3e-8, 1e1)
+    plt.xlim(0, 12)   
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)
-    # in-plot label instead of a title, as in D0.py
-    plt.text(0.95, 0.95, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\n{CHANNEL}, HymnD\nExclusive + diffractive",
-             transform=plt.gca().transAxes, ha="right", va="top", fontsize=20, linespacing=1.4)
+    plt.text(0.95, 0.92, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\n{CHANNEL}, HymnD",
+             transform=plt.gca().transAxes, ha="right", va="top", fontsize=24, linespacing=1.8)
 
-    # Same numticks fix as D0.py: with a wide log-scale range,
-    # LogLocator's default budget silently drops minor ticks entirely, and
-    # thins major tick MARKS (not just labels) at every other decade.
     plt.gca().yaxis.set_minor_locator(
         ticker.LogLocator(base=10.0, subs=[2, 3, 4, 5, 6, 7, 8, 9], numticks=100))
     plt.gca().yaxis.set_minor_formatter(ticker.NullFormatter())
@@ -81,10 +64,9 @@ def main():
         ticker.FuncFormatter(lambda val, pos: f"$10^{{{round(math.log10(val))}}}$"
                               if round(math.log10(val)) % 2 != 0 else ""))
 
-    # Discrete per-y legend instead of a colorbar (see D0.py).
-    y_handles = [Line2D([0], [0], color=colors[y], linestyle=linestyles[y], linewidth=LINEWIDTH, label=f"$y={y:g}$")
+    y_handles = [Line2D([0], [0], color=colors[y], linestyle=linestyles[y], linewidth=3, label=f"$y={y:g}$")
                  for y in Y_TO_PLOT]
-    plt.legend(handles=y_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0), fontsize=20,
+    plt.legend(handles=y_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0), fontsize=22,
                frameon=False)
 
     plt.tight_layout()

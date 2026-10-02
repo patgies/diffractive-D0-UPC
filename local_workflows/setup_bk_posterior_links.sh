@@ -1,23 +1,10 @@
 #!/bin/bash
 # Usage: ./local_workflows/setup_bk_posterior_links.sh
-#
-# The BK-initial-condition posterior sample dipole files live at
-# bk/bks_Pbtargets_1/bks/<N>/ic_208_<b>.dat (N = 0..99, b = 0,2,...,34 -- see
-# bk/posteriorsamples_100_LOmvefit.dat, one row per N). run_many_nucleus.sh
-# (and the underlying D0 binary) expect a DIPOLE_DIR containing files named
-# glauber_mve_<b>, matching data/Pb/mve/'s convention -- so this creates
-# relative symlinks data/Pb/bk_posterior/member_NNNN/glauber_mve_<b> ->
-# ../../../../bk/bks_Pbtargets_1/bks/<N>/ic_208_<b>.dat for every member,
-# rather than duplicating the 359M of underlying bk/ data or changing
-# run_many_nucleus.sh's glob pattern. Safe to re-run (skips existing links).
-#
-# These files also leave x0 out of their header (DataFile reads that as
-# "invalid x0" and resets it to 0) -- run_bk_posterior_members_roihu.sbatch
-# passes DIPOLE_X0=0.01 to work around that, see src/main.cpp.
+# Makes links data/Pb/bk_posterior/member_NNNN/glauber_mve_<b> -> inputs/BK/bks_Pbtargets_1/bks/<N>/ic_208_<b>.dat.
 
 set -e
 
-BK_SRC=bk/bks_Pbtargets_1/bks
+BK_SRC=inputs/BK/bks_Pbtargets_1/bks
 BK_DIR=data/Pb/bk_posterior
 
 for member_dir in "$BK_SRC"/*; do

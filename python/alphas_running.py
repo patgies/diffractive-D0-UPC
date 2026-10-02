@@ -1,14 +1,12 @@
 import numpy as np
 
-# One-loop running of alpha_s
-# Input: alpha_s(mZ) from PDG world average
-# Formula: 1/alpha_s(mu) = 1/alpha_s(mZ) + 2*b0*ln(mu/mZ)
-# b0 = (33 - 2*Nf) / (12*pi)  for Nc=3
+# One-loop running of alpha_s from alpha_s(mZ):
+# 1/alpha_s(mu) = 1/alpha_s(mZ) + 2*b0*ln(mu/mZ), b0 = (33 - 2*Nf)/(12*pi)
 
-alphas_mZ = 0.118    # PDG world average
-mZ        = 91.2     # GeV
+alphas_mZ = 0.118    
+mZ        = 91.2
 Nc        = 3
-Nf        = 4        # active flavours at charm scale (u, d, s, c)
+Nf        = 4        
 b0        = (33 - 2*Nf) / (12*np.pi)
 
 def alphas_run(mu):
@@ -23,8 +21,7 @@ if __name__ == '__main__':
         print('  %8.1f      %.4f' % (mu, alphas_run(mu)))
     print()
 
-    # Print at transverse mass scale mu = sqrt(pT^2 + mc^2) 
-    mc = 1.5   # charm mass GeV
+    mc = 1.5   
     pt_values = np.arange(0.1, 10.1, 0.2)
 
     print('alpha_s at mu = sqrt(pT^2 + mc^2),  mc=%.1f GeV' % mc)
