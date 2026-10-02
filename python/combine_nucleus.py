@@ -79,7 +79,7 @@ def integrate_over_b(pairs):
 
 
 def prefactor(process, pt):
-    """Physical prefactor, matching cross_section.py's convention.
+    """Physical prefactor, matching D0.py's convention.
     No sigma0 here: that's the GBW proton-dipole normalization, and for a
     nucleus target the "area" is already accounted for by integrate_over_b's
     Glauber b-integral -- applying sigma0 on top of that would double-count it.
@@ -93,7 +93,7 @@ def prefactor(process, pt):
 
 
 def load_results(process):
-    pattern = f"../files/D0_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y*.dat"
+    pattern = f"../output/D0_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y*.dat"
     results = {}
     for filename in sorted(glob.glob(pattern)):
         y = read_rapidity(filename)
@@ -114,7 +114,7 @@ def load_results(process):
 def write_combined(process, results):
     for y, points in sorted(results.items()):
         ytag = str(y).replace(".", "")
-        outfile = f"../files/combined_d0_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y{ytag}.dat"
+        outfile = f"../output/combined_d0_{process}_{FRAG}_{CHANNEL}_{NUCLEUS}_y{ytag}.dat"
         with open(outfile, "w") as f:
             f.write(f"# {process} D0 cross section, {NUCLEUS} target, {FRAG} fragmentation, "
                     f"{CHANNEL} channel, integrated over Glauber b\n")
@@ -130,7 +130,7 @@ def main():
     results_diff = load_results("diffractive")
     if not results_excl and not results_diff:
         sys.exit(f"No files found for NUCLEUS={NUCLEUS}, FRAG_TYPE={FRAG}, CHANNEL={CHANNEL} "
-                  "in ../files/ -- run ../local_workflows/run_many_nucleus.sh first.")
+                  "in ../output/ -- run ../local_workflows/run_many_nucleus.sh first.")
 
     write_combined("exclusive", results_excl)
     write_combined("diffractive", results_diff)
@@ -165,7 +165,7 @@ def main():
     ax.grid(True, which='both', alpha=0.3)
 
     plt.tight_layout()
-    outname = f"../plots/combined_d0_{FRAG}_{CHANNEL}_{NUCLEUS}.png"
+    outname = f"../plots/combined_d0_{FRAG}_{CHANNEL}_{NUCLEUS}{NUCLEUS}.png"
     plt.savefig(outname, dpi=300)
     print(f"Saved: {outname}")
 

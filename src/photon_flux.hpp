@@ -318,6 +318,7 @@ private:
         double P_no_emd = std::exp(-S / (b * b));
         if (channel == "An0n") return P_no_emd;
         if (channel == "Xn0n") return P_no_emd * (1.0 - P_no_emd);
+        if (channel == "0n0n") return P_no_emd * P_no_emd;
         return 1.0;   // AnAn
     }
 
@@ -351,7 +352,7 @@ public:
     // (An0n, Xn0n) still carry a percent-level s/r correction at r=300
     // (s reaches up to s_max~66, not yet negligible against r there), which
     // showed up as a visible bump/dip in f_eff(z) right where a given z's
-    // r_max(z) integration bound crosses r_switch (see eff_flux_check.pdf).
+    // r_max(z) integration bound crosses r_switch (see photon_flux_discrepancy.pdf).
     EffFluxRadial(const WSThickness& TB, const std::string& channel_, double S_,
                   double B_mass_, double r_switch, int nr = 400, double r0 = 0.5)
         : r_min_(r0), r_switch_(r_switch), B_mass(B_mass_), S(S_), channel(channel_)

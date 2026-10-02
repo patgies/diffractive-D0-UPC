@@ -18,7 +18,7 @@ using namespace std;
 //  Run: ./D0_xpom <dipole_file> <pD0> <y> <x_po> [frag_type] [channel]
 //   x_po       pomeron momentum fraction, should be between 0 and 0.1
 //   frag_type  BCFY (default) | KniehlKramer | HymnD
-//   channel    An0n (default) | Xn0n | PL(AnAn)
+//   channel    An0n (default) | Xn0n | 0n0n | PL(AnAn)
 //
 // This is the x_po-fixed version of D0, giving both channels differential
 // in x_P instead of integrated over it. If you run this for a bunch of

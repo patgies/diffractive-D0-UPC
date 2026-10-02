@@ -34,10 +34,10 @@
 # both data/Pb/mve/'s header and the standard HERA-fit convention this
 # family of Bayesian MVe fits uses).
 #
-# Output for member NNNN goes to $OUTDIR/member_NNNN/files/D0_*_HymnD_*.dat
+# Output for member NNNN goes to $OUTDIR/member_NNNN/output/D0_*_HymnD_*.dat
 # under /scratch. Bring the member_* directories back to this project's
-# files/bk_posterior/ locally (e.g. via rsync) before running
-# cross_section.py's load_bk_band().
+# output/bk_posterior/ locally (e.g. via rsync) before running
+# D0.py's load_bk_band().
 
 set -e
 

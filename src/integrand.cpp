@@ -151,7 +151,7 @@ double integrand_exclusive_factorized(double* vec, size_t /*dim*/, void* p)
 // Then (see e.g. Eq. 25 of the reference this was ported from):
 //   dsigma/(dy d2p dlnx_P) = dsigma/(dy d2p dq+)|_{q+=q+_*} * (q+_*)^2(1-z_*)/p+
 // To keep the SAME raw-output convention as integrand_diffractive_xpom
-// (plain x_P density, dsigma/dx_P -- see xpom_spectrum.py's "xpo *
+// (plain x_P density, dsigma/dx_P -- see xpom.py's "xpo *
 // dsigma_dxpo" ln-conversion step, applied uniformly to both channels),
 // this returns dsigma/dx_P, i.e. that Jacobian divided by one more power
 // of x_P.
@@ -467,59 +467,6 @@ double integrand_diffractive_fixed_qp(double* vec, size_t /*dim*/, void* p)
 
     double kernel = 2.0*M_PI * k * D1*D2 * fun
                     * (k * par->log_k) * (x_po * log_xpo_range);
-
-    return kernel;
-}
-
-// Same as integrand_diffractive_fixed_qp above, but x_po is fixed at
-// par->fixed_xpo instead of being one of the random integration
-// variables (dropping u_xpo and its log-mapping Jacobian) -- gives
-// dsigma_fixed_qp/(d2K dx_po) at one specific x_po, integrated over the
-// remaining 3 variables {r1, r2, u_k}.
-double integrand_diffractive_fixed_qp_xpom(double* vec, size_t /*dim*/, void* p)
-{
-    parameters* par = (parameters*)p;
-
-    double k_lo = 0.01;
-
-    double r1   = vec[0];
-    double r2   = vec[1];
-    double k    = k_lo * exp(vec[2] * par->log_k);
-    double x_po = par->fixed_xpo;
-
-    if (k > par->p) return 0.0;
-
-    double z1 = 1.0 / 3.0;   // q+ = 3p+, so p+/q+ = 1/3
-    double z2 = 1.0 - z1;
-
-    double pp = (par->mt / M_SQRT2) * exp(par->y);
-    double qp = 3.0 * pp;
-    double w2   = M_SQRT2 * qp * par->ss;
-    double Mqq2 = (par->p2 + par->m2) / (z1 * z2);
-    double x    = Mqq2 / (x_po * w2);
-    if (x <= 0.0 || x >= 1.0) return 0.0;
-
-    double xfac    = x / (1.0 - x);
-    double omega2  = xfac * k * k;
-    double sqomega = sqrt(xfac) * k;
-
-    // the "hard factor" H^2,
-    double H2 = z1 * par->inv_denom8 * ((z1*z1 + z2*z2) * par->p4m4 + par->two_m2p2m2);
-
-    // the gluon transverse-momentum-dependent gDTMD^2
-    double gDTMD2 = omega2 * omega2 * r1*r2
-                    * Jn(2, k*r1) * Kn(2, sqomega*r1)
-                    * Jn(2, k*r2) * Kn(2, sqomega*r2);
-
-    double fun = H2 * (1.0 / (1.0 - x)) * gDTMD2;
-
-    // dipole scattering amplitude for each of the two dipole sizes
-    double x_po_dip = min(x_po, 0.01);
-    double D1 = par->dipole->N(r1, x_po_dip);
-    double D2 = par->dipole->N(r2, x_po_dip);
-
-    double kernel = 2.0*M_PI * k * D1*D2 * fun
-                    * (k * par->log_k);
 
     return kernel;
 }

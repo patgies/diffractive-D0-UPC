@@ -20,13 +20,13 @@
 # not once per (Glauber sample, pD0, y) -- much cheaper than the Pb+Pb sweep.
 #
 # Env vars:
-#   Y_VALS   rapidities to scan (default matches cross_section_sum.py's Y_TO_PLOT)
+#   Y_VALS   rapidities to scan (default matches D0_sum.py's Y_TO_PLOT)
 #   PT_VALS  pD0 values to scan, GeV (default matches run_many_nucleus.sh)
 #   FRAG_TYPE  BCFY | KniehlKramer | HymnD (default HymnD)
-#   CHANNEL    An0n (default) | Xn0n | PL(AnAn)
+#   CHANNEL    An0n (default) | Xn0n | 0n0n | PL(AnAn)
 #   FLUX_MODEL EFF (default) | PL | WS -- must match run_many_nucleus.sh
 #   CORES      parallel D0 invocations (default nproc/2)
-#   OUTDIR     output goes to $OUTDIR/files/ (default: the repo root)
+#   OUTDIR     output goes to $OUTDIR/output/ (default: the repo root)
 #   SKIP_BUILD 1 = use the existing build/bin/D0 (cluster jobs: build once
 #              with build_roihu.sh instead of every job running cmake)
 #   CALLS_EXCL, CALLS_EXCL_FACTORIZED, CALLS_DIFF, EXCL_PT_THRESHOLD (see run_many_nucleus.sh)
@@ -67,12 +67,12 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
 	echo "Build OK."
 fi
 
-mkdir -p "$OUTDIR/files"
+mkdir -p "$OUTDIR/output"
 
 for proc in exclusive diffractive; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="$OUTDIR/files/D0_proton_baseline_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
+		outfile="$OUTDIR/output/D0_proton_baseline_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
 		{
 			echo "# proton-target baseline for R_pA (same nuclear photon flux as Pb+Pb, TARGET=AA, flux_model=${FLUX_MODEL})"
 			echo "# ${proc} D0 cross section, proton target, ${frag_tag} fragmentation, ${channel_tag} channel"
@@ -98,8 +98,8 @@ run_one_point() {
 		echo "Warning: D0 $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$pt  $excl" >> "$OUTDIR/files/D0_proton_baseline_exclusive_${frag_tag}_${channel_tag}_y${ytag}.dat"
-	echo "$pt  $diff" >> "$OUTDIR/files/D0_proton_baseline_diffractive_${frag_tag}_${channel_tag}_y${ytag}.dat"
+	echo "$pt  $excl" >> "$OUTDIR/output/D0_proton_baseline_exclusive_${frag_tag}_${channel_tag}_y${ytag}.dat"
+	echo "$pt  $diff" >> "$OUTDIR/output/D0_proton_baseline_diffractive_${frag_tag}_${channel_tag}_y${ytag}.dat"
 }
 
 for y in $Y_VALS; do
@@ -111,4 +111,4 @@ for y in $Y_VALS; do
 done
 wait
 
-echo "Done. Next: python3 python/nuclear_modification_factor.py to compute R_pA and plot."
+echo "Done. Next: python3 python/RpA.py to compute R_pA and plot."

@@ -17,7 +17,7 @@ using namespace std;
 
 //  Run: ./D0 <dipole_file> <pD0> <y> [frag_type] [channel]
 //   frag_type  BCFY (default) | KniehlKramer | HymnD
-//   channel    An0n (default) | Xn0n | PL(AnAn)
+//   channel    An0n (default) | Xn0n | 0n0n | PL(AnAn)
 
 
 int main(int argc, char* argv[])
@@ -94,8 +94,8 @@ int main(int argc, char* argv[])
     param.bmin    = 14.2 / 0.197327;
     // FLUX_MODEL: "EFF" (default) is the target-nucleus geometric
     // convolution (arXiv:2404.09731 Eq. 4, effective_photon_flux() in
-    // photon_flux.cpp) -- validated in scan_flux_eff.cpp/eff_flux_check.pdf
-    // and photon_flux_discrepancy.pdf to actually reproduce Paakkinen's
+    // photon_flux.cpp) -- validated in scan_flux_eff.cpp and
+    // photon_flux_discrepancy.pdf to actually reproduce Paakkinen's
     // tabulated Starlight flux, unlike the old single-b treatment. "PL" is
     // that old single-b treatment (Eq. 1/15 of our own paper and of Guzey
     // et al. 2606.05469), kept for comparison/reproducing old results;

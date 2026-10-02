@@ -1,7 +1,0 @@
-# D0 exclusive cross section, dipole file: data/proton/mve.dat
-# generated: 2026-07-30 14:26:46 EEST
-# calls: 1e5 below 4.0 GeV, 1e3 above (VEGAS calls per point)
-# pD0  y  dsigma
-3.0  0.0  0.0006259
-4.5  0.0  3.09918e-05
-6.0  0.0  2.86589e-06

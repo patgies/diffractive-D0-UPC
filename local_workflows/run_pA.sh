@@ -18,17 +18,17 @@
 #
 # The proton dipole amplitude (data/proton/mve.dat) is used as-is: sigma0 in
 # its GBW normalization already represents the target proton's transverse
-# area (see python/nuclear_modification_factor.py's proton_prefactor()),
+# area (see python/RpA.py's proton_prefactor()),
 # which is the correct convention here too, since the target is a proton in
-# both cases -- python/nuclear_modification_factor.py's proton_prefactor()
+# both cases -- python/RpA.py's proton_prefactor()
 # applies unchanged to this script's output (sigma0 included, no
 # GEVSQR_TO_MB, no Glauber b-integral: raw D0 output is used directly).
 #
 # Env vars:
-#   Y_VALS     rapidities to scan (default matches cross_section_sum.py's Y_TO_PLOT)
+#   Y_VALS     rapidities to scan (default matches D0_sum.py's Y_TO_PLOT)
 #   PT_VALS    pD0 values to scan, GeV (default matches run_many_nucleus.sh)
 #   FRAG_TYPE  BCFY | KniehlKramer | HymnD (default HymnD)
-#   CHANNEL    An0n (default) | Xn0n | PL(AnAn) -- unused for TARGET=pA (no EMD), kept only for the output filename tag
+#   CHANNEL    An0n (default) | Xn0n | 0n0n | PL(AnAn) -- unused for TARGET=pA (no EMD), kept only for the output filename tag
 #   FLUX_MODEL WS (default, realistic Gamma_pA) | PL (sharp cutoff at bmin=1.1*R_A, comparison only)
 #   SIGMA_NN   total pp cross section in mb (default 99, sqrt(s_NN)=8.16 TeV value from arXiv:2606.05469)
 #   CORES      parallel D0 invocations (default nproc/2)
@@ -67,12 +67,12 @@ cmake -S . -B build > /dev/null
 cmake --build build -j"$(nproc)" --target D0
 echo "Build OK."
 
-mkdir -p files
+mkdir -p output
 
 for proc in exclusive diffractive; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="files/D0_pA_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
+		outfile="output/D0_pA_${proc}_${frag_tag}_${channel_tag}_y${ytag}.dat"
 		{
 			echo "# p-Pb UPC (TARGET=pA): lead emits, proton target, sqrt(s_NN)=8.16 TeV,"
 			echo "# Gamma_pA(b)=exp(-sigma_NN*T_A(b)) [sigma_NN=${SIGMA_NN} mb], flux_model=${FLUX_MODEL}, no EMD"
@@ -99,8 +99,8 @@ run_one_point() {
 		echo "Warning: D0 $pt $y produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$pt  $excl" >> "files/D0_pA_exclusive_${frag_tag}_${channel_tag}_y${ytag}.dat"
-	echo "$pt  $diff" >> "files/D0_pA_diffractive_${frag_tag}_${channel_tag}_y${ytag}.dat"
+	echo "$pt  $excl" >> "output/D0_pA_exclusive_${frag_tag}_${channel_tag}_y${ytag}.dat"
+	echo "$pt  $diff" >> "output/D0_pA_diffractive_${frag_tag}_${channel_tag}_y${ytag}.dat"
 }
 
 for y in $Y_VALS; do
@@ -112,4 +112,4 @@ for y in $Y_VALS; do
 done
 wait
 
-echo "Done. files/D0_pA_{exclusive,diffractive}_${frag_tag}_${channel_tag}_y<Y>.dat written."
+echo "Done. output/D0_pA_{exclusive,diffractive}_${frag_tag}_${channel_tag}_y<Y>.dat written."

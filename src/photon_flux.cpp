@@ -125,6 +125,7 @@ double photon_flux(double b, double qp, void* p)
     double emd_factor = 1.0;
     if      (channel == "An0n") emd_factor = P_no_emd;
     else if (channel == "Xn0n") emd_factor = P_no_emd * (1.0 - P_no_emd);
+    else if (channel == "0n0n") emd_factor = P_no_emd * P_no_emd;   // neither nucleus breaks up
     return 2.0 * M_PI * b * flux * gamma * emd_factor;
 }
 

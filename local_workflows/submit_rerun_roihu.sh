@@ -2,7 +2,7 @@
 # Submits every Pb prediction that depends on the photon flux / FF to Roihu,
 # with the new effective flux (FLUX_MODEL=EFF, inputs/Gamma_AA.dat at
 # sigma_NN=92 mb) and the EKO-evolved BCFY/Kniehl-Kramer grids. Same y/pT
-# grids as the files currently in files/. All output goes under $BASE in
+# grids as the files currently in output/. All output goes under $BASE in
 # /scratch (one subdirectory per run, see the layout at the bottom).
 #
 # Usage, on Roihu from the repo root:
@@ -19,8 +19,8 @@
 # the exclusive pD0=3.0, 3.5 points of that first central run this way
 # (3.0 as a cross-check against the 5D result).
 #
-# Not rerun: D0_fixed_qp* (no photon flux, no fragmentation), ff_vs_q_scan.dat
-# (HymnD only, unchanged), out/flux_scan*.csv (already current).
+# Not rerun: charm_fixed_qp* (no photon flux, no fragmentation),
+# output/flux_scan/*.dat (already current).
 # Not included here: the HymnD replica band and the BK posterior band. They
 # need the HymnD members 0001-0100 and the bk/ posterior dipoles on Roihu;
 # once those are there, submit run_HymnD_members_roihu.sbatch /
@@ -98,7 +98,7 @@ if step proton; then
 	  submit --job-name=D0_proton_baseline --time=01:00:00 --cpus-per-task=20 $WRAP local_workflows/run_proton_baseline.sh )
 fi
 
-# 4. x_po spectrum: BCFY at pD0=2 GeV (y=0-3), what python/xpom_spectrum.py
+# 4. x_po spectrum: BCFY at pD0=2 GeV (y=0-3), what python/xpom.py
 #    plots by default. (The old Kniehl-Kramer x_po set is not rerun; for it:
 #    FRAG_TYPE=KniehlKramer with run_many_xpom.sh's default grid, ~64 cores x 8 h.)
 if step xpom; then
@@ -109,10 +109,10 @@ fi
 cat <<EOF
 
 Submitted ($STEPS). When everything has finished, $BASE contains:
-  central/files/D0_{exclusive,diffractive}_{BCFY,KniehlKramer,HymnD}_An0n_Pb_y*.dat  -> files/
-  HymnD_scale/factor_{0.5,2.0}/files/                                              -> files/HymnD_scale/factor_*/files/
-  {BCFY,KniehlKramer}_scale/factor_{0.5,2.0}/files/                                -> files/{BCFY,KniehlKramer}_scale/factor_*/files/
-  proton_baseline/files/D0_proton_baseline_*                                       -> files/
-  xpom/files/D0_*_xpom_BCFY_*                                                      -> files/
+  central/output/D0_{exclusive,diffractive}_{BCFY,KniehlKramer,HymnD}_An0n_Pb_y*.dat  -> output/
+  HymnD_scale/factor_{0.5,2.0}/output/                                              -> output/HymnD_scale/factor_*/output/
+  {BCFY,KniehlKramer}_scale/factor_{0.5,2.0}/output/                                -> output/{BCFY,KniehlKramer}_scale/factor_*/output/
+  proton_baseline/output/D0_proton_baseline_*                                       -> output/
+  xpom/output/D0_*_xpom_BCFY_*                                                      -> output/
 then rebuild combined_d0_* with python/combine_nucleus.py.
 EOF

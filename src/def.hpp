@@ -77,7 +77,7 @@ struct parameters
     double fixed_xpo;
 
     // Used only in the "fixed q+, no photon flux" mode (see main_fixed_qp.cpp).
-    // Here q+ is fixed (2*p+ in D0_fixed_qp, 3*p+ in D0_fixed_qp_xpom) instead of the photon
+    // Here q+ is fixed (2*p+ in charm_fixed_qp) instead of the photon
     // flux, and there is no fragmentation step -- p is directly the charm
     // quark's transverse momentum K. Since these don't change during the
     // integration, we compute them once outside and just reuse them.
@@ -171,12 +171,5 @@ double Kn(int nu, double x);
 double exclusiveCrossSection_fixed_qp(void* p);
 double integrand_diffractive_fixed_qp(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_fixed_qp(void* p);
-
-// Same as the fixed_qp pair above, but x_po is fixed at par->fixed_xpo
-// instead of being integrated over (dropping u_xpo), giving
-// dsigma_fixed_qp/(d2K dx_po) at one specific x_po -- the fixed-q+ analogue
-// of diffractiveCrossSection_xpom.
-double integrand_diffractive_fixed_qp_xpom(double* vec, size_t dim, void* p);
-double diffractiveCrossSection_fixed_qp_xpom(void* p);
 
 #endif

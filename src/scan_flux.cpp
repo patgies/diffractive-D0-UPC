@@ -3,7 +3,7 @@
 // effective fluxes of arXiv:2404.09731 (inputs/photon_flux/, see
 // python/flux_comparison.py). Not part of the physics pipeline.
 //
-// usage: ./build/bin/scan_flux > out/flux_scan.csv
+// usage: ./build/bin/scan_flux > output/flux_scan/flux_scan.dat
 // columns: channel,y,dN_dy   (dN_dy = dN/domega * sqrt(s)/2)
 #include "def.hpp"
 #include "photon_flux.hpp"
@@ -36,7 +36,7 @@ int main()
 
     const std::vector<std::string> channels = {"PL(AnAn)", "AnAn", "An0n", "Xn0n"};
 
-    std::cout << "channel,y,dN_dy\n" << std::setprecision(10);
+    std::cout << "# channel  y  dN_dy\n" << std::setprecision(10);
     const int ny = 60, nb = 6000;
     for (const auto& ch : channels) {
         par.channel = ch;
@@ -64,7 +64,7 @@ int main()
             }
             double dN_domega = sum * h / 3.0;
             double dN_dy = dN_domega * par.ss / 2.0;
-            std::cout << ch << "," << y << "," << dN_dy << "\n";
+            std::cout << ch << "  " << y << "  " << dN_dy << "\n";
         }
     }
     return 0;

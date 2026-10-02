@@ -1,4 +1,3 @@
-import csv
 import os
 import numpy as np
 from scipy.interpolate import CubicSpline
@@ -8,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import LogLocator, FixedLocator, FuncFormatter, NullFormatter
 
-# make the plot look nicer (same style as cross_section.py / xpom_spectrum.py / fixed_qp_spectrum.py;
+# make the plot look nicer (same style as D0.py / xpom.py / charm_fixed_qp.py;
 # font sizes a bit below inclusive-D0-UPC/python/fragmentation_comparison_evolved.py)
 plt.rcParams.update({
     "text.usetex": True,
@@ -40,23 +39,23 @@ plt.rcParams.update({
 # of arXiv:2404.09731 (inputs/photon_flux/log-flux-tbl-*.dta, P. Paakkinen),
 # evaluated with the paper's barycentric Lagrange interpolation on Chebyshev
 # nodes in y^(1/4) (Eqs. 34-37). AnAn/An0n/Xn0n use this code's *effective*
-# flux (src/scan_flux_eff.cpp -> out/flux_scan_eff_<channel>.csv, Eq. 4 of
+# flux (src/scan_flux_eff.cpp -> output/flux_scan/flux_scan_eff_<channel>.dat, Eq. 4 of
 # arXiv:2404.09731 -- see photon_flux_discrepancy.pdf for why the simple
 # single-b treatment used to live here instead, and why it undershoots the
 # table by up to 33x at large y). PL(AnAn) is the deliberate point-like
 # baseline, not the effective flux, so it still comes from the simple scan
-# (src/scan_flux.cpp -> out/flux_scan.csv).
+# (src/scan_flux.cpp -> output/flux_scan/flux_scan.dat).
 # The effective fluxes use sigma_NN = 90.8533 mb (inputs/Gamma_AA_sigma90.85.dat),
 # the value behind the Starlight table (see its header: sqrt(s_NN) = 5.36 TeV);
 # the physics pipeline uses 92 mb (inputs/Gamma_AA.dat).
 # Regenerate with, from the repository root:
-#   ./build/bin/scan_flux > out/flux_scan.csv
+#   ./build/bin/scan_flux > output/flux_scan/flux_scan.dat
 #   for ch in AnAn An0n Xn0n; do
-#     GAMMA_AA_FILE=./inputs/Gamma_AA_sigma90.85.dat ./build/bin/scan_flux_eff $ch > out/flux_scan_eff_$ch.csv
+#     GAMMA_AA_FILE=./inputs/Gamma_AA_sigma90.85.dat ./build/bin/scan_flux_eff $ch > output/flux_scan/flux_scan_eff_$ch.dat
 #   done
 
 TABLE_DIR = "../inputs/photon_flux"
-OUT_DIR = "../out"
+SCAN_DIR = "../output/flux_scan"
 
 
 def load_table(path):
@@ -84,18 +83,22 @@ def interp_flux(tab, key, y):
     return np.array(out)
 
 
-def load_csv(fn):
+def load_scan(fn):
+    """scan_flux/scan_flux_eff output: "# channel  y  dN_dy" header, one row per (channel, y)."""
     d = {}
-    for r in csv.DictReader(open(fn)):
-        d.setdefault(r["channel"], []).append((float(r["y"]), float(r["dN_dy"])))
+    for line in open(fn):
+        if not line.strip() or line.startswith("#"):
+            continue
+        ch, y, dn_dy = line.split()
+        d.setdefault(ch, []).append((float(y), float(dn_dy)))
     return {k: (np.array([p[0] for p in v]), np.array([p[1] for p in v])) for k, v in d.items()}
 
 
 PL = load_table(os.path.join(TABLE_DIR, "log-flux-tbl-PL.dta"))
 WS = load_table(os.path.join(TABLE_DIR, "log-flux-tbl-WS.dta"))
-scan = {"PL(AnAn)": load_csv(os.path.join(OUT_DIR, "flux_scan.csv"))["PL(AnAn)"]}
+scan = {"PL(AnAn)": load_scan(os.path.join(SCAN_DIR, "flux_scan.dat"))["PL(AnAn)"]}
 for ch in ["AnAn", "An0n", "Xn0n"]:
-    scan[ch] = load_csv(os.path.join(OUT_DIR, f"flux_scan_eff_{ch}.csv"))[ch]
+    scan[ch] = load_scan(os.path.join(SCAN_DIR, f"flux_scan_eff_{ch}.dat"))[ch]
 
 # Xn0n has no column in Petja's tables at all (only AnAn/An0n) -- plotted
 # as a mine-only curve (no table comparison, no ratio-panel line).

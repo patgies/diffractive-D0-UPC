@@ -1,6 +1,6 @@
 build/
 */build/
-#files/
+#output/
 *.o
 #run_many_oberon.sh
 CMakeCache.txt

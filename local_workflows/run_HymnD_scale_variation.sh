@@ -5,14 +5,14 @@
 # Q = SCALE_FACTOR * mt0 (mt0 = sqrt(pD0^2 + m_charm^2)) set to the
 # conventional up/down variation (0.5x and 2x) around the central scale
 # (SCALE_FACTOR=1.0, already produced by the normal FRAG_TYPE=HymnD run
-# into files/), using only the central HymnD member (member 0000 -- this
+# into output/), using only the central HymnD member (member 0000 -- this
 # is a scale-convention envelope, not a PDF/FF-fit uncertainty, so unlike
 # run_HymnD_members_roihu.sbatch it does not need to be redone per replica
 # member).
 #
-# Output lands in $OUTBASE/factor_<0.5|2.0>/files/D0_<process>_HymnD_<channel>_<NUCLEUS>_y<Y>.dat
+# Output lands in $OUTBASE/factor_<0.5|2.0>/output/D0_<process>_HymnD_<channel>_<NUCLEUS>_y<Y>.dat
 #
-# cross_section.py combines these with the central (SCALE_FACTOR=1.0) run
+# D0.py combines these with the central (SCALE_FACTOR=1.0) run
 # to build a min/max scale-variation envelope, separate from the replica
 # (mean +/- std) band built from run_HymnD_members_roihu.sbatch's output.
 #
@@ -23,7 +23,7 @@ set -e
 
 HYMND_DIR=${HYMND_DIR:-inputs/prompt-D0-1-109}
 HYMND_SET=${HYMND_SET:-prompt-D0-1-109}
-OUTBASE=${OUTBASE:-files/HymnD_scale}
+OUTBASE=${OUTBASE:-output/HymnD_scale}
 SCALE_FACTORS=${SCALE_FACTORS:-"0.5 2.0"}
 
 member_file="$HYMND_DIR/${HYMND_SET}_0000.dat"

@@ -20,14 +20,14 @@
 #   XPO_MIN,XPO_MAX,XPO_N  log-spaced x_po grid (default 1e-6, 0.1, 25)
 #   CORES        parallel D0_xpom invocations (default nproc/2)
 #   FRAG_TYPE    BCFY (default) | KniehlKramer | HymnD
-#   CHANNEL      An0n (default) | Xn0n | PL(AnAn)
+#   CHANNEL      An0n (default) | Xn0n | 0n0n | PL(AnAn)
 #   CALLS, CALLS_DIFF, CALLS_EXCL_FACTORIZED (CALLS_DIFF overrides CALLS for
 #                      the diffractive integrand; the exclusive one always
 #                      uses the factorized analytic-r1,r2 integrand, see
 #                      exclusiveCrossSection_xpom, so CALLS_EXCL is unused
 #                      here -- CALLS_EXCL_FACTORIZED is what matters)
 #   HYMND_FILE
-#   OUTDIR       output goes to $OUTDIR/files/ (default: the repo root)
+#   OUTDIR       output goes to $OUTDIR/output/ (default: the repo root)
 #   SKIP_BUILD   1 = use the existing build/bin/D0_xpom (cluster jobs: build
 #                once with build_roihu.sh instead of every job running cmake)
 
@@ -74,7 +74,7 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
 	echo "Build OK."
 fi
 
-mkdir -p "$OUTDIR/files"
+mkdir -p "$OUTDIR/output"
 
 # Log-spaced x_po grid, computed once (awk rather than python/numpy, which
 # isn't available on the cluster compute nodes without extra modules;
@@ -90,7 +90,7 @@ for y in $Y_VALS; do
 	for pt in $PT_VALS; do
 		pttag=$(echo "$pt" | tr -d '.')
 		for process in exclusive diffractive; do
-			outfile="$OUTDIR/files/D0_${process}_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+			outfile="$OUTDIR/output/D0_${process}_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
 			{
 				echo "# ${process} D0 dsigma/(d2pD0 dy dx_po), ${NUCLEUS} target, ${frag_tag} fragmentation, ${channel_tag} channel"
 				echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -122,8 +122,8 @@ run_one_point() {
 		echo "Warning: D0_xpom $dfile $pt $y $xpo produced no data line -- skipping this point." >&2
 		return
 	fi
-	echo "$b  $xpo  $excl" >> "$OUTDIR/files/D0_exclusive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
-	echo "$b  $xpo  $diff" >> "$OUTDIR/files/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+	echo "$b  $xpo  $excl" >> "$OUTDIR/output/D0_exclusive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
+	echo "$b  $xpo  $diff" >> "$OUTDIR/output/D0_diffractive_xpom_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}_pt${pttag}.dat"
 }
 
 for dfile in "$DIPOLE_DIR"/glauber_mve_*; do
@@ -141,4 +141,4 @@ for dfile in "$DIPOLE_DIR"/glauber_mve_*; do
 done
 wait
 
-echo "Done. Next: python3 python/xpom_spectrum.py to integrate over b and plot (add SUM=1 for the exclusive+diffractive sum)."
+echo "Done. Next: python3 python/xpom.py to integrate over b and plot."

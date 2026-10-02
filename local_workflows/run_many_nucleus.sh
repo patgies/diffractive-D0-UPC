@@ -13,7 +13,7 @@ PT_MAX=${PT_MAX:-12.0}
 PT_VALS=${PT_VALS:-$(seq "$PT_MIN" "$PT_STEP" "$PT_MAX")}
 CORES=${CORES:-$(( $(nproc) / 2 ))}
 DIPOLE_DIR=${DIPOLE_DIR:-data/$NUCLEUS/mve}
-# Where output files land: OUTDIR/files/D0_<process>_..._y<Y>.dat. Defaults to
+# Where output files land: OUTDIR/output/D0_<process>_..._y<Y>.dat. Defaults to
 # the current directory (same as before OUTDIR existed). Useful for e.g. a
 # SLURM array job giving each task its own OUTDIR so tasks don't clobber
 # each other's output.
@@ -52,7 +52,7 @@ export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCE
 
 # Photon flux: EFF (default) | PL | WS, see src/main.cpp. Must match the
 # FLUX_MODEL used for run_proton_baseline.sh, otherwise the flux no longer
-# cancels in R_pA (python/nuclear_modification_factor.py). TARGET is pinned
+# cancels in R_pA (python/RpA.py). TARGET is pinned
 # to AA so a stray TARGET=pA in the environment can't switch the geometry.
 FLUX_MODEL=${FLUX_MODEL:-EFF}
 export TARGET=AA FLUX_MODEL
@@ -61,13 +61,13 @@ export TARGET=AA FLUX_MODEL
 flux_tag=$([[ "$FLUX_MODEL" == "EFF" ]] && echo "" || echo "_${FLUX_MODEL}")
 
 
-mkdir -p "$OUTDIR/files"
+mkdir -p "$OUTDIR/output"
 
 
 for proc in $procs; do
 	for y in $Y_VALS; do
 		ytag=$(echo "$y" | tr -d '.')
-		outfile="$OUTDIR/files/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
+		outfile="$OUTDIR/output/D0_${proc}_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 		if [[ "$proc" == "exclusive" ]]; then
 			proc_calls="${CALLS_EXCL} below ${EXCL_PT_THRESHOLD} GeV, ${CALLS_EXCL_FACTORIZED} above (see EXCL_PT_THRESHOLD)"
 		else
@@ -103,10 +103,10 @@ run_one_point() {
 	fi
 	# Only write the file(s) for the process actually computed this run.
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
-		echo "$b  $pt  $excl" >> "$OUTDIR/files/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
+		echo "$b  $pt  $excl" >> "$OUTDIR/output/D0_exclusive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 	fi
 	if [[ "$PROCESS" == "both" || "$PROCESS" == "diffractive" ]]; then
-		echo "$b  $pt  $diff" >> "$OUTDIR/files/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
+		echo "$b  $pt  $diff" >> "$OUTDIR/output/D0_diffractive_${frag_tag}_${channel_tag}_${NUCLEUS}${flux_tag}_y${ytag}.dat"
 	fi
 }
 

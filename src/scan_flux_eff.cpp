@@ -25,7 +25,7 @@
 //                       NOT bounded away from 0: the photon can be emitted
 //                       from anywhere in nucleus A, including deep inside it.
 //
-// usage: ./build/bin/scan_flux_eff <channel> > out/flux_scan_eff_<channel>.csv
+// usage: ./build/bin/scan_flux_eff <channel> > output/flux_scan/flux_scan_eff_<channel>.dat
 #include "def.hpp"
 #include "photon_flux.hpp"
 #include <gsl/gsl_errno.h>
@@ -49,6 +49,7 @@ static double channel_emd_factor(const string& channel, double b, double S)
     double P_no_emd = std::exp(-P_emd);
     if (channel == "An0n") return P_no_emd;
     if (channel == "Xn0n") return P_no_emd * (1.0 - P_no_emd);
+    if (channel == "0n0n") return P_no_emd * P_no_emd;
     return 1.0;   // AnAn
 }
 
@@ -162,7 +163,7 @@ int main(int argc, char** argv)
                   << "  ratio=" << h1/h2 << "\n";
     }
 
-    std::cout << "channel,y,dN_dy\n" << std::setprecision(10);
+    std::cout << "# channel  y  dN_dy\n" << std::setprecision(10);
     const int ny = 120;
     for (int iy = 0; iy < ny; iy++) {
         double y  = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));   // z = photon energy fraction
@@ -185,7 +186,7 @@ int main(int argc, char** argv)
 
         double dN_domega = f_eff;               // f_eff(z) already IS dN/domega-like (matches flux_density_WS's own convention)
         double dN_dy = dN_domega * par.ss / 2.0;
-        std::cout << channel << "," << y << "," << dN_dy << "\n";
+        std::cout << channel << "  " << y << "  " << dN_dy << "\n";
     }
     return 0;
 }

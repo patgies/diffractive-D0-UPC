@@ -147,7 +147,7 @@ pipeline (\texttt{src/photon\_flux.hpp/.cpp}: \texttt{WSThickness},
 \texttt{integrand.cpp}, \texttt{int\_exclusive.cpp},
 \texttt{int\_diffractive.cpp}, \texttt{main.cpp}/\texttt{main\_xpom.cpp}
 as \texttt{FLUX\_MODEL=EFF}, now the \emph{default}). The result closes the
-gap dramatically (Table~\ref{tab:eff}, Fig.~\ref{fig:eff_check}): agreement
+gap dramatically (Table~\ref{tab:eff}): agreement
 improves from a factor of $\sim33$ at $y=0.1$ down to $\sim10\%$, and stays
 within $O(1)$ across the whole physically relevant range, instead of
 collapsing. The same implementation was ported to \texttt{inclusive-D0-UPC}
@@ -248,8 +248,7 @@ analysis, not a correction that can be neglected there.
 \section{A residual feature: diffractive-like minima at large $y$}
 
 Even under the effective-flux treatment, a residual $O(1)$ wiggle in the
-ratio to the table remains around $y\sim0.15$--$0.3$ (visible in
-Fig.~\ref{fig:eff_check}). We traced roughly half an order of magnitude of
+ratio to the table remains around $y\sim0.15$--$0.3$. We traced roughly half an order of magnitude of
 this to a numerical artifact --- the asymptotic matching radius used to cap
 the geometric convolution's numerical grid ($R_{\rm switch}$) was too
 small, giving a $\sim0.7\%$ discontinuity there for the EMD-bearing
@@ -292,8 +291,6 @@ Eq.~\eqref{eq:eff} before it was productionized.
 remain available for comparison/reproducing old results.
 \item \texttt{python/flux\_comparison.py}, \texttt{plots/flux\_comparison.pdf} ---
 simple-treatment comparison to the Starlight table (Fig.~\ref{fig:flux_comparison}).
-\item \texttt{python/eff\_flux\_check.py}, \texttt{plots/eff\_flux\_check.pdf} ---
-simple vs.\ effective comparison (Fig.~\ref{fig:eff_check}).
 \item \texttt{../inclusive-D0-UPC/src/photon\_flux.hpp/.cpp},
 \texttt{inclusive\_spectrum.cpp}, \texttt{main.cpp} --- the same implementation
 ported to the inclusive-spectrum codebase (see \S\ref{sec:eff} for the
@@ -306,14 +303,6 @@ normalization-convention difference this required).
 \caption{This code's simple single-$b$ flux (Eq.~\ref{eq:simple}) vs.\ the
 tabulated Starlight flux.}
 \label{fig:flux_comparison}
-\end{figure}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.8\textwidth]{plots/eff_flux_check.pdf}
-\caption{Ratio to the Starlight table: simple (dotted) vs.\ effective-flux
-(solid) treatment, for the AnAn and An0n channels.}
-\label{fig:eff_check}
 \end{figure}
 
 \end{document}

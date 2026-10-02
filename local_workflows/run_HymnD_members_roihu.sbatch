@@ -34,11 +34,11 @@
 # means the wall-clock cost is roughly ONE member's sweep, not 101x --
 # they all run in parallel instead of serially like a local loop would.
 #
-# Output for member NNNN goes to $OUTDIR/member_NNNN/files/D0_*_HymnD_*.dat
+# Output for member NNNN goes to $OUTDIR/member_NNNN/output/D0_*_HymnD_*.dat
 # under /scratch (not /projappl -- scratch is meant for job I/O, projappl
 # for the code/build). Bring the member_* directories back to this
-# project's files/HymnD/ locally (e.g. via rsync) before running
-# cross_section.py's load_hymnd_replica_band().
+# project's output/HymnD/ locally (e.g. via rsync) before running
+# D0.py's load_hymnd_replica_band().
 
 set -e
 

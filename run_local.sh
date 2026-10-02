@@ -2,8 +2,8 @@
 
 # Usage: ./run_local.sh
 
-# Output: files/D0_exclusive.dat and
-# files/D0_diffractive.dat (columns: pD0  y  dsigma).
+# Output: output/D0_exclusive.dat and
+# output/D0_diffractive.dat (columns: pD0  y  dsigma).
 
 set -e
 
@@ -32,9 +32,9 @@ CALLS_DIFF=${CALLS_DIFF:-$CALLS}
 PROCESS=${PROCESS:-both}
 export CALLS CALLS_EXCL CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD CALLS_DIFF PROCESS HYMND_FILE
 
-mkdir -p files
-excl_file="files/D0_exclusive.dat"
-diff_file="files/D0_diffractive.dat"
+mkdir -p output
+excl_file="output/D0_exclusive.dat"
+diff_file="output/D0_diffractive.dat"
 
 timestamp=$(date '+%Y-%m-%d %H:%M:%S %Z')
 if [[ "$PROCESS" == "both" || "$PROCESS" == "exclusive" ]]; then
