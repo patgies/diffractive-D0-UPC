@@ -1,8 +1,6 @@
 # Diffractive D0 photoproduction
 
-This project computes the exclusive and diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework.
-
-The code supports different UPC channels, photon fluxes and fragmentation functions, and it can be used for proton and nuclear targets.
+Diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework. The code supports different UPC channels, photon fluxes and fragmentation functions, and it can be used for proton and nuclear targets.
 
 If you use this code, please cite:
 
