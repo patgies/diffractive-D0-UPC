@@ -75,6 +75,15 @@ The code expects dipole input files of the form
 
 Dipole parametrization MVe from [https://github.com/hejajama/rcbkdipole](https://github.com/hejajama/rcbkdipole).
 
+The other inputs are in `input/`:
+
+- `BCFY_EKO/` and `KK_EKO/`: grids of the BCFY and Kniehl-Kramer fragmentation functions, DGLAP-evolved with [eko](https://github.com/NNPDF/eko) in [EKO-FF](https://github.com/patgies/EKO-FF).
+- `HymnD/`: the HymnD fragmentation function set, members 0–100.
+- `WS_photon_flux/`: tables of the hadronic survival factor `Gamma_AA(b)`, for `sigma_NN = 92` mb (default) and `90.85` mb. They are made with [src/make_gamma_aa.py](src/make_gamma_aa.py).
+- `Starlight_photon_flux/`: the Starlight photon flux tables, used with `FLUX_MODEL=STARLIGHT` and in `flux_comparison.py`.
+- `BK/`: the posterior samples of the BK initial condition. `run_scripts/setup_bk_posterior_links.sh` links them as `data/Pb/bk_posterior/member_NNNN/`.
+- `inclusive/`: the inclusive D0 cross section from [inclusive-D0-UPC](https://github.com/patgies/inclusive-D0-UPC), only needed for `ratio.py`. It is not included.
+
 ---
 
 ## UPC channel and photon flux
@@ -105,6 +114,8 @@ The fragmentation function is selected through `FRAG_TYPE`:
 - `BCFY`: E. Braaten, K.-m. Cheung, S. Fleming, and T.-C. Yuan, "Perturbative QCD fragmentation functions as a model for heavy quark fragmentation," Phys. Rev. D 51, 4819 (1995) [arXiv:hep-ph/9409316].
 - `KniehlKramer`: B. A. Kniehl and G. Kramer, "Charmed-hadron fragmentation functions from CERN LEP1 revisited," Phys. Rev. D 74, 037502 (2006) [arXiv:hep-ph/0607306].
 - `HymnD` (default): Epele, Hekhorn, Helenius, Paukkunen, and Zurita, "Towards new D meson fragmentation functions" [arXiv:2609.10327].
+
+`BCFY` and `KniehlKramer` are evolved with DGLAP from their input at the starting scale `mc` up to the fragmentation scale. The evolution is done with [eko](https://github.com/NNPDF/eko) in the repository [EKO-FF](https://github.com/patgies/EKO-FF) and stored as grids in `input/BCFY_EKO/` and `input/KK_EKO/`.
 
 The fragmentation scale is `Q = SCALE_FACTOR * mT`.
 
