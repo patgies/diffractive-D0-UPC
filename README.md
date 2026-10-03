@@ -4,6 +4,9 @@ This project computes the exclusive and diffractive D0 photoproduction cross sec
 
 The code supports different UPC channels, photon fluxes and fragmentation functions, and it can be used for proton and nuclear targets.
 
+If you use this code, please cite:
+
+P. Caucal, P. Gimeno-Estivill, E. Iancu, T. Lappi, and F. Salazar, *TMD factorization in diffractive heavy quark production in photon-nucleus collisions*, JHEP 09 (2026) 169 [[arXiv:2606.04169](https://arxiv.org/abs/2606.04169)] [[doi:10.1007/JHEP09(2026)169](https://doi.org/10.1007/JHEP09(2026)169)].
 
 ---
 
@@ -88,7 +91,12 @@ The channel is selected through `CHANNEL`:
 - `AnAn`
 - `PL(AnAn)`
 
-The photon flux is selected through `FLUX_MODEL`: `EFF` (default), `STARLIGHT`, `PL` or `WS`.
+The photon flux is selected through `FLUX_MODEL`:
+
+- `EFF` (default): effective flux of K. J. Eskola, V. Guzey, I. Helenius, P. Paakkinen, and H. Paukkunen, "Spatial resolution of dijet photoproduction in near-encounter ultraperipheral nuclear collisions," Phys. Rev. C 110, 054906 (2024) [arXiv:2404.09731], Eq. (4).
+- `STARLIGHT`: flux tables of the same paper (only `AnAn` and `An0n`), made with Starlight: S. R. Klein, J. Nystrand, J. Seger, Y. Gorbunov, and J. Butterworth, "STARlight: A Monte Carlo simulation program for ultra-peripheral collisions of relativistic ions," Comput. Phys. Commun. 212, 258 (2017) [arXiv:1607.03838].
+- `PL`: flux of a point-like nucleus.
+- `WS`: flux for a Woods-Saxon charge distribution.
 
 The photon flux, and how to use your own, is explained in [notes_photon_flux.pdf](notes_photon_flux.pdf).
 
@@ -98,9 +106,9 @@ The photon flux, and how to use your own, is explained in [notes_photon_flux.pdf
 
 The fragmentation function is selected through `FRAG_TYPE`:
 
-- `BCFY`
-- `KniehlKramer`
-- `HymnD` (default)
+- `BCFY`: E. Braaten, K.-m. Cheung, S. Fleming, and T.-C. Yuan, "Perturbative QCD fragmentation functions as a model for heavy quark fragmentation," Phys. Rev. D 51, 4819 (1995) [arXiv:hep-ph/9409316].
+- `KniehlKramer`: B. A. Kniehl and G. Kramer, "Charmed-hadron fragmentation functions from CERN LEP1 revisited," Phys. Rev. D 74, 037502 (2006) [arXiv:hep-ph/0607306].
+- `HymnD` (default): Epele, Hekhorn, Helenius, Paukkunen, and Zurita, "Towards new D meson fragmentation functions" [arXiv:2609.10327].
 
 The fragmentation scale is `Q = SCALE_FACTOR * mT`.
 
