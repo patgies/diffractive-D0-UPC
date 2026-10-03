@@ -1,7 +1,7 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
 #include "photon_flux.hpp"
-#include "hymnd_grid.hpp"
+#include "lhapdf_grid.hpp"
 #include "bcfy_grid.hpp"
 #include "kk_grid.hpp"
 #include <string>
@@ -14,8 +14,6 @@
 using namespace std;
 
 
-// Run: ./D0 <dipole_file> <pD0> <y> [frag_type] [channel]
-// frag_type: BCFY | KniehlKramer | HymnD;  channel: An0n | Xn0n | 0n0n | PL(AnAn)
 
 
 int main(int argc, char* argv[])
@@ -45,7 +43,7 @@ int main(int argc, char* argv[])
     }
 
     gsl_set_error_handler_off();
-    load_data_and_initialize("./inputs/WS_photon_flux/Gamma_AA.dat");
+    load_data_and_initialize("./input/WS_photon_flux/Gamma_AA.dat");
 
     parameters param;
     param.dipole   = &inst;
@@ -105,15 +103,15 @@ int main(int argc, char* argv[])
     // QPMAX: largest photon energy, only for tests (default 800 GeV).
     param.qpmax   = getenv("QPMAX") ? atof(getenv("QPMAX")) : 800.0;
 
-    // Upper limit of the b integral, 60/(z_min*mn), where z_min is the smallest
+    // Upper limit of the b integral, 60/(z_gamma_min*mn), where z_gamma_min is the smallest
     // photon energy fraction possible at this (pD0, y).
-    double mt_min = sqrt(pD0*pD0 + param.m2);       // mt at zh=zmax=1
-    double z_min  = mt_min * exp(y) / param.ss;     // smallest photon energy fraction possible
-    param.bmax    = 60.0 / (z_min * param.mn);
+    double mt_min = sqrt(pD0*pD0 + param.m2);          // mt at z_h=z_h_max=1
+    double z_gamma_min = mt_min * exp(y) / param.ss;   // smallest photon energy fraction possible
+    param.bmax    = 60.0 / (z_gamma_min * param.mn);
 
     // Fragmentation (c -> D0)
-    param.zmin   = 0.05;
-    param.zmax   = 1.0;
+    param.z_h_min = 0.05;
+    param.z_h_max = 1.0;
 
     if (frag_tag == "BCFY")              param.frag_type = FragmentationType::BCFY;
     else if (frag_tag == "KniehlKramer") param.frag_type = FragmentationType::KniehlKramer;
@@ -125,7 +123,7 @@ int main(int argc, char* argv[])
 
     string hymnD_file;
     if (getenv("HYMND_FILE")) hymnD_file = getenv("HYMND_FILE");
-    else                       hymnD_file = "inputs/HymnD/prompt-D0-1-109_0000.dat";
+    else                       hymnD_file = "input/HymnD/prompt-D0-1-109_0000.dat";
     const int hymnD_charm_flavor = 4;  // PDG id for the charm quark
     // Fragmentation scale Q = SCALE_FACTOR * mt0, mt0 = sqrt(pD0^2 + m^2).
     double mt0 = sqrt(pD0*pD0 + param.m2);
@@ -133,10 +131,10 @@ int main(int argc, char* argv[])
     double frag_scale = scale_factor * mt0;
     // the fragmentation scale cannot be below the charm mass
     if (frag_scale < param.m) frag_scale = param.m;
-    // D(z) at the fragmentation scale for the chosen frag_type.
+    // D(z_h) at the fragmentation scale for the chosen frag_type.
     unique_ptr<Interpolator> d_frag_interp;
     if (param.frag_type == FragmentationType::HymnD) {
-        d_frag_interp = MakeHymnDZInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);
+        d_frag_interp = MakeLHAPDFGridInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);
     } else if (param.frag_type == FragmentationType::BCFY) {
         d_frag_interp = MakeBCFYInterpolator(frag_scale);
     } else {

@@ -1,0 +1,6 @@
+{
+    "[python]": {
+        "editor.colorDecorators": false,
+        "editor.defaultColorDecorators": "never"
+    }
+}

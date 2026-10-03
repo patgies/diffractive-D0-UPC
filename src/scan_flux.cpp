@@ -1,5 +1,3 @@
-// Test tool: photon flux dN/dy integrated over b, for python/flux_comparison.py.
-// usage: ./build/bin/scan_flux > output/flux_scan/flux_scan.dat
 #include "def.hpp"
 #include "photon_flux.hpp"
 #include <gsl/gsl_errno.h>
@@ -7,48 +5,59 @@
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
-#include <vector>
 #include <string>
 
-int main()
+// dN/domega from the flux at one b, integrated over b (Simpson rule in ln b)
+static double flux_over_b(double z_gamma, double qp, parameters& par)
 {
+    const int nb = 6000;
+    double bmax = 60.0 / (z_gamma * par.mn);   // beyond eta > 50 photon_flux() is already zero
+    double b_lo = (par.channel == "PL(AnAn)") ? par.bmin : 1e-3;   // only the point-like channel starts at bmin
+    double a = std::log(b_lo), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
+    for (int i = 0; i <= nb; i++) {
+        double b = std::exp(a + i * h);
+        double w = (i == 0 || i == nb) ? 1.0 : (i % 2 ? 4.0 : 2.0);
+        sum += w * photon_flux(b, qp, &par) * b;   // db = b dlnb
+    }
+    return sum * h / 3.0;
+}
+
+int main(int argc, char** argv)
+{
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <EFF|STARLIGHT|PL|WS> <channel>..." << std::endl;
+        return 1;
+    }
     gsl_set_error_handler_off();
-    load_data_and_initialize("./inputs/WS_photon_flux/Gamma_AA.dat");
+    const std::string model = argv[1];
+
+    load_data_and_initialize("./input/WS_photon_flux/Gamma_AA.dat");
 
     parameters par;
-    par.ss    = 5360.0;   // GeV, sqrt(s_NN) of the Starlight tables (inputs/Starlight_photon_flux/*.dta headers)
-    par.alpha = 1.0/137.0;
+    par.ss    = 5360.0;   // GeV, sqrt(s_NN) of the Starlight tables (input/Starlight_photon_flux/*.dta headers)
+    par.alpha = 1.0 / 137.0;
     par.Z     = 82.0;
     par.mn    = 0.938;
     par.S     = std::pow(17.4, 2) / std::pow(0.197327, 2);
-    // default b_min = 14.205 fm, the value that agrees with the PL table of arXiv:2404.09731
+    // b_min = 14.205 fm, the value that agrees with the PL table of arXiv:2404.09731
     const char* bm = std::getenv("BMIN_FM");
     par.bmin  = (bm ? std::atof(bm) : 14.205) / 0.197327;
-    par.flux_model = std::getenv("FLUX_MODEL") ? std::getenv("FLUX_MODEL") : "PL";
-    if (par.flux_model == "WS") init_ws_form_factor();
+    par.flux_model = model;
+    if (model == "WS") init_ws_form_factor();
 
-    const std::vector<std::string> channels = {"PL(AnAn)", "AnAn", "An0n", "Xn0n"};
-
+    std::cout << "# flux_model     : " << model << "\n";
+    std::cout << "# Gamma_AA table : " << gamma_aa_info() << "\n";
     std::cout << "# channel  y  dN_dy\n" << std::setprecision(10);
-    const int ny = 60, nb = 6000;
-    for (const auto& ch : channels) {
-        par.channel = ch;
+    const int ny = 120;
+    for (int k = 2; k < argc; k++) {
+        par.channel = argv[k];
+        if (model == "EFF")       init_effective_flux(par.channel, &par);
+        if (model == "STARLIGHT") init_starlight_flux(par.channel);
         for (int iy = 0; iy < ny; iy++) {
-            double y    = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));
-            double qp   = y * par.ss / std::sqrt(2.0);    // omega = qp/sqrt(2) = y*sqrt(s)/2
-            // bmax = 60/(y*mn): beyond eta > 50, where photon_flux() is already zero
-            double bmax = 60.0 / (y * par.mn);
-            // Simpson rule in ln b. Only the point-like channel starts at bmin
-            double b_lo = (ch == "PL(AnAn)") ? par.bmin : 1e-3;
-            double a = std::log(b_lo), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
-            for (int i = 0; i <= nb; i++) {
-                double b = std::exp(a + i * h);
-                double w = (i == 0 || i == nb) ? 1.0 : (i % 2 ? 4.0 : 2.0);
-                sum += w * photon_flux(b, qp, &par) * b;   // db = b dlnb
-            }
-            double dN_domega = sum * h / 3.0;
-            double dN_dy = dN_domega * par.ss / 2.0;
-            std::cout << ch << "  " << y << "  " << dN_dy << "\n";
+            double z_gamma = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));   // photon energy fraction
+            double qp      = z_gamma * par.ss / std::sqrt(2.0);   // omega = qp/sqrt(2) = z_gamma*sqrt(s)/2
+            double dN_domega = is_effective_flux(&par) ? effective_photon_flux(qp, &par) : flux_over_b(z_gamma, qp, par);
+            std::cout << par.channel << "  " << z_gamma << "  " << dN_domega * par.ss / 2.0 << "\n";
         }
     }
     return 0;

@@ -1,6 +1,6 @@
 # ============================================================
 # Date        =  2026-09-30 18:57:45
-# Fixed-W (no photon flux) exclusive & diffractive dsigma/d2K
+# Fixed-W (no photon flux) exclusive & diffractive dsigma/d2p
 # W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z1=1/2); y fixed
 # x_pom > 0.1 forced to 0 on both sides
 # exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)
@@ -13,7 +13,7 @@
 # pt grid     =  40 pts in [0.2, 20] GeV (log)
 # VEGAS calls =  1000000 (diffractive only; exclusive is deterministic)
 # ============================================================
-# K  exclusive_fixedW  diffractive_fixedW
+# p  exclusive_fixedW  diffractive_fixedW
 0.2  0.00620381  9.97161e-08
 0.225067  0.00609523  1.2323e-07
 0.253276  0.00596113  1.52132e-07

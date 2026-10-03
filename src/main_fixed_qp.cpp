@@ -13,7 +13,7 @@
 using namespace std;
 
 // Exclusive and diffractive spectra at fixed q+ (qp = 2*pp, no photon flux),
-// as a function of the quark transverse momentum K, at fixed rapidity y.
+// as a function of the quark transverse momentum p, at fixed rapidity y.
 
 int main(int argc, char* argv[])
 {
@@ -43,11 +43,11 @@ int main(int argc, char* argv[])
 
     cout << "# ============================================================" << endl;
     cout << "# Date        =  " << date_buf << endl;
-    cout << "# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2K" << endl;
-    cout << "# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z1=1/2); y fixed" << endl;
+    cout << "# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2p" << endl;
+    cout << "# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y fixed" << endl;
     cout << "# x_pom > 0.1 forced to 0 on both sides" << endl;
     cout << "# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)" << endl;
-    cout << "# diffractive column: full physical cross section" << endl;
+    cout << "# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)" << endl;
     cout << "# ------------------------------------------------------------" << endl;
     cout << "# Dipole data =  " << datafile << endl;
     cout << "# sqrt(s)     =  " << param.ss << " GeV" << endl;
@@ -56,12 +56,12 @@ int main(int argc, char* argv[])
     cout << "# pt grid     =  " << n_pt << " pts in [" << pt_min << ", " << pt_max << "] GeV (log)" << endl;
     cout << "# VEGAS calls =  " << param.calls_diff << " (diffractive only; exclusive is deterministic)" << endl;
     cout << "# ============================================================" << endl;
-    cout << "# K  exclusive_fixed_qp  diffractive_fixed_qp" << endl;
+    cout << "# p  exclusive_fixed_qp  diffractive_fixed_qp" << endl;
 
-    vector<double> K_grid(n_pt), out_excl(n_pt), out_diff(n_pt);
+    vector<double> p_grid(n_pt), out_excl(n_pt), out_diff(n_pt);
     double log_lo = log(pt_min), log_hi = log(pt_max);
     for (int i = 0; i < n_pt; ++i)
-        K_grid[i] = exp(log_lo + i * (log_hi - log_lo) / (n_pt - 1));
+        p_grid[i] = exp(log_lo + i * (log_hi - log_lo) / (n_pt - 1));
 
     cerr << "# Starting grid (" << n_pt << " points, "
          << omp_get_max_threads() << " OMP threads) ..." << endl;
@@ -69,11 +69,11 @@ int main(int argc, char* argv[])
 
     #pragma omp parallel for schedule(dynamic)
     for (int idx = 0; idx < n_pt; ++idx) {
-        double K = K_grid[idx];
+        double pt = p_grid[idx];
 
         parameters p = param;
-        p.p  = K;
-        p.p2 = K * K;
+        p.p  = pt;
+        p.p2 = pt * pt;
         double p2m2 = p.p2 + p.m2;
         p.denom4     = p2m2 * p2m2;
         p.p4m4       = p.p2*p.p2 + p.m2*p.m2;
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
          << (int)(elapsed/60)%60 << "m " << (int)elapsed%60 << "s" << endl;
 
     for (int idx = 0; idx < n_pt; ++idx)
-        cout << K_grid[idx] << "  " << out_excl[idx] << "  " << out_diff[idx] << endl;
+        cout << p_grid[idx] << "  " << out_excl[idx] << "  " << out_diff[idx] << endl;
 
     return 0;
 }

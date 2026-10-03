@@ -70,30 +70,30 @@ public:
 #include <gsl/gsl_spline2d.h>
 #include <gsl/gsl_sf_result.h>
 
-// Table of the k_perp integral I(z,b) of the Woods-Saxon flux, on a grid in (log z, log b).
-// f_WS(z,b) = alpha Z^2/(pi^2 z) * I(z,b)^2 (arXiv:2404.09731 Eq. 11).
+// Table of the k_perp integral I(z_gamma,r) of the Woods-Saxon flux, on a grid in (log z_gamma, log r).
+// f_WS(z_gamma,r) = alpha Z^2/(pi^2 z_gamma) * I(z_gamma,r)^2 (arXiv:2404.09731 Eq. 11).
 class WSFluxTable {
 private:
     gsl_spline2d* spline;
-    gsl_interp_accel* z_acc;
-    gsl_interp_accel* b_acc;
-    double lz_min, lz_max, lb_min, lb_max;
+    gsl_interp_accel* z_gamma_acc;
+    gsl_interp_accel* r_acc;
+    double lz_gamma_min, lz_gamma_max, lr_min, lr_max;
 
-    struct IntegrandParams { double z, b, mn2; const WSFormFactor* FA; };
+    struct IntegrandParams { double z_gamma, r, mn2; const WSFormFactor* FA; };
 
     static double integrand(double kt, void* p)
     {
         IntegrandParams* par = (IntegrandParams*)p;
-        double t = kt * kt + par->z * par->z * par->mn2;
+        double t = kt * kt + par->z_gamma * par->z_gamma * par->mn2;
         gsl_sf_result res;
-        int status = gsl_sf_bessel_Jn_e(1, kt * par->b, &res);
+        int status = gsl_sf_bessel_Jn_e(1, kt * par->r, &res);
         double J1 = (status == GSL_SUCCESS) ? res.val : 0.0;
         return kt * kt * (*par->FA)(std::sqrt(t)) / t * J1;
     }
 
-    static double raw_I(double z, double b, double mn, const WSFormFactor& FA, double q_max)
+    static double raw_I(double z_gamma, double r, double mn, const WSFormFactor& FA, double q_max)
     {
-        IntegrandParams par{z, b, mn * mn, &FA};
+        IntegrandParams par{z_gamma, r, mn * mn, &FA};
         gsl_function F; F.function = &integrand; F.params = &par;
         gsl_integration_workspace* w = gsl_integration_workspace_alloc(2000);
         double result, err;
@@ -104,50 +104,50 @@ private:
 
 public:
     WSFluxTable(const WSFormFactor& FA, double mn, double q_max,
-                double z_min, double z_max, int nz,
-                double b_min, double b_max, int nb)
+                double z_gamma_min, double z_gamma_max, int nz_gamma,
+                double r_min, double r_max, int nr)
     {
-        lz_min = std::log(z_min); lz_max = std::log(z_max);
-        lb_min = std::log(b_min); lb_max = std::log(b_max);
+        lz_gamma_min = std::log(z_gamma_min); lz_gamma_max = std::log(z_gamma_max);
+        lr_min = std::log(r_min); lr_max = std::log(r_max);
 
-        std::vector<double> lz(nz), lb(nb);
-        for (int i = 0; i < nz; i++) lz[i] = lz_min + (lz_max - lz_min) * i / (nz - 1.0);
-        for (int j = 0; j < nb; j++) lb[j] = lb_min + (lb_max - lb_min) * j / (nb - 1.0);
+        std::vector<double> lz_gamma(nz_gamma), lr(nr);
+        for (int i = 0; i < nz_gamma; i++) lz_gamma[i] = lz_gamma_min + (lz_gamma_max - lz_gamma_min) * i / (nz_gamma - 1.0);
+        for (int j = 0; j < nr; j++) lr[j] = lr_min + (lr_max - lr_min) * j / (nr - 1.0);
 
-        spline = gsl_spline2d_alloc(gsl_interp2d_bicubic, nz, nb);
-        std::vector<double> grid_z(nz * nb);   // 1D array in the order gsl_spline2d needs
-        for (int i = 0; i < nz; i++) {
-            double z = std::exp(lz[i]);
-            for (int j = 0; j < nb; j++) {
-                double b = std::exp(lb[j]);
-                double I = raw_I(z, b, mn, FA, q_max);
-                // if the k_perp integral fails (it can near z=1), store a tiny value so the spline still works
+        spline = gsl_spline2d_alloc(gsl_interp2d_bicubic, nz_gamma, nr);
+        std::vector<double> grid_z(nz_gamma * nr);   // 1D array in the order gsl_spline2d needs
+        for (int i = 0; i < nz_gamma; i++) {
+            double z_gamma = std::exp(lz_gamma[i]);
+            for (int j = 0; j < nr; j++) {
+                double r = std::exp(lr[j]);
+                double I = raw_I(z_gamma, r, mn, FA, q_max);
+                // if the k_perp integral fails (it can near z_gamma=1), store a tiny value so the spline still works
                 double logI2 = std::isfinite(I) ? std::log(std::max(I * I, 1e-300)) : std::log(1e-300);
                 gsl_spline2d_set(spline, grid_z.data(), i, j, logI2);
             }
         }
-        gsl_spline2d_init(spline, lz.data(), lb.data(), grid_z.data(), nz, nb);
-        z_acc = gsl_interp_accel_alloc();
-        b_acc = gsl_interp_accel_alloc();
+        gsl_spline2d_init(spline, lz_gamma.data(), lr.data(), grid_z.data(), nz_gamma, nr);
+        z_gamma_acc = gsl_interp_accel_alloc();
+        r_acc = gsl_interp_accel_alloc();
     }
 
     WSFluxTable(const WSFluxTable&) = delete;
     WSFluxTable& operator=(const WSFluxTable&) = delete;
 
-    // Returns I(z,b)^2, without the alpha Z^2/(pi^2 z) prefactor.
-    double I2(double z, double b) const
+    // Returns I(z_gamma,r)^2, without the alpha Z^2/(pi^2 z_gamma) prefactor.
+    double I2(double z_gamma, double r) const
     {
-        double lz_ = std::log(z), lb_ = std::log(b);
-        if (lz_ < lz_min) lz_ = lz_min; else if (lz_ > lz_max) lz_ = lz_max;
-        if (lb_ < lb_min) lb_ = lb_min; else if (lb_ > lb_max) lb_ = lb_max;
-        return std::exp(gsl_spline2d_eval(spline, lz_, lb_, z_acc, b_acc));
+        double lz_gamma_ = std::log(z_gamma), lr_ = std::log(r);
+        if (lz_gamma_ < lz_gamma_min) lz_gamma_ = lz_gamma_min; else if (lz_gamma_ > lz_gamma_max) lz_gamma_ = lz_gamma_max;
+        if (lr_ < lr_min) lr_ = lr_min; else if (lr_ > lr_max) lr_ = lr_max;
+        return std::exp(gsl_spline2d_eval(spline, lz_gamma_, lr_, z_gamma_acc, r_acc));
     }
 
     ~WSFluxTable()
     {
         gsl_spline2d_free(spline);
-        gsl_interp_accel_free(z_acc);
-        gsl_interp_accel_free(b_acc);
+        gsl_interp_accel_free(z_gamma_acc);
+        gsl_interp_accel_free(r_acc);
     }
 };
 
@@ -337,17 +337,20 @@ public:
 
 void load_data_and_initialize(const std::string& filename);
 
+// File and sigma_NN of the Gamma_AA table that load_data_and_initialize() loaded.
+const std::string& gamma_aa_info();
+
 // Builds the Woods-Saxon flux table. Call it before using flux_model "WS".
 void init_ws_form_factor(double RA_fm = 6.49, double a_fm = 0.54, double mn = 0.938);
 
-// Builds the effective flux f_eff(z) for the given channel (arXiv:2404.09731 Eq. 4).
+// Builds the effective flux f_eff(z_gamma) for the given channel (arXiv:2404.09731 Eq. 4).
 void init_effective_flux(const std::string& channel, void* par,
                           double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
 
 // FLUX_MODEL=STARLIGHT: reads the effective flux table of P. Paakkinen
 // (arXiv:2404.09731). The table only has AnAn and An0n.
 void init_starlight_flux(const std::string& channel,
-                         const std::string& filename = "./inputs/Starlight_photon_flux/log-flux-tbl-WS.dta");
+                         const std::string& filename = "./input/Starlight_photon_flux/log-flux-tbl-WS.dta");
 
 // Effective flux dN/domega. The sum over b is already done.
 double effective_photon_flux(double qp, void* par);

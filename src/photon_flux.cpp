@@ -21,16 +21,16 @@ static double Kn_flux(int nu, double x)
 
 static double get_GammaAA(double b) { return gamma_aa()(b); }
 
-double flux_density(double qp, double b, void* p)
+double flux_density(double qp, double r, void* p)
 {
     parameters* par = (parameters*)p;
     double omega = qp / sqrt(2.0);
-    double z     = omega * 2.0 / par->ss;
-    double eta   = z * par->mn * b;
+    double z_gamma = omega * 2.0 / par->ss;
+    double eta     = z_gamma * par->mn * r;
     if (eta > 50.0) return 0.0;
     double pref = (par->alpha * par->Z * par->Z) / (M_PI * M_PI);
     double K1   = Kn_flux(1, eta);
-    return (pref / omega) * (eta*eta / (b*b)) * (K1*K1);
+    return (pref / omega) * (eta*eta / (r*r)) * (K1*K1);
 }
 
 namespace {
@@ -43,21 +43,21 @@ namespace {
     const double WS_QMAX = 5.0;   // GeV, see init_ws_form_factor()
 }
 
-// Woods-Saxon photon flux. For b >= 2R_PL = 14.2 fm it is the same as the
+// Woods-Saxon photon flux. For r >= 2R_PL = 14.2 fm it is the same as the
 // point-like flux_density(), as in the appendix of arXiv:2404.09731.
-double flux_density_WS(double z, double b, void* p)
+double flux_density_WS(double z_gamma, double r, void* p)
 {
     parameters* par = (parameters*)p;
     if (!ws_flux_table)
         throw std::runtime_error("flux_density_WS() called before init_ws_form_factor()");
-    if (b >= ws_r_switch) {
-        double omega = z * par->ss / 2.0;
-        return flux_density(omega * std::sqrt(2.0), b, p);
+    if (r >= ws_r_switch) {
+        double omega = z_gamma * par->ss / 2.0;
+        return flux_density(omega * std::sqrt(2.0), r, p);
     }
 
     // The factor 2/ss makes this equal to flux_density() when F_A = 1.
-    double pref = (2.0 * par->alpha * par->Z * par->Z) / (M_PI * M_PI * z * par->ss);
-    return pref * ws_flux_table->I2(z, b);
+    double pref = (2.0 * par->alpha * par->Z * par->Z) / (M_PI * M_PI * z_gamma * par->ss);
+    return pref * ws_flux_table->I2(z_gamma, r);
 }
 
 namespace {
@@ -87,9 +87,11 @@ double photon_flux(double b, double qp, void* p)
     parameters* par = (parameters*)p;
     const string& channel = par->channel;
     double omega = qp / sqrt(2.0);
-    double z     = omega * 2.0 / par->ss;
-    double flux  = (par->flux_model == "WS") ? flux_density_WS(z, b, p)
-                                              : flux_density(qp, b, p);
+    double z_gamma = omega * 2.0 / par->ss;
+    // the flux is taken at the centre of the target nucleus, r = b
+    double r     = b;
+    double flux  = (par->flux_model == "WS") ? flux_density_WS(z_gamma, r, p)
+                                              : flux_density(qp, r, p);
 
     if (par->target == "pA") {
         // pA: no EMD factor. "PL" is zero below bmin. The others use Gamma_pA(b).
@@ -112,6 +114,12 @@ double photon_flux(double b, double qp, void* p)
     return 2.0 * M_PI * b * flux * gamma * emd_factor;
 }
 
+namespace {
+    std::string gamma_aa_source;   // file (and sigma_NN) of the loaded Gamma_AA table
+}
+
+const std::string& gamma_aa_info() { return gamma_aa_source; }
+
 void load_data_and_initialize(const std::string& default_filename)
 {
     // GAMMA_AA_FILE: use another Gamma_AA table.
@@ -125,9 +133,15 @@ void load_data_and_initialize(const std::string& default_filename)
     std::vector<double> b_values;
     std::vector<double> T_values;
     std::string line;
+    gamma_aa_source = filename;
 
     // columns: b [GeV^-1]  Gamma_AA(b)
     while (std::getline(file, line)) {
+        // the header line "# sigma_NN : 92 mb" says which sigma_NN the table was made with
+        if (line.rfind("# sigma_NN", 0) == 0) {
+            gamma_aa_source += " (sigma_NN = " + line.substr(line.find(':') + 1) + ")";
+            gamma_aa_source.erase(gamma_aa_source.find("=  ") + 2, 1);
+        }
         if (line.empty() || line[0] == '#') continue;
         std::istringstream iss(line);
         double b, T;
@@ -159,13 +173,13 @@ void init_ws_form_factor(double RA_fm, double a_fm, double mn)
     ws_r_switch = (std::getenv("WS_RSWITCH_FM") ? std::atof(std::getenv("WS_RSWITCH_FM")) : 14.2) / hbarc;
     double a_GeV = a_fm / hbarc;
     ws_form_factor.reset(new WSFormFactor(ws_RA, a_GeV, WS_QMAX));
-    // The b grid stops at that radius (above it we use the point-like flux).
+    // The r grid stops at that radius (above it we use the point-like flux).
     // Grid sizes can be changed for tests with WS_NZ, WS_NB.
-    int nz = std::getenv("WS_NZ") ? std::atoi(std::getenv("WS_NZ")) : 160;
-    int nb = std::getenv("WS_NB") ? std::atoi(std::getenv("WS_NB")) : 260;
+    int nz_gamma = std::getenv("WS_NZ") ? std::atoi(std::getenv("WS_NZ")) : 160;
+    int nr = std::getenv("WS_NB") ? std::atoi(std::getenv("WS_NB")) : 260;
     ws_flux_table.reset(new WSFluxTable(*ws_form_factor, mn, WS_QMAX,
-                                         1e-6, 1.0, nz,      // z grid
-                                         1.0, ws_r_switch, nb));   // b grid
+                                         1e-6, 1.0, nz_gamma,      // z_gamma grid
+                                         1.0, ws_r_switch, nr));   // r grid
 }
 
 namespace {
@@ -173,7 +187,7 @@ namespace {
     std::unique_ptr<EffFluxRadial> eff_H;
     gsl_spline* eff_flux_spline = nullptr;
     gsl_interp_accel* eff_flux_acc = nullptr;
-    double eff_lz_min = 0.0, eff_lz_max = 0.0;
+    double eff_lz_gamma_min = 0.0, eff_lz_gamma_max = 0.0;
     const double EFF_R_SWITCH = 800.0;   // GeV^-1. With 300 the result was off by about 1%
 }
 
@@ -189,35 +203,37 @@ void init_effective_flux(const std::string& channel, void* p, double RA_fm, doub
     eff_TB.reset(new WSThickness(RA, a, B_mass, s_max));
     eff_H.reset(new EffFluxRadial(*eff_TB, channel, par->S, B_mass, EFF_R_SWITCH));
 
-    // f_eff(z) = (2*pi/B) \int_0^{r_max(z)} r dr f_WS(z,r) H_channel(r), r_max = 60/(z*mn)
-    int nz = 100;
-    double z_min = 1e-6, z_max = 1.0;
-    eff_lz_min = std::log(z_min); eff_lz_max = std::log(z_max);
-    std::vector<double> lz(nz), logf(nz);
-    for (int i = 0; i < nz; i++) {
-        double lzz = eff_lz_min + (eff_lz_max - eff_lz_min) * i / (nz - 1.0);
-        lz[i] = lzz;
-        double z = std::exp(lzz);
-        double r_max = 60.0 / (z * par->mn);
+    // f_eff(z_gamma) = (2*pi/B) \int_0^{r_max(z_gamma)} r dr f_WS(z_gamma,r) H_channel(r), r_max = 60/(z_gamma*mn)
+    int nz_gamma = 100;
+    double z_gamma_min = 1e-6, z_gamma_max = 1.0;
+    eff_lz_gamma_min = std::log(z_gamma_min); eff_lz_gamma_max = std::log(z_gamma_max);
+    std::vector<double> lz_gamma(nz_gamma), logf(nz_gamma);
+    for (int i = 0; i < nz_gamma; i++) {
+        double lz_gamma_i = eff_lz_gamma_min + (eff_lz_gamma_max - eff_lz_gamma_min) * i / (nz_gamma - 1.0);
+        lz_gamma[i] = lz_gamma_i;
+        double z_gamma = std::exp(lz_gamma_i);
+        double r_max = 60.0 / (z_gamma * par->mn);
         double r0 = 1e-3;
         int Nr = 2000;
         double aa = std::log(r0), cc = std::log(r_max), hh = (cc - aa) / Nr, sum = 0.0;
         for (int k = 0; k <= Nr; k++) {
             double r = std::exp(aa + k * hh);
-            double flux = flux_density_WS(z, r, p);
+            double flux = flux_density_WS(z_gamma, r, p);
             double Hval = (*eff_H)(r);
             double w = (k == 0 || k == Nr) ? 1.0 : (k % 2 ? 4.0 : 2.0);
             sum += w * (r * flux * Hval) * r;   // extra r: dr = r dlnr
         }
         double r_integral = sum * hh / 3.0;
         double f_eff = (2.0 * M_PI / B_mass) * r_integral;
-        // one NaN point would make the whole spline NaN
-        logf[i] = std::isfinite(f_eff) ? std::log(std::max(f_eff, 1e-300)) : std::log(1e-300);
+        // NaN or 0 (at z_gamma = 1, where the flux vanishes): continue the line of the two points
+        // before, since a jump to a tiny value makes the spline oscillate up to z_gamma ~ 0.5
+        if (std::isfinite(f_eff) && f_eff > 0.0) logf[i] = std::log(f_eff);
+        else logf[i] = (i >= 2) ? 2.0 * logf[i-1] - logf[i-2] : std::log(1e-300);
     }
     if (eff_flux_spline) { gsl_spline_free(eff_flux_spline); gsl_interp_accel_free(eff_flux_acc); }
-    eff_flux_spline = gsl_spline_alloc(gsl_interp_cspline, nz);
+    eff_flux_spline = gsl_spline_alloc(gsl_interp_cspline, nz_gamma);
     eff_flux_acc = gsl_interp_accel_alloc();
-    gsl_spline_init(eff_flux_spline, lz.data(), logf.data(), nz);
+    gsl_spline_init(eff_flux_spline, lz_gamma.data(), logf.data(), nz_gamma);
 }
 
 namespace {
@@ -280,14 +296,14 @@ double effective_photon_flux(double qp, void* p)
     if (par->flux_model == "STARLIGHT") {
         if (sl_x.empty())
             throw std::runtime_error("effective_photon_flux() called before init_starlight_flux()");
-        double y = (qp / std::sqrt(2.0)) * 2.0 / par->ss;
-        return starlight_dNdy(y) * 2.0 / par->ss;   // dN/domega, same units as f_eff
+        double z_gamma = (qp / std::sqrt(2.0)) * 2.0 / par->ss;
+        return starlight_dNdy(z_gamma) * 2.0 / par->ss;   // dN/domega, same units as f_eff
     }
     if (!eff_flux_spline)
         throw std::runtime_error("effective_photon_flux() called before init_effective_flux()");
     double omega = qp / std::sqrt(2.0);
-    double z     = omega * 2.0 / par->ss;
-    double lz = std::log(z);
-    if (lz < eff_lz_min) lz = eff_lz_min; else if (lz > eff_lz_max) lz = eff_lz_max;
-    return std::exp(gsl_spline_eval(eff_flux_spline, lz, eff_flux_acc));
+    double z_gamma = omega * 2.0 / par->ss;
+    double lz_gamma = std::log(z_gamma);
+    if (lz_gamma < eff_lz_gamma_min) lz_gamma = eff_lz_gamma_min; else if (lz_gamma > eff_lz_gamma_max) lz_gamma = eff_lz_gamma_max;
+    return std::exp(gsl_spline_eval(eff_flux_spline, lz_gamma, eff_flux_acc));
 }

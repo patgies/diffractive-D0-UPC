@@ -1,10 +1,10 @@
 #include "alphas_running.hpp"
 #include <cmath>
 
-// PDG value of the strong coupling at the Z boson mass
+
 static double alphas_mZ = 0.118;
-static double mZ = 91.2;    // Z boson mass, in GeV
-static double Nf = 4.0;     // number of quark flavors at the charm mass scale
+static double mZ = 91.2;    
+static double Nf = 4.0;     
 
 double alphas_run(double mu)
 {

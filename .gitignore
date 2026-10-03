@@ -1,11 +1,8 @@
 build/
 */build/
-#output/
 *.o
-#run_many_oberon.sh
 CMakeCache.txt
 CMakeFiles/
-FragFunc/
-#plots/
-notes/
 __pycache__/
+run_scripts/roihu/
+

@@ -1,0 +1,198 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[a4paper,top=2cm,bottom=2cm,left=2.2cm,right=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\sloppy
+
+\title{$c\to D^0$ fragmentation functions}
+\author{}
+\date{\today}
+
+\begin{document}
+\begingroup\let\newpage\relax
+\makeatletter\renewcommand\@maketitle{\begin{center}{\LARGE\@title\par}\vskip 0.5em{\large\@date\par}\end{center}\vskip 0.5em}\makeatother
+\maketitle
+\endgroup
+
+
+The code has three FF: \texttt{BCFY},
+\texttt{KniehlKramer} and \texttt{HymnD}.
+
+\section{Variables}
+
+The fragmentation fraction $z_h$ is the fraction of the charm quark momentum
+carried by the $D^0$,
+\begin{equation}
+  p_{D^0} = z_h\,p_c ,
+\end{equation}
+where $p_{D^0}$ is the transverse momentum we measure (\texttt{pD0}) and $p_c$
+the one of the charm quark (\texttt{pc}). Every integrand is multiplied by
+\begin{equation}
+  \frac{D(z_h, m_T)}{z_h^2}, \qquad z_h \in [z_{h,\min}, z_{h,\max}] = [0.05,\,1],
+  \label{eq:weight}
+\end{equation}
+and $z_h$ is one of the variables of the Monte Carlo integration (VEGAS). The
+limits are \texttt{z\_h\_min} and \texttt{z\_h\_max} in \texttt{src/main.cpp}
+and \texttt{src/main\_xpom.cpp}.
+
+The FF is taken at the fragmentation scale
+\begin{equation}
+  m_T = \kappa\,\sqrt{p_{D^0}^2 + m_c^2}, \qquad \kappa = \texttt{SCALE\_FACTOR}\ (\text{default } 1),
+\end{equation}
+with $m_c = 1.5$~GeV. The scale cannot be below $m_c$: if it is, the code
+uses $m_T = m_c$. The scale variation uses $\kappa = 0.5$ and $2$.
+
+\section{How the FF gets into the calculation}
+
+The three FFs are tables in the LHAPDF format (\texttt{lhagrid1}), on a grid
+in $z_h$ and $m_T$. They are read by the same function,
+\texttt{MakeLHAPDFGridInterpolator(file, flavor, m\_T)} in
+\texttt{src/lhapdf\_grid.cpp}:
+\begin{enumerate}
+\item it takes the column of the charm quark (PDG id 4),
+\item it interpolates linearly in $m_T$ between the two closest grid values. If
+  $m_T$ is outside the grid, it uses the closest grid value,
+\item the table has $z_h\,D(z_h,m_T)$, so it divides by $z_h$,
+\item it gives back an \texttt{Interpolator} for $D(z_h)$ at this $m_T$.
+\end{enumerate}
+This is done once per run in \texttt{src/main.cpp} (and
+\texttt{src/main\_xpom.cpp}), because $m_T$ depends only on $p_{D^0}$. The result
+is stored in \texttt{param.D\_frag\_interp}. In \texttt{src/integrands.cpp} all
+the integrands end with the same line:
+\begin{verbatim}
+return kernel * fragmentation(z_h, par);     // D(z_h) / z_h^2
+\end{verbatim}
+Then, the FF can be changed without modifying the integrands.
+
+\section{The fragmentation functions in this code}
+
+\subsection{BCFY (Braaten--Cheung--Fleming--Yuan)}
+
+File \texttt{input/BCFY\_EKO/bcfy\_eko\_0000.dat}. At the lowest scale,
+$m_T = 1.5$~GeV, it is the BCFY function, and it is evolved to higher scales
+with DGLAP (EKO). The grid has 200 points in $z_h$ from $0.05$ to $1$ and 30
+points in $m_T$ from $1.5$ to $50$~GeV.
+
+At this scale it is the sum of the part for the $D^0$ produced directly and the
+part for $D^{*0}\to D^0$, with the formulae of Braaten, Cheung, Fleming and
+Yuan, Phys.\ Rev.\ D \textbf{51} (1995) 4819 (arXiv:hep-ph/9409316). The
+parameter is $r = 0.1$ and the weights of the two parts are $0.168$ and
+$0.39$.
+
+\subsection{Kniehl--Kramer}
+
+File \texttt{input/KK\_EKO/kk\_eko\_0000.dat}, with the same grid and the same
+evolution as BCFY. At $m_T = 1.5$~GeV it is the function of Kniehl and
+Kramer, Phys.\ Rev.\ D \textbf{74} (2006) 037502 (arXiv:hep-ph/0607306),
+with $N = 0.694$ and $\epsilon = 0.101$.
+
+\subsection{HymnD}
+
+File \texttt{input/HymnD/prompt-D0-1-109\_0000.dat}, the central member of
+the set of Epele, Hekhorn, Helenius, Paukkunen and Zurita, ``Towards new $D$
+meson fragmentation functions'' (arXiv:2609.10327). The set has 100 more members (replicas), which give the uncertainty
+band of the FF: \texttt{run\_scripts/run\_members.sh} with
+\texttt{MEMBER\_SET=HymnD} runs the calculation once per member. Only the
+central member is in the repository, the others are in
+\texttt{input/HymnD/} as \texttt{prompt-D0-1-109\_NNNN.dat}.
+
+\section{How to choose the FF}
+
+The FF is the fourth argument of the programs,
+\begin{verbatim}
+./build/bin/D0 <dipole_file> <pD0> <y> <BCFY|KniehlKramer|HymnD> <channel>
+\end{verbatim}
+and in the workflows it is chosen with environment variables (the defaults
+are in \texttt{run\_scripts/config.sh}):
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Variable & Default & \\
+\midrule
+\texttt{FRAG\_TYPE} & \texttt{HymnD} & FF of one workflow script \\
+\texttt{FRAGS} & all three & FFs of \texttt{run\_all.sh} \\
+\texttt{SCALE\_FACTOR} & \texttt{1.0} & $\kappa$ of the fragmentation scale \\
+\texttt{SCALE\_FACTORS} & \texttt{0.5 2.0} & values of $\kappa$ in \texttt{run\_scale\_variation.sh} \\
+\texttt{HYMND\_FILE} & central member & file of \texttt{HymnD} \\
+\texttt{BCFY\_EKO\_FILE} & \texttt{input/BCFY\_EKO/bcfy\_eko\_0000.dat} & file of \texttt{BCFY} \\
+\texttt{KK\_EKO\_FILE} & \texttt{input/KK\_EKO/kk\_eko\_0000.dat} & file of \texttt{KniehlKramer} \\
+\bottomrule
+\end{tabular}
+\end{center}
+For example:
+\begin{verbatim}
+CHANNEL=0n0n FRAG_TYPE=BCFY ./run_scripts/run_nucleus.sh
+\end{verbatim}
+The results go to a folder with the name of the FF,
+\texttt{output/<CHANNEL>/central\_values/<FRAG>/}.
+
+\section{How to add another FF}\label{sec:own}
+
+\subsection{A table in the LHAPDF format}
+
+Example:
+\begin{verbatim}
+HYMND_FILE=path/to/my_ff_0000.dat FRAG_TYPE=HymnD ./run_scripts/run_nucleus.sh
+\end{verbatim}
+
+
+To add it with its own name:
+\begin{enumerate}
+\item Add the name to \texttt{enum class FragmentationType} in
+  \texttt{src/def.hpp}.
+\item In \texttt{src/main.cpp} and \texttt{src/main\_xpom.cpp}, add the name
+  where \texttt{frag\_tag} is read, and a line where the FF is built:
+\begin{verbatim}
+d_frag_interp = MakeLHAPDFGridInterpolator("input/MyFF/my_ff_0000.dat",
+                                           4, frag_scale);
+\end{verbatim}
+\item Add the name to \texttt{FRAGS} in \texttt{run\_scripts/run\_all.sh}.\\
+  If you want it in the plot of \texttt{plotting\_scripts/D0\_bins.py}, add it
+  to \texttt{FRAG\_SCHEMES} there too.
+\end{enumerate}
+The file must have this form (the lines before the first \texttt{---} are
+not read):
+\begin{verbatim}
+---
+z_h values (one line)
+m_T values in GeV (one line)
+flavors (one line, it must contain 4)
+z_h*D for every flavor, one line per (z_h, m_T): first all m_T for the first z_h, ...
+---
+\end{verbatim}
+
+\subsection{A formula}
+
+If the FF is a formula and does not depend on the scale, no file is needed.
+Write a function like \texttt{MakeKniehlKramerInterpolator()} that fills two
+vectors and gives back the interpolator:
+\begin{verbatim}
+std::vector<double> z_h_vals(n), dvals(n);
+for (int i = 0; i < n; i++) {
+    z_h_vals[i] = 0.05 + (1.0 - 0.05) * i / (n - 1.0);
+    dvals[i]    = my_D(z_h_vals[i]);
+}
+return std::unique_ptr<Interpolator>(new Interpolator(z_h_vals, dvals));
+\end{verbatim}
+and then follow the three steps above.
+
+\subsection*{Careful}
+
+\begin{itemize}
+\item The interpolator must give $D(z_h)$, not $z_h D(z_h)$ and not
+  $D(z_h)/z_h^2$. Tables in the LHAPDF format have $z_h D$:
+  \texttt{MakeLHAPDFGridInterpolator()} already divides by $z_h$. The factor
+  $1/z_h^2$ of Eq.~\eqref{eq:weight} is added in \texttt{fragmentation()}.
+\item The grid must cover the range of the $z_h$ integral, from
+  $0.05$ to $1$.
+\item The grid in $m_T$ should start at $m_c = 1.5$~GeV or below and go up to
+  $2\sqrt{p_{D^0}^2+m_c^2}$ for the largest $p_{D^0}$ (about $24$~GeV for
+  $p_{D^0} = 12$~GeV). Outside the grid the code does not stop: it uses
+  the closest value of $m_T$.
+\end{itemize}
+
+\end{document}

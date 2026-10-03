@@ -1,7 +1,7 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
 #include "photon_flux.hpp"
-#include "hymnd_grid.hpp"
+#include "lhapdf_grid.hpp"
 #include "bcfy_grid.hpp"
 #include "kk_grid.hpp"
 #include <string>
@@ -13,9 +13,6 @@
 
 using namespace std;
 
-
-// Run: ./D0_xpom <dipole_file> <pD0> <y> <x_po> [frag_type] [channel]
-// Same as D0 but at one fixed x_po (0 < x_po <= 0.1).
 
 
 int main(int argc, char* argv[])
@@ -41,11 +38,11 @@ int main(int argc, char* argv[])
     inst.SetInterpolationMethod(LINEAR_LINEAR);  
 
     gsl_set_error_handler_off();
-    load_data_and_initialize("./inputs/WS_photon_flux/Gamma_AA.dat");
+    load_data_and_initialize("./input/WS_photon_flux/Gamma_AA.dat");
 
     parameters param;
     param.dipole   = &inst;
-    // TARGET=pA: see main.cpp.
+    // TARGET=pA:
     param.target = getenv("TARGET") ? getenv("TARGET") : "AA";
     param.ss     = (param.target == "pA") ? 8160.0 : 5360.0;
 
@@ -65,7 +62,7 @@ int main(int argc, char* argv[])
     param.S       = pow(17.4, 2) / pow(0.197327, 2);
     param.channel = channel;
     param.bmin    = 14.2 / 0.197327;
-    // FLUX_MODEL: see main.cpp.
+    // FLUX_MODEL:
     if (param.target == "pA") {
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "WS";
         if (param.flux_model == "EFF" || param.flux_model == "STARLIGHT") {
@@ -86,14 +83,14 @@ int main(int argc, char* argv[])
     }
     param.qpmax   = 800.0;
 
-    // Upper limit of the b integral: see main.cpp.
+    // Upper limit of the b integral
     double mt_min = sqrt(pD0*pD0 + param.m2);
-    double z_min  = mt_min * exp(y) / param.ss;
-    param.bmax    = 60.0 / (z_min * param.mn);
+    double z_gamma_min = mt_min * exp(y) / param.ss;
+    param.bmax    = 60.0 / (z_gamma_min * param.mn);
 
     // Fragmentation (c -> D0)
-    param.zmin   = 0.05;
-    param.zmax   = 1.0;
+    param.z_h_min = 0.05;
+    param.z_h_max = 1.0;
 
     if (frag_tag == "BCFY")              param.frag_type = FragmentationType::BCFY;
     else if (frag_tag == "KniehlKramer") param.frag_type = FragmentationType::KniehlKramer;
@@ -105,7 +102,7 @@ int main(int argc, char* argv[])
 
     string hymnD_file;
     if (getenv("HYMND_FILE")) hymnD_file = getenv("HYMND_FILE");
-    else                       hymnD_file = "inputs/HymnD/prompt-D0-1-109_0000.dat";
+    else                       hymnD_file = "input/HymnD/prompt-D0-1-109_0000.dat";
     const int hymnD_charm_flavor = 4;  // PDG id for the charm quark
     // Fragmentation scale Q = SCALE_FACTOR * mt0 (see main.cpp).
     double mt0 = sqrt(pD0*pD0 + param.m2);
@@ -113,10 +110,10 @@ int main(int argc, char* argv[])
     double frag_scale = scale_factor * mt0;
     // the fragmentation scale cannot be below the charm mass
     if (frag_scale < param.m) frag_scale = param.m;
-    // D(z) at the fragmentation scale for the chosen frag_type.
+    // D(z_h) at the fragmentation scale for the chosen frag_type.
     unique_ptr<Interpolator> d_frag_interp;
     if (param.frag_type == FragmentationType::HymnD) {
-        d_frag_interp = MakeHymnDZInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);
+        d_frag_interp = MakeLHAPDFGridInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);
     } else if (param.frag_type == FragmentationType::BCFY) {
         d_frag_interp = MakeBCFYInterpolator(frag_scale);
     } else {
