@@ -39,7 +39,7 @@ Example:
 ./build/bin/D0 data/proton/mve.dat 3 0 HymnD An0n
 ```
 
-This prints `pD0`, the exclusive and the diffractive cross section, without the prefactors.
+This prints `pD0`, the exclusive and the diffractive cross section, without prefactors.
 
 The other executables are `D0_xpom` (differential in `x_pom`), `charm_fixed_qp` (charm quark at fixed `q+`, no photon flux) and `scan_flux` (photon flux alone).
 
@@ -47,19 +47,17 @@ The other executables are `D0_xpom` (differential in `x_pom`), `charm_fixed_qp` 
 
 ## Run scripts
 
-Each calculation has its own script. The results go to `output/`.
+The results go to `output/`.
 
-| Script | Calculation |
-|---|---|
-| `run_nucleus.sh` | nuclear target, every `b_d`, `pD0` and `y` |
-| `run_scale_variation.sh` | the same with the fragmentation scale `Q = 0.5 mT` and `2 mT` |
-| `run_proton.sh` | `TARGET=pA` for p+Pb at 8.16 TeV |
-| `run_xpom.sh` | cross section differential in `x_pom` |
-| `run_members.sh` | HymnD replicas (`MEMBER_SET=HymnD`) or BK posterior samples (`MEMBER_SET=bk`) |
-| `run_charm_fixed_qp.sh` | charm quark at fixed `q+` |
-| `run_flux_scan.sh` | photon flux alone |
+- `run_nucleus.sh`: nuclear target, every `b_d`, `pD0` and `y`
+- `run_scale_variation.sh`: the same with the fragmentation scale `Q = 0.5 mT` and `2 mT`
+- `run_proton.sh`: `TARGET=pA` for p+Pb at 8.16 TeV
+- `run_xpom.sh`: cross section differential in `x_pom`
+- `run_members.sh`: HymnD replicas (`MEMBER_SET=HymnD`) or BK posterior samples (`MEMBER_SET=bk`)
+- `run_charm_fixed_qp.sh`: charm quark at fixed `q+`
+- `run_flux_scan.sh`: photon flux alone
 
-The settings are environment variables. The defaults are in [run_scripts/config.sh](run_scripts/config.sh).
+The settings are environment variables, defaults are in [run_scripts/config.sh](run_scripts/config.sh).
 
 ```bash
 CHANNEL=0n0n FRAG_TYPE=BCFY ./run_scripts/run_nucleus.sh
@@ -113,6 +111,19 @@ The fragmentation scale is `Q = SCALE_FACTOR * mT`.
 The fragmentation functions and how to change them are explained in [notes_FF.pdf](notes_FF.pdf).
 
 The HymnD members 0–100 are in `input/HymnD/`.
+
+### Uncertainty bands
+
+The plots include the scale uncertainty for the three fragmentation functions (`HymnD`, `BCFY` and `KniehlKramer`). [D0_bins.py](plotting_scripts/D0_bins.py) shows it for all three; [D0.py](plotting_scripts/D0.py) and [D0_sum.py](plotting_scripts/D0_sum.py) show it only for the HymnD curve:
+
+- a band from varying the fragmentation scale `Q` and the renormalization scale of `alpha_s` by a factor of `0.5` and `2` around the central scale `mT`. The band is the envelope of the 7 combinations where the two scales differ by at most a factor of 2.
+
+The fragmentation scale variation is run with `run_scale_variation.sh`, once per fragmentation function. The renormalization scale variation is done in the plotting scripts and only changes the diffractive cross section.
+
+Two other uncertainties can be computed with `run_members.sh` and are not included in the displayed band:
+
+- the HymnD replicas (`MEMBER_SET=HymnD`): one run per member of the fragmentation function set.
+- the BK initial condition (`MEMBER_SET=bk`): one run per posterior sample of the BK fit, with the fragmentation function fixed. The samples are in `input/BK/` and `data/Pb/bk_posterior/`.
 
 ---
 
