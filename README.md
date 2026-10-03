@@ -23,7 +23,6 @@ Requirements:
 - GSL (GNU Scientific Library)
 - OpenMP
 
----
 
 ## Basic run
 
@@ -43,19 +42,6 @@ This prints `pD0`, the exclusive and the diffractive cross section, without pref
 
 The other executables are `D0_xpom` (differential in `x_pom`), `charm_fixed_qp` (charm quark at fixed `q+`, no photon flux) and `scan_flux` (photon flux alone).
 
----
-
-## Run scripts
-
-The results go to `output/`.
-
-- `run_nucleus.sh`: nuclear target, every `b_d`, `pD0` and `y`
-- `run_scale_variation.sh`: the same with the fragmentation scale `Q = 0.5 mT` and `2 mT`
-- `run_proton.sh`: `TARGET=pA` for p+Pb at 8.16 TeV
-- `run_xpom.sh`: cross section differential in `x_pom`
-- `run_members.sh`: HymnD replicas (`MEMBER_SET=HymnD`) or BK posterior samples (`MEMBER_SET=bk`)
-- `run_charm_fixed_qp.sh`: charm quark at fixed `q+`
-- `run_flux_scan.sh`: photon flux alone
 
 The settings are environment variables, defaults are in [run_scripts/config.sh](run_scripts/config.sh).
 
@@ -64,7 +50,8 @@ CHANNEL=0n0n FRAG_TYPE=BCFY ./run_scripts/run_nucleus.sh
 Y_VALS="0.0 1.0" PT_VALS="1.0 2.0 4.0" CALLS=1e4 ./run_scripts/run_nucleus.sh
 ```
 
----
+The results go to `output/`.
+
 
 ## Inputs and targets
 
@@ -75,16 +62,14 @@ The code expects dipole input files of the form
 
 Dipole parametrization MVe from [https://github.com/hejajama/rcbkdipole](https://github.com/hejajama/rcbkdipole).
 
-The other inputs are in `input/`:
-
 - `BCFY_EKO/` and `KK_EKO/`: grids of the BCFY and Kniehl-Kramer fragmentation functions, DGLAP-evolved with [eko](https://github.com/NNPDF/eko) in [EKO-FF](https://github.com/patgies/EKO-FF).
 - `HymnD/`: the HymnD fragmentation function set, members 0–100.
 - `WS_photon_flux/`: tables of the hadronic survival factor `Gamma_AA(b)`, for `sigma_NN = 92` mb (default) and `90.85` mb. They are made with [src/make_gamma_aa.py](src/make_gamma_aa.py).
 - `Starlight_photon_flux/`: the Starlight photon flux tables, used with `FLUX_MODEL=STARLIGHT` and in `flux_comparison.py`.
 - `BK/`: the posterior samples of the BK initial condition. `run_scripts/setup_bk_posterior_links.sh` links them as `data/Pb/bk_posterior/member_NNNN/`.
-- `inclusive/`: the inclusive D0 cross section from [inclusive-D0-UPC](https://github.com/patgies/inclusive-D0-UPC), only needed for `ratio.py`. It is not included.
+- `inclusive/`: the inclusive D0 cross section from [inclusive-D0-UPC](https://github.com/patgies/inclusive-D0-UPC), only needed for `ratio.py`. 
 
----
+
 
 ## UPC channel and photon flux
 
@@ -99,7 +84,7 @@ The photon flux is selected through `FLUX_MODEL`:
 
 The photon flux and how to change it is explained in [notes_photon_flux.pdf](notes_photon_flux.pdf).
 
----
+
 
 ## Fragmentation functions
 
@@ -115,8 +100,6 @@ The fragmentation scale is `Q = SCALE_FACTOR * mT`.
 
 The fragmentation functions and how to change them is explained in [notes_FF.pdf](notes_FF.pdf).
 
-The HymnD members 0–100 are in `input/HymnD/`.
-
 ### Uncertainty bands
 
 The plots include the scale uncertainty for the three fragmentation functions (`HymnD`, `BCFY` and `KniehlKramer`). [D0_bins.py](plotting_scripts/D0_bins.py) shows it for all three; [D0.py](plotting_scripts/D0.py) and [D0_sum.py](plotting_scripts/D0_sum.py) show it only for the HymnD curve:
@@ -130,7 +113,7 @@ Two other uncertainties can be computed with `run_members.sh` but are not includ
 - the HymnD replicas (`MEMBER_SET=HymnD`): one run per member of the fragmentation function set.
 - the BK initial condition (`MEMBER_SET=bk`): one run per posterior sample of the BK fit, with the fragmentation function fixed. The samples are in `input/BK/` and `data/Pb/bk_posterior/`.
 
----
+
 
 ## Differential cross section and normalization
 
