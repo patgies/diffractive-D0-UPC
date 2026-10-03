@@ -1,6 +1,6 @@
 # Diffractive D0 photoproduction
 
-Diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework. The code supports different UPC channels, photon fluxes and fragmentation functions, and it can be used for proton and nuclear targets.
+Diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework. The code supports different UPC channels, photon fluxes and fragmentation functions. It can be used for proton and nuclear targets.
 
 If you use this code, please cite:
 
@@ -96,7 +96,7 @@ The photon flux is selected through `FLUX_MODEL`:
 - `PL`: flux of a point-like nucleus.
 - `WS`: flux for a Woods-Saxon charge distribution.
 
-The photon flux, and how to use your own, is explained in [notes_photon_flux.pdf](notes_photon_flux.pdf).
+The photon flux and how to change it is explained in [notes_photon_flux.pdf](notes_photon_flux.pdf).
 
 ---
 
@@ -110,7 +110,7 @@ The fragmentation function is selected through `FRAG_TYPE`:
 
 The fragmentation scale is `Q = SCALE_FACTOR * mT`.
 
-The fragmentation functions, and how to add your own, are explained in [notes_FF.pdf](notes_FF.pdf).
+The fragmentation functions and how to change them are explained in [notes_FF.pdf](notes_FF.pdf).
 
 The HymnD members 0–100 are in `input/HymnD/`.
 
