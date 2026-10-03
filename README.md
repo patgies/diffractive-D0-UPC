@@ -1,6 +1,6 @@
 # Diffractive D0 photoproduction
 
-Diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework. The code supports different UPC channels, photon fluxes and fragmentation functions. It can be used for proton and nuclear targets.
+This project calculates the diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework. The code supports different UPC channels, photon fluxes and fragmentation functions. It can be used for proton and nuclear targets.
 
 If you use this code, please cite:
 
@@ -88,18 +88,12 @@ The other inputs are in `input/`:
 
 ## UPC channel and photon flux
 
-The channel is selected through `CHANNEL`:
-
-- `An0n`
-- `Xn0n`
-- `0n0n`
-- `AnAn`
-- `PL(AnAn)`
+The channel is selected through `CHANNEL`: `An0n`, `Xn0n`, `0n0n`, `AnAn`, `PL(AnAn)`.
 
 The photon flux is selected through `FLUX_MODEL`:
 
 - `EFF` (default): effective flux of K. J. Eskola, V. Guzey, I. Helenius, P. Paakkinen, and H. Paukkunen, "Spatial resolution of dijet photoproduction in near-encounter ultraperipheral nuclear collisions," Phys. Rev. C 110, 054906 (2024) [arXiv:2404.09731], Eq. (4).
-- `STARLIGHT`: flux tables of the same paper (only `AnAn` and `An0n`), made with Starlight: S. R. Klein, J. Nystrand, J. Seger, Y. Gorbunov, and J. Butterworth, "STARlight: A Monte Carlo simulation program for ultra-peripheral collisions of relativistic ions," Comput. Phys. Commun. 212, 258 (2017) [arXiv:1607.03838].
+- `STARLIGHT`: flux tables of the same paper (only `AnAn` and `An0n`).
 - `PL`: flux of a point-like nucleus.
 - `WS`: flux for a Woods-Saxon charge distribution.
 
@@ -119,7 +113,7 @@ The fragmentation function is selected through `FRAG_TYPE`:
 
 The fragmentation scale is `Q = SCALE_FACTOR * mT`.
 
-The fragmentation functions and how to change them are explained in [notes_FF.pdf](notes_FF.pdf).
+The fragmentation functions and how to change them is explained in [notes_FF.pdf](notes_FF.pdf).
 
 The HymnD members 0–100 are in `input/HymnD/`.
 
@@ -131,7 +125,7 @@ The plots include the scale uncertainty for the three fragmentation functions (`
 
 The fragmentation scale variation is run with `run_scale_variation.sh`, once per fragmentation function. The renormalization scale variation is done in the plotting scripts and only changes the diffractive cross section.
 
-Two other uncertainties can be computed with `run_members.sh` and are not included in the displayed band:
+Two other uncertainties can be computed with `run_members.sh` but are not included in the plots:
 
 - the HymnD replicas (`MEMBER_SET=HymnD`): one run per member of the fragmentation function set.
 - the BK initial condition (`MEMBER_SET=bk`): one run per posterior sample of the BK fit, with the fragmentation function fixed. The samples are in `input/BK/` and `data/Pb/bk_posterior/`.
