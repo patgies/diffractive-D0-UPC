@@ -1,10 +1,9 @@
-# Exclusive and diffractive D0 photoproduction
+# Diffractive D0 photoproduction
 
 This project computes the exclusive and diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework.
 
 The code supports different UPC channels, photon fluxes and fragmentation functions, and it can be used for proton and nuclear targets.
 
-The formulae are in [notes/cross_section_formulae.pdf](notes/cross_section_formulae.pdf).
 
 ---
 
@@ -53,7 +52,7 @@ Each calculation has its own script. The results go to `output/`.
 |---|---|
 | `run_nucleus.sh` | nuclear target, every `b_d`, `pD0` and `y` |
 | `run_scale_variation.sh` | the same with the fragmentation scale `Q = 0.5 mT` and `2 mT` |
-| `run_proton.sh` | proton target (baseline for `R_pA`); `TARGET=pA` for p+Pb at 8.16 TeV |
+| `run_proton.sh` | `TARGET=pA` for p+Pb at 8.16 TeV |
 | `run_xpom.sh` | cross section differential in `x_pom` |
 | `run_members.sh` | HymnD replicas (`MEMBER_SET=HymnD`) or BK posterior samples (`MEMBER_SET=bk`) |
 | `run_charm_fixed_qp.sh` | charm quark at fixed `q+` |
@@ -118,28 +117,3 @@ The output of the nuclear runs is per impact parameter `b_d`. The plotting scrip
 For a proton target, the impact-parameter integral is replaced by the proton normalization `16.36` mb of the MVe dipole parametrization.
 
 Units are GeV throughout.
-
----
-
-## Plots
-
-Run the plotting scripts from `plotting_scripts/`. They read `output/` and write to `plots/`.
-
-```bash
-cd plotting_scripts
-python3 D0.py
-CHANNEL=0n0n python3 D0_sum.py
-```
-
-| Script | Plot |
-|---|---|
-| `D0.py` | exclusive and diffractive spectra |
-| `D0_sum.py` | exclusive + diffractive |
-| `D0_bins.py` | averages over `pD0` and `y` bins |
-| `RpA.py` | nuclear modification factor |
-| `xpom.py` | diffractive `x_pom` spectrum |
-| `ratio.py` | (exclusive + diffractive) / inclusive, with the inclusive cross section from [inclusive-D0-UPC](https://github.com/patgies/inclusive-D0-UPC) in `input/inclusive/` |
-| `charm_fixed_qp.py` | charm quark at fixed `q+` |
-| `flux_comparison.py` | photon fluxes compared with the Starlight tables |
-
-Requirements: Python 3 with numpy, scipy, matplotlib and LaTeX.
