@@ -65,7 +65,7 @@ Dipole parametrization MVe from [https://github.com/hejajama/rcbkdipole](https:/
 - `BCFY_EKO/` and `KK_EKO/`: grids of the BCFY and Kniehl-Kramer fragmentation functions, DGLAP-evolved with [eko](https://github.com/NNPDF/eko) in [EKO-FF](https://github.com/patgies/EKO-FF).
 - `HymnD/`: the HymnD fragmentation function set, members 0–100.
 - `WS_photon_flux/`: tables of the hadronic survival factor `Gamma_AA(b)`, for `sigma_NN = 92` mb (default) and `90.85` mb. They are made with [src/make_gamma_aa.py](src/make_gamma_aa.py).
-- `Starlight_photon_flux/`: the Starlight photon flux tables, used with `FLUX_MODEL=STARLIGHT` and in `flux_comparison.py`.
+- `Starlight_photon_flux/`: the photon flux tables of Petja Paakkinen, used with `FLUX_MODEL=STARLIGHT` and in `flux_comparison.py`.
 - `BK/`: the posterior samples of the BK initial condition. `run_scripts/setup_bk_posterior_links.sh` links them as `data/Pb/bk_posterior/member_NNNN/`.
 - `inclusive/`: the inclusive D0 cross section from [inclusive-D0-UPC](https://github.com/patgies/inclusive-D0-UPC), only needed for `ratio.py`. 
 
@@ -78,7 +78,7 @@ The channel is selected through `CHANNEL`: `An0n`, `Xn0n`, `0n0n`, `AnAn`, `PL(A
 The photon flux is selected through `FLUX_MODEL`:
 
 - `EFF` (default): effective flux of K. J. Eskola, V. Guzey, I. Helenius, P. Paakkinen, and H. Paukkunen, "Spatial resolution of dijet photoproduction in near-encounter ultraperipheral nuclear collisions," Phys. Rev. C 110, 054906 (2024) [arXiv:2404.09731], Eq. (4).
-- `STARLIGHT`: flux tables of the same paper (only `AnAn` and `An0n`).
+- `STARLIGHT`: flux tables of Petja Paakkinen from the same paper (only `AnAn` and `An0n`).
 - `PL`: flux of a point-like nucleus.
 - `WS`: flux for a Woods-Saxon charge distribution.
 
@@ -102,7 +102,7 @@ The fragmentation functions and how to change them is explained in [notes_FF.pdf
 
 ### Uncertainty bands
 
-The plots include the scale uncertainty for the three fragmentation functions (`HymnD`, `BCFY` and `KniehlKramer`). [D0_bins.py](plotting_scripts/D0_bins.py) shows it for all three; [D0.py](plotting_scripts/D0.py) and [D0_sum.py](plotting_scripts/D0_sum.py) show it only for the HymnD curve:
+The plots include the scale uncertainty for the three fragmentation functions (`HymnD`, `BCFY` and `KniehlKramer`). [PbPb_bins.py](plotting_scripts/PbPb_bins.py) and [pPb_bins.py](plotting_scripts/pPb_bins.py) show it for all three; [D0.py](plotting_scripts/D0.py) and [D0_sum.py](plotting_scripts/D0_sum.py) show it only for the HymnD curve:
 
 - a band from varying the fragmentation scale `Q` and the renormalization scale of `alpha_s` by a factor of `0.5` and `2` around the central scale `mT`. The band is the envelope of the 7 combinations where the two scales differ by at most a factor of 2.
 
