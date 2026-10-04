@@ -1,6 +1,6 @@
 #!/bin/bash
 # D0 cross section on a proton. TARGET=AA (default): R_pA baseline with the Pb+Pb flux,
-# in output/<CHANNEL>/proton_baseline/<FRAG>/. TARGET=pA: p+Pb at 8.16 TeV, in output/pPb/<FRAG>/.
+# in output/<CHANNEL>/proton_baseline/<FRAG>/. TARGET=pA: p+Pb at 8.16 TeV, in output/pPb/central_values/<FRAG>/.
 
 # Defaults for p+Pb
 if [[ "${TARGET:-AA}" == "pA" ]]; then
@@ -24,7 +24,7 @@ data_column() { awk -v c="$2" '$1 !~ /^#/ {print $c}' <<< "$1"; }
 
 DIPOLE_FILE=${DIPOLE_FILE:-data/proton/mve.dat}
 if [[ "$TARGET" == "pA" ]]; then
-	OUTDIR=${OUTDIR:-$OUTPUT_ROOT/pPb/$FRAG_TYPE}
+	OUTDIR=${OUTDIR:-$OUTPUT_ROOT/pPb/central_values/$FRAG_TYPE}
 	prefix=D0_pA
 	name_tag=""                     # no neutron class in p+Pb
 	channel_text=""

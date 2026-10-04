@@ -30,8 +30,8 @@ plt.rcParams.update({
     "ytick.minor.size": 5,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "xtick.color": "0.4",
-    "ytick.color": "0.4",
+    "xtick.color": "black",
+    "ytick.color": "black",
     "xtick.labelcolor": "black",
     "ytick.labelcolor": "black",
     "xtick.major.pad": 8,
@@ -59,7 +59,7 @@ SCALE_DIR = os.environ.get("SCALE_DIR", f"../output/{CHANNEL}/scale_variation/Hy
 PROCESSES = ["diffractive", "exclusive"]
 FRAG_TYPES = ["HymnD"]
 MIN_Y_TO_PLOT = -1.0
-MAX_Y_TO_PLOT = 3.0
+MAX_Y_TO_PLOT = 2.0
 
 SCALE_FACTOR_TAGS = {0.5: "0.5", 1.0: None, 2.0: "2.0"}
 SCALE_FACTORS = list(SCALE_FACTOR_TAGS)

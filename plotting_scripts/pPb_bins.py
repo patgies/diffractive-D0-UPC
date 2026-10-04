@@ -17,8 +17,8 @@ from D0 import read_rapidity, alphas_run, alphae, mc, e_c, Nc, _scale_combos, SC
 from RpA import sigma0
 
 PROCESS = os.environ.get("PROCESS", "sum")
-PPB_DIR = os.environ.get("PPB_DIR", "../output/pPb")
-SCALE_BASE = os.environ.get("SCALE_BASE", "../output/pPb_scale")
+PPB_DIR = os.environ.get("PPB_DIR", "../output/pPb/central_values")
+SCALE_BASE = os.environ.get("SCALE_BASE", "../output/pPb/scale_variation")
 
 PT_BINS = [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (6.0, 7.0), (10.0, 11.0)]
 Y_BINS = [(-3.0, -2.0), (-2.0, -1.0), (-1.0, 0.0), (0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]
@@ -110,7 +110,7 @@ def scale_band(frag):
     return {key: (min(v[key] for v in all_values), max(v[key] for v in all_values)) for key in keys}
 
 
-def draw_panels(averages, bands, outname, legend_side="right"):
+def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, left=0.015):
     """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
     The legend goes in the first panel: upper left, or on the right under the pT label."""
@@ -144,32 +144,32 @@ def draw_panels(averages, bands, outname, legend_side="right"):
             y_max = max(y_max, legend_top / free_below)   # room for the legend
         ax.set_ylim(0, y_max)
         ax.xaxis.set_major_locator(MultipleLocator(1))
-        ax.tick_params(labelsize=29)
+        ax.tick_params(labelsize=26)
         ax.tick_params(which="both", color="black")
         formatter = TrimmedFormatter(useMathText=True)
         if pt_hi <= 2.0:
             formatter.set_scientific(False)   # decimals in the first two panels
         else:
             formatter.set_powerlimits((-2, 2))
-            ax.yaxis.get_offset_text().set_fontsize(30)
+            ax.yaxis.get_offset_text().set_fontsize(27)
         ax.yaxis.set_major_formatter(formatter)
         ax.text(0.95, 0.93, rf"${pt_lo:g} < p_{{D^0\perp}} < {pt_hi:g}$ GeV", transform=ax.transAxes,
-                ha="right", va="top", fontsize=28)
+                ha="right", va="top", fontsize=25)
 
     frag_handles = [Line2D([0], [0], color=color, linestyle=linestyle, lw=3, label=label)
                     for _, label, color, linestyle in FRAG_SCHEMES]
     if legend_side == "right":
-        axes.flat[0].legend(handles=frag_handles, loc="upper right", bbox_to_anchor=(1.0, 0.87), fontsize=26,
+        axes.flat[0].legend(handles=frag_handles, loc="upper right", bbox_to_anchor=(1.0, 0.87), fontsize=22,
                             frameon=False)
     else:
-        axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=26, frameon=False)
+        axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=22, frameon=False)
 
 
     for ax in axes[-1]:
-        ax.set_xlabel(r"$y$", labelpad=12, fontsize=38)
-    fig.supylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", fontsize=38, x=0.0)
+        ax.set_xlabel(r"$y$", labelpad=12, fontsize=34)
+    fig.supylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", fontsize=34, x=ylabel_x)
 
-    plt.tight_layout(h_pad=1.5, w_pad=3.0, rect=(0.015, 0, 1, 1))
+    plt.tight_layout(h_pad=1.5, w_pad=3.0, rect=(left, 0, 1, 1))
     plt.savefig(outname, bbox_inches="tight")
     print(f"Saved: {outname}")
 

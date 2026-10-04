@@ -12,7 +12,7 @@ static double flux_over_b(double z_gamma, double qp, parameters& par)
 {
     const int nb = 6000;
     double bmax = 60.0 / (z_gamma * par.mn);   // beyond eta > 50 photon_flux() is already zero
-    double b_lo = (par.channel == "PL(AnAn)") ? par.bmin : 1e-3;   // only the point-like channel starts at bmin
+    double b_lo = (par.channel == "PL(AnAn)" || par.target == "pA") ? par.bmin : 1e-3;   // see b_integration_min()
     double a = std::log(b_lo), c = std::log(bmax), h = (c - a) / nb, sum = 0.0;
     for (int i = 0; i <= nb; i++) {
         double b = std::exp(a + i * h);
@@ -25,7 +25,7 @@ static double flux_over_b(double z_gamma, double qp, parameters& par)
 int main(int argc, char** argv)
 {
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <EFF|STARLIGHT|PL|WS> <channel>..." << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <EFF|STARLIGHT|PL|WS> <channel>...   (TARGET=pA: WS or PL, channel pA)" << std::endl;
         return 1;
     }
     gsl_set_error_handler_off();
@@ -44,6 +44,22 @@ int main(int argc, char** argv)
     par.bmin  = (bm ? std::atof(bm) : 14.205) / 0.197327;
     par.flux_model = model;
     if (model == "WS") init_ws_form_factor();
+
+    // TARGET=pA: flux of the lead nucleus in p+Pb at 8.16 TeV, with Gamma_pA(b) and no EMD (as in main.cpp)
+    const char* target = std::getenv("TARGET");
+    if (target && std::string(target) == "pA") {
+        if (model != "WS" && model != "PL") {
+            std::cerr << "Error: TARGET=pA needs WS or PL." << std::endl;
+            return 1;
+        }
+        par.target = "pA";
+        par.ss     = 8160.0;
+        double sigma_NN_mb = std::getenv("SIGMA_NN") ? std::atof(std::getenv("SIGMA_NN")) : 99.0;
+        init_pA_flux(sigma_NN_mb);
+        const double R_PL_fm = 7.1;   // point-like radius (see main.cpp)
+        par.bmin = (model == "PL") ? ((bm ? std::atof(bm) : 1.1 * R_PL_fm) / 0.197327) : 1e-3;   // BMIN_FM changes it
+        std::cout << "# target         : pA, sqrt(s_NN) = " << par.ss << " GeV, sigma_NN = " << sigma_NN_mb << " mb\n";
+    }
 
     std::cout << "# flux_model     : " << model << "\n";
     std::cout << "# Gamma_AA table : " << gamma_aa_info() << "\n";

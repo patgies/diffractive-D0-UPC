@@ -33,7 +33,8 @@ def main():
         sys.exit(f"No data found in {CENTRAL_DIR}.")
 
     suffix = "" if PROCESS == "sum" else f"_{PROCESS}"
-    draw_panels(averages, bands, f"../plots/D0_bins_y_{CHANNEL}_{NUCLEUS}{NUCLEUS}{suffix}.pdf")
+    draw_panels(averages, bands, f"../plots/D0_bins_y_{CHANNEL}_{NUCLEUS}{NUCLEUS}{suffix}.pdf", ylabel_x=0.011,
+                left=0.035)   # the tick numbers are wider here: more room for the axis title
 
 
 if __name__ == "__main__":

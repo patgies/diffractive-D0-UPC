@@ -19,6 +19,9 @@ mkdir -p "$OUTDIR"
 echo "Gamma_AA table: $GAMMA_AA_FILE -> $OUTDIR"
 ./build/bin/scan_flux PL "PL(AnAn)" > "$OUTDIR/flux_scan_PL.dat" &
 ./build/bin/scan_flux EFF $FLUX_CHANNELS > "$OUTDIR/flux_scan_EFF.dat"
+# p+Pb at 8.16 TeV (for plotting_scripts/flux_pPb.py)
+TARGET=pA ./build/bin/scan_flux WS pA > "$OUTDIR/flux_scan_pPb_WS.dat" &
+TARGET=pA ./build/bin/scan_flux PL pA > "$OUTDIR/flux_scan_pPb_PL.dat"
 wait
 
-echo "Done. Next: python3 flux_comparison.py (from plotting_scripts/) to plot."
+echo "Done. Next: python3 flux_comparison.py or flux_pPb.py (from plotting_scripts/) to plot."

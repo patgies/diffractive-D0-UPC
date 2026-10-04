@@ -73,8 +73,8 @@ int main(int argc, char* argv[])
         double sigma_NN_mb = getenv("SIGMA_NN") ? atof(getenv("SIGMA_NN")) : 99.0;
         init_pA_flux(sigma_NN_mb);
         if (param.flux_model == "WS") init_ws_form_factor();
-        const double RA_fm = 6.49;
-        param.bmin = (param.flux_model == "PL") ? (1.1 * RA_fm / 0.197327) : 1e-3;
+        const double R_PL_fm = 7.1;   // point-like radius (see main.cpp)
+        param.bmin = (param.flux_model == "PL") ? (1.1 * R_PL_fm / 0.197327) : 1e-3;
     } else {
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "EFF";
         if      (param.flux_model == "WS")  init_ws_form_factor();

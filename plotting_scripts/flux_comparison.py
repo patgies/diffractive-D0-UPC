@@ -25,8 +25,8 @@ plt.rcParams.update({
     "ytick.minor.size": 5,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "xtick.color": "0.4",
-    "ytick.color": "0.4",
+    "xtick.color": "black",
+    "ytick.color": "black",
     "xtick.labelcolor": "black",
     "ytick.labelcolor": "black",
     "xtick.major.pad": 8,
@@ -137,8 +137,11 @@ if __name__ == "__main__":
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_ylim(YMIN, 4e2); ax.set_xlim(1e-4, 0.1)
     ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
-    ax.text(0.95, 0.93, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=22)
+    ax.text(0.95, 0.93, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=26)
     for a in (ax, axr):
+        a.tick_params(labelsize=26)
+        a.tick_params(axis="x", pad=9)
+        a.tick_params(axis="y", pad=6)
         a.xaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
         a.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
         a.yaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
@@ -148,19 +151,19 @@ if __name__ == "__main__":
     y_to_omega = lambda y: y * SQRT_S / 2.0
     omega_to_y = lambda w: w * 2.0 / SQRT_S
     secax = ax.secondary_xaxis("top", functions=(y_to_omega, omega_to_y))
-    secax.set_xlabel(r"$\omega$ [GeV]", labelpad=16)
+    secax.set_xlabel(r"$\omega$ [GeV]", labelpad=26)
     secax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
     secax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
-    secax.tick_params(axis="x", which="major", pad=4)
+    secax.tick_params(axis="x", which="major", pad=6, labelsize=26)
 
     channel_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], lw=3, ls="-", label=label) for ch, _, _, label in PAIRS]
     source_handles = [Line2D([], [], color="0.3", **OURS_STYLE, label=r"$P_b$ (Baur \textit{et al.})"),
                        Line2D([], [], color="0.3", **TABLE_STYLE, label=r"Starlight (Eskola \textit{et al.})")]
-    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.23),
-                                fontsize=19.5, frameon=False)
+    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.215),
+                                fontsize=18, labelspacing=0.55, frameon=False)
     ax.add_artist(channel_legend)
     ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0),
-              fontsize=19.5, title="Model", title_fontsize=19.5, frameon=False)
+              fontsize=18, labelspacing=0.55, title="Model", title_fontsize=18, frameon=False)
     ratio_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], ls="-", **RATIO_STYLE[ch], label=label)
                      for ch, _, _, label in PAIRS if ch in RATIO_STYLE]
     axr.legend(handles=ratio_handles, loc="upper left", bbox_to_anchor=(0.0, 1.04), ncol=3, fontsize=20,
