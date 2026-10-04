@@ -26,7 +26,7 @@ def main():
         ax.plot(z, z * f, color=CHANNEL_COLORS[channel], linestyle=linestyle, lw=3, label=label)
 
     ax.set_xscale("log"); ax.set_yscale("log")
-    ax.set_ylim(1e-3, 4e2); ax.set_xlim(1e-4, 0.3)
+    ax.set_ylim(1e-3, 2.5e2); ax.set_xlim(1e-4, 0.3)
     ax.set_xlabel(r"$z_\gamma$", labelpad=6)
     ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
     ax.text(0.95, 0.93, "p-Pb 8.16 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=26)

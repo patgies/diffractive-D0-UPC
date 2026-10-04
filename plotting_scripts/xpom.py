@@ -181,8 +181,8 @@ def main():
         plt.plot(ln_xpo, dsigma_values, color=colors[y], linestyle=y_linestyles[y], lw=2.0)
 
     plt.yscale("log")
-    plt.ylim(1e-9, 1e5)
-    plt.yticks(10.0**np.arange(-9, 6, 2))
+    plt.ylim(1e-9, 1e4)
+    plt.yticks(10.0**np.arange(-9, 4, 2))
     plt.xlim(-10, -2)
     plt.xlabel(r"$\ln(x_{\mathbb{P}})$", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}\,d\ln(x_{\mathbb{P}})$ [mb/GeV]", labelpad=16)

@@ -49,7 +49,7 @@ def main():
         plt.plot(pt_values, totals, color=colors[y], linestyle=linestyles[y], lw=LINEWIDTH)
 
     plt.yscale("log")
-    plt.ylim(3e-8, 1e1)
+    plt.ylim(3e-8, 1.5 * plt.gca().dataLim.y1)   # just above the highest curve
     plt.xlim(0, 12)   
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)

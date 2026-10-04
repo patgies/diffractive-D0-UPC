@@ -96,7 +96,7 @@ def main():
 
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_ylim(bottom=1e-11)
+    ax.set_ylim(1e-11, 1e-4)
     ax.set_xlim(0.2, 20)
     ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
     ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
@@ -114,8 +114,7 @@ def main():
     y_legend = ax.legend(handles=y_handles, fontsize=22, loc='lower left',
                          bbox_to_anchor=(0.02, 0.0), frameon=False)
     ax.add_artist(y_legend)
-    ax.legend(handles=style_handles, fontsize=22, loc='lower left',
-              bbox_to_anchor=(0.33, 0.0), frameon=False)
+    ax.legend(handles=style_handles, fontsize=22, loc='upper right', frameon=False)
     plt.tight_layout()
     outname = "../plots/charm_fixed_qp.pdf"
     plt.savefig(outname, dpi=150)

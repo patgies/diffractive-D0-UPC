@@ -435,7 +435,7 @@ def main():
             plt.plot(pt_values, cross_section_values, color=colors[y], linestyle=linestyle, lw=LINEWIDTH)
 
     plt.yscale("log")
-    plt.ylim(3e-9, 1e1)
+    plt.ylim(3e-9, 1.5 * plt.gca().dataLim.y1)   # just above the highest curve
     plt.xlim(0, 12)
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)
@@ -467,7 +467,8 @@ def main():
                 style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label))
             elif (process, frag) in all_results:
                 style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label))
-    plt.legend(handles=style_handles, loc="lower left", bbox_to_anchor=(0.33, 0.0), fontsize=22,
+    # under the text in the upper right
+    plt.legend(handles=style_handles, loc="upper right", bbox_to_anchor=(0.98, 0.76), fontsize=22,
                frameon=False)
 
     plt.tight_layout()

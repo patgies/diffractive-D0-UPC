@@ -24,7 +24,7 @@ PT_BINS = [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (6.0, 7.0), (10.0, 11
 Y_BINS = [(-3.0, -2.0), (-2.0, -1.0), (-1.0, 0.0), (0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]
 FRAG_SCHEMES = [
     ("BCFY", "BCFY", "#2166ac", "-"),
-    ("KniehlKramer", "KK", "#e08a00", "--"),
+    ("KniehlKramer", "KK", "#1b7837", "--"),
     ("HymnD", "HymnD", "#b2182b", ":"),
 ]
 PROCESS_LABELS = {
@@ -110,54 +110,67 @@ def scale_band(frag):
     return {key: (min(v[key] for v in all_values), max(v[key] for v in all_values)) for key in keys}
 
 
-def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, left=0.015):
+def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, left=0.015, process_text=None):
     """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
     The legend goes in the first panel: upper left, or on the right under the pT label."""
-    under_legend = (lambda y_lo, y_hi: y_hi > 0) if legend_side == "right" else (lambda y_lo, y_hi: y_lo < -1)
-    free_below = 0.5 if legend_side == "right" else 0.6
     fig, axes = plt.subplots(3, 2, figsize=(16, 17), sharex=True)
     edges = [y_lo for y_lo, _ in Y_BINS] + [Y_BINS[-1][1]]
 
+    # Texts at the top of a panel: (bins under the text, fraction of the height that is free below it).
+    # The vertical range is the smallest one where the histograms stay below these texts.
+    on_the_right = lambda y_lo, y_hi: y_hi > -0.4
+    on_the_left = lambda y_lo, y_hi: y_lo < -1
+    texts = [(on_the_right, 0.77)]   # the pT label
+    first_panel_texts = list(texts)
+    if legend_side == "right":
+        first_panel_texts.append((lambda y_lo, y_hi: y_hi > 0, 0.43))   # legend under the pT label
+        if process_text:
+            first_panel_texts.append((on_the_left, 0.84))
+    else:
+        first_panel_texts.append((on_the_left, 0.52))                  # legend in the upper left
+        if process_text:
+            first_panel_texts.append((on_the_right, 0.72))
+
     for ax, (pt_lo, pt_hi) in zip(axes.flat, PT_BINS):
-        top = 0.0
-        legend_top = 0.0   
+        bin_top = {y_bin: 0.0 for y_bin in Y_BINS}   # highest point of each y bin
         for frag, _, color, linestyle in FRAG_SCHEMES:
             values = [averages[frag].get((pt_lo, y_lo), np.nan) for y_lo, _ in Y_BINS]
             if np.all(np.isnan(values)):
                 continue
             ax.stairs(values, edges, baseline=None, color=color, linestyle=linestyle, lw=3)
-            top = max(top, np.nanmax(values))
-            legend_top = max([legend_top] + [v for v, y_bin in zip(values, Y_BINS)
-                                             if under_legend(*y_bin) and not np.isnan(v)])
+            for value, y_bin in zip(values, Y_BINS):
+                if not np.isnan(value):
+                    bin_top[y_bin] = max(bin_top[y_bin], value)
             for y_lo, y_hi in Y_BINS:
                 if (pt_lo, y_lo) in bands[frag]:
                     low, high = bands[frag][(pt_lo, y_lo)]
                     ax.fill_between([y_lo, y_hi], low, high, color=color, alpha=0.25, linewidth=0)
-                    top = max(top, high)
-                    if under_legend(y_lo, y_hi):
-                        legend_top = max(legend_top, high)
+                    bin_top[(y_lo, y_hi)] = max(bin_top[(y_lo, y_hi)], high)
 
         ax.set_xlim(-3, 3)
-        y_max = 1.45 * top
-        if ax is axes.flat[0]:
-            y_max = max(y_max, legend_top / free_below)   # room for the legend
+        y_max = 1.12 * max(bin_top.values())
+        for under_text, free_below in (first_panel_texts if ax is axes.flat[0] else texts):
+            y_max = max([y_max] + [top / free_below for y_bin, top in bin_top.items() if under_text(*y_bin)])
         ax.set_ylim(0, y_max)
         ax.xaxis.set_major_locator(MultipleLocator(1))
-        ax.tick_params(labelsize=26)
+        ax.tick_params(labelsize=30, pad=10)
         ax.tick_params(which="both", color="black")
         formatter = TrimmedFormatter(useMathText=True)
         if pt_hi <= 2.0:
             formatter.set_scientific(False)   # decimals in the first two panels
         else:
             formatter.set_powerlimits((-2, 2))
-            ax.yaxis.get_offset_text().set_fontsize(27)
+            ax.yaxis.get_offset_text().set_fontsize(30)
         ax.yaxis.set_major_formatter(formatter)
         ax.text(0.95, 0.93, rf"${pt_lo:g} < p_{{D^0\perp}} < {pt_hi:g}$ GeV", transform=ax.transAxes,
                 ha="right", va="top", fontsize=25)
 
     frag_handles = [Line2D([0], [0], color=color, linestyle=linestyle, lw=3, label=label)
                     for _, label, color, linestyle in FRAG_SCHEMES]
+    if process_text:   # in the first panel, on the side that the legend does not use
+        x, y, ha = (0.05, 0.93, "left") if legend_side == "right" else (0.95, 0.82, "right")
+        axes.flat[0].text(x, y, process_text, transform=axes.flat[0].transAxes, ha=ha, va="top", fontsize=25)
     if legend_side == "right":
         axes.flat[0].legend(handles=frag_handles, loc="upper right", bbox_to_anchor=(1.0, 0.87), fontsize=22,
                             frameon=False)

@@ -135,7 +135,7 @@ if __name__ == "__main__":
         ax.plot(yy, yy * interp_flux(tab, key, yy), color=color, **TABLE_STYLE)
         ax.plot(y, y * f, color=color, **OURS_STYLE)
     ax.set_xscale("log"); ax.set_yscale("log")
-    ax.set_ylim(YMIN, 4e2); ax.set_xlim(1e-4, 0.1)
+    ax.set_ylim(YMIN, 2.5e2); ax.set_xlim(1e-4, 0.1)
     ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
     ax.text(0.95, 0.93, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=26)
     for a in (ax, axr):
