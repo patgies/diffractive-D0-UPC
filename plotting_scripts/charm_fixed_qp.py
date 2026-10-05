@@ -79,7 +79,7 @@ def main():
 
   
     EXCL_COLOR, DIFF_COLOR = "#2166ac", "#b2182b"
-    linestyle_cycle = ["-", "--", ":", "-."]
+    linestyle_cycle = ["-", (0, (8, 2)), "--", "-.", (0, (5, 1.5, 1, 1.5, 1, 1.5)), ":"]   # as in RpA_fixed_qp.py
     linestyles = [linestyle_cycle[i % len(linestyle_cycle)] for i in range(len(y_values))]
 
     fig, ax = plt.subplots(figsize=(8, 6.5))
