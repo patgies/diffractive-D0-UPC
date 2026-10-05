@@ -25,8 +25,8 @@ plt.rcParams.update({
     "ytick.minor.size": 5,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "xtick.color": "black",
-    "ytick.color": "black",
+    "xtick.color": "gray",
+    "ytick.color": "gray",
     "xtick.labelcolor": "black",
     "ytick.labelcolor": "black",
     "xtick.major.pad": 8,
@@ -97,7 +97,7 @@ CHANNEL_COLORS = {
     "PL(AnAn)": "#333333",
     "AnAn":     "#d62728",
     "An0n":     "#2563b8",
-    "Xn0n":     "#1f907e",
+    "Xn0n":     "#1a7f4b",
     "0n0n":     "#e08a00",
 }
 TABLE_STYLE = dict(ls="-", lw=6.5, alpha=0.35, solid_capstyle="butt")

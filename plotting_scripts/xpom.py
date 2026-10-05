@@ -31,8 +31,8 @@ plt.rcParams.update({
     "ytick.minor.size": 5,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "xtick.color": "black",
-    "ytick.color": "black",
+    "xtick.color": "gray",
+    "ytick.color": "gray",
     "xtick.labelcolor": "black",
     "ytick.labelcolor": "black",
     "xtick.major.pad": 8,
@@ -170,7 +170,7 @@ def main():
         palette = ["#2166ac", "#67a9cf", "#ef8a62", "#b2182b"]
     colors = {y: palette[round(i * (len(palette) - 1) / max(len(y_values) - 1, 1))]
               for i, y in enumerate(y_values)}
-    linestyle_cycle = ["-", "--", ":", "-.", (0, (5, 1.5, 1, 1.5, 1, 1.5)), (0, (8, 2))]
+    linestyle_cycle = ["-", (0, (8, 2)), "--", "-.", (0, (5, 1.5, 1, 1.5, 1, 1.5)), ":"]
     y_linestyles = {y: linestyle_cycle[i % len(linestyle_cycle)] for i, y in enumerate(y_values)}
 
     plt.figure(figsize=(8, 7))

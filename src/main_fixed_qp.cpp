@@ -17,7 +17,8 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    string datafile = "./data/proton/mve.dat";
+    // optional 4th argument: dipole file (default: proton)
+    string datafile = (argc > 4) ? argv[4] : "./data/proton/mve.dat";
 
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);

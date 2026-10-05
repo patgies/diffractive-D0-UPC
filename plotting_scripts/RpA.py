@@ -6,6 +6,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.transforms import blended_transform_factory
+from matplotlib.ticker import FuncFormatter
 
 from D0 import (
     read_rapidity, alphae, mc, e_c, Nc, load_results, _summed_results,
@@ -30,6 +32,7 @@ def proton_prefactor(process, pt):
 # Pb+Pb sum (D0.py); denominator: run_proton.sh (TARGET=AA) output, no b_d integral.
 
 A_PB = 208
+Y_TO_PLOT = [0.0, 0.5, 1.0, 1.5, 2.0]
 
 PROTON_DIR = os.environ.get("PROTON_DIR", f"../output/{CHANNEL}/proton_baseline")
 
@@ -81,18 +84,16 @@ def make_plot(process):
         bk_band = load_bk_band(process, "HymnD")
         label = process
 
-    y_values = sorted(set(aa_results) & set(pa_results))
+    y_values = sorted(y for y in set(aa_results) & set(pa_results) if y in Y_TO_PLOT)
     if not y_values:
         sys.exit(f"No overlapping rapidities between Pb+Pb and proton-baseline data for {process} -- "
                   f"check {CENTRAL_DIR} and {PROTON_DIR} (run ../run_scripts/run_proton.sh).")
 
-    blue_ramp = ["#cde2fb", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
-    colors = {}
-    for i, y in enumerate(y_values):
-        step = round(i * (len(blue_ramp) - 1) / max(len(y_values) - 1, 1))
-        colors[y] = blue_ramp[step]
+    y_colors = {-2.0: "#053061", -1.0: "#053061", -0.5: "#2166ac", 0.0: "#2166ac", 0.5: "#67a9cf",
+                1.0: "#ef8a62", 1.5: "#d6604d", 2.0: "#b2182b"}
+    colors = {y: y_colors.get(y, "0.3") for y in y_values}
 
-    linestyle_cycle = ['-', '--', ':', '-.']
+    linestyle_cycle = ["-", (0, (8, 2)), "--", "-.", (0, (5, 1.5, 1, 1.5, 1, 1.5)), ":"]
     y_linestyles = {y: linestyle_cycle[i % len(linestyle_cycle)] for i, y in enumerate(y_values)}
 
     plt.figure(figsize=(7.5, 6.5))
@@ -114,14 +115,30 @@ def make_plot(process):
             plt.fill_between(band_pt, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
 
     plt.axhline(1.0, color="gray", linestyle=":", linewidth=1)
+    plt.xlim(0, 12)
+    plt.xticks([0, 2, 4, 6, 8, 10, 12])
+    if process == "diffractive":
+        plt.ylim(0.4, 1.15)
+    else:
+        plt.ylim(bottom=0.85)
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
 
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
     plt.ylabel(r"$R_{pA}$", labelpad=15)
-    plt.title(rf"Nuclear modification factor $R_{{pA}}$ ({label})", pad=15)
 
     y_handles = [Line2D([0], [0], color=colors[y], linestyle=y_linestyles[y], linewidth=2, label=f"$y={y:g}$")
                  for y in y_values]
-    plt.legend(handles=y_handles, loc="upper right", fontsize=15)
+    ax = plt.gca()
+    if process == "exclusive":
+        ax.text(0.08, 0.93, "Exclusive", transform=ax.transAxes, ha="left", va="top", fontsize=23)
+    if process == "sum":
+        ax.text(0.95, 0.93, "Diffractive", transform=ax.transAxes, ha="right", va="top", fontsize=23)
+    if process == "diffractive":
+        ax.text(0.95, 0.93, r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$", transform=ax.transAxes, ha="right", va="top", fontsize=23)
+        plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 0.03), fontsize=20, frameon=False)
+    else:
+        plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 1.16 if process == "sum" else 1.04),
+                   fontsize=20, frameon=False, bbox_transform=blended_transform_factory(ax.transAxes, ax.transData))
 
     plt.tight_layout()
     suffix = "" if process == "sum" else f"_{process}"
@@ -133,6 +150,7 @@ def make_plot(process):
 def main():
     make_plot("sum")
     make_plot("exclusive")
+    make_plot("diffractive")
 
 
 if __name__ == "__main__":

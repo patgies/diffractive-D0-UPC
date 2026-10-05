@@ -4,6 +4,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib import ticker
 
 # Total D0 cross section (diffractive + exclusive) for some rapidities,
@@ -28,7 +29,7 @@ def main():
 
     palette = ["#2166ac", "#67a9cf", "#ef8a62", "#b2182b"]
     colors = {y: palette[i % len(palette)] for i, y in enumerate(Y_TO_PLOT)}
-    linestyle_cycle = ["-", "--", ":", "-."]
+    linestyle_cycle = ["-", "--", "-.", ":"]
     linestyles = {y: linestyle_cycle[i % len(linestyle_cycle)] for i, y in enumerate(Y_TO_PLOT)}
 
     plt.figure(figsize=(8, 7))
@@ -53,7 +54,7 @@ def main():
     plt.xlim(0, 12)   
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)
-    plt.text(0.95, 0.92, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\n{CHANNEL}, HymnD",
+    plt.text(0.95, 0.92, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\nDiffractive\n{CHANNEL}, HymnD",
              transform=plt.gca().transAxes, ha="right", va="top", fontsize=24, linespacing=1.8)
 
     plt.gca().yaxis.set_minor_locator(
@@ -66,6 +67,8 @@ def main():
 
     y_handles = [Line2D([0], [0], color=colors[y], linestyle=linestyles[y], linewidth=3, label=f"$y={y:g}$")
                  for y in Y_TO_PLOT]
+    if hymnd_band:
+        y_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
     plt.legend(handles=y_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0), fontsize=22,
                frameon=False)
 

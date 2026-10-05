@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib import ticker
 from scipy.integrate import simpson
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))   # alphas_running.py
@@ -30,8 +31,8 @@ plt.rcParams.update({
     "ytick.minor.size": 5,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "xtick.color": "black",
-    "ytick.color": "black",
+    "xtick.color": "gray",
+    "ytick.color": "gray",
     "xtick.labelcolor": "black",
     "ytick.labelcolor": "black",
     "xtick.major.pad": 8,
@@ -439,7 +440,7 @@ def main():
     plt.xlim(0, 12)
     plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)
-    plt.text(0.95, 0.92, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\n{CHANNEL}, HymnD", transform=plt.gca().transAxes,
+    plt.text(0.95, 0.945, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\n{CHANNEL}, HymnD", transform=plt.gca().transAxes,
              ha="right", va="top", fontsize=24, linespacing=1.8)
     plt.gca().yaxis.set_minor_locator(
         ticker.LogLocator(base=10.0, subs=[2, 3, 4, 5, 6, 7, 8, 9], numticks=100))
@@ -467,8 +468,10 @@ def main():
                 style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label))
             elif (process, frag) in all_results:
                 style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label))
+    if any(hymnd_bands.values()):
+        style_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
     # under the text in the upper right
-    plt.legend(handles=style_handles, loc="upper right", bbox_to_anchor=(0.98, 0.76), fontsize=22,
+    plt.legend(handles=style_handles, loc="upper right", bbox_to_anchor=(1.01, 0.81), fontsize=22,
                frameon=False)
 
     plt.tight_layout()

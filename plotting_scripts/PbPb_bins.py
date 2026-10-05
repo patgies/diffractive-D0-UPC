@@ -34,7 +34,7 @@ def main():
 
     suffix = "" if PROCESS == "sum" else f"_{PROCESS}"
     draw_panels(averages, bands, f"../plots/D0_bins_y_{CHANNEL}_{NUCLEUS}{NUCLEUS}{suffix}.pdf", ylabel_x=0.011,
-                left=0.035)   # the tick numbers are wider here: more room for the axis title
+                left=0.035, legend_side="split")   # the tick numbers are wider here: more room for the axis title
 
 
 if __name__ == "__main__":

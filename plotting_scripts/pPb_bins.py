@@ -9,6 +9,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib.ticker import MultipleLocator, ScalarFormatter
 
 
@@ -115,20 +116,23 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
     The legend goes in the first panel: upper left, or on the right under the pT label."""
     fig, axes = plt.subplots(3, 2, figsize=(16, 17), sharex=True)
-    edges = [y_lo for y_lo, _ in Y_BINS] + [Y_BINS[-1][1]]
 
     # Texts at the top of a panel: (bins under the text, fraction of the height that is free below it).
     # The vertical range is the smallest one where the histograms stay below these texts.
     on_the_right = lambda y_lo, y_hi: y_hi > -0.4
     on_the_left = lambda y_lo, y_hi: y_lo < -1
+    has_band = any(bands[frag] for frag in bands)
     texts = [(on_the_right, 0.77)]   # the pT label
     first_panel_texts = list(texts)
-    if legend_side == "right":
-        first_panel_texts.append((lambda y_lo, y_hi: y_hi > 0, 0.43))   # legend under the pT label
+    if legend_side == "split":   # pT label on the right, legend in the upper left (its last line is the widest)
+        first_panel_texts = [(on_the_right, 0.77), (on_the_left, 0.42 if has_band else 0.6),
+                             (lambda y_lo, y_hi: y_lo < 1, 0.5 if has_band else 1.0)]
+    elif legend_side == "right":
+        first_panel_texts.append((lambda y_lo, y_hi: y_hi > 0, 0.47 if has_band else 0.43))   # legend under the pT label
         if process_text:
             first_panel_texts.append((on_the_left, 0.84))
     else:
-        first_panel_texts.append((on_the_left, 0.52))                  # legend in the upper left
+        first_panel_texts.append((on_the_left, 0.38 if has_band else 0.52))   # legend in the upper left
         if process_text:
             first_panel_texts.append((on_the_right, 0.72))
 
@@ -138,7 +142,9 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
             values = [averages[frag].get((pt_lo, y_lo), np.nan) for y_lo, _ in Y_BINS]
             if np.all(np.isnan(values)):
                 continue
-            ax.stairs(values, edges, baseline=None, color=color, linestyle=linestyle, lw=3)
+            for value, (y_lo, y_hi) in zip(values, Y_BINS):   # one flat segment per bin, no vertical steps
+                if not np.isnan(value):
+                    ax.plot([y_lo, y_hi], [value, value], color=color, linestyle=linestyle, lw=3)
             for value, y_bin in zip(values, Y_BINS):
                 if not np.isnan(value):
                     bin_top[y_bin] = max(bin_top[y_bin], value)
@@ -155,23 +161,28 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
         ax.set_ylim(0, y_max)
         ax.xaxis.set_major_locator(MultipleLocator(1))
         ax.tick_params(labelsize=30, pad=10)
-        ax.tick_params(which="both", color="black")
         formatter = TrimmedFormatter(useMathText=True)
         if pt_hi <= 2.0:
             formatter.set_scientific(False)   # decimals in the first two panels
         else:
             formatter.set_powerlimits((-2, 2))
-            ax.yaxis.get_offset_text().set_fontsize(30)
+            ax.yaxis.get_offset_text().set(fontsize=30, color="black")   # the x10^n stays black, unlike the ticks
+            ax.yaxis.OFFSETTEXTPAD = 8
         ax.yaxis.set_major_formatter(formatter)
-        ax.text(0.95, 0.93, rf"${pt_lo:g} < p_{{D^0\perp}} < {pt_hi:g}$ GeV", transform=ax.transAxes,
-                ha="right", va="top", fontsize=25)
+        ax.text(0.95, 0.93, rf"$p_{{D^0\perp}} \in ({pt_lo:g}, {pt_hi:g})$ GeV", transform=ax.transAxes,
+                ha="right", va="top", fontsize=27)
 
     frag_handles = [Line2D([0], [0], color=color, linestyle=linestyle, lw=3, label=label)
                     for _, label, color, linestyle in FRAG_SCHEMES]
+    if has_band:
+        frag_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
     if process_text:   # in the first panel, on the side that the legend does not use
         x, y, ha = (0.05, 0.93, "left") if legend_side == "right" else (0.95, 0.82, "right")
         axes.flat[0].text(x, y, process_text, transform=axes.flat[0].transAxes, ha=ha, va="top", fontsize=25)
-    if legend_side == "right":
+    if legend_side == "split":
+        axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=25,
+                            frameon=False)
+    elif legend_side == "right":
         axes.flat[0].legend(handles=frag_handles, loc="upper right", bbox_to_anchor=(1.0, 0.87), fontsize=22,
                             frameon=False)
     else:
@@ -194,7 +205,7 @@ def main():
         sys.exit(f"No data found in {PPB_DIR} -- run TARGET=pA ../run_scripts/run_proton.sh first.")
 
     suffix = "" if PROCESS == "sum" else f"_{PROCESS}"
-    draw_panels(averages, bands, f"../plots/D0_bins_pPb{suffix}.pdf", legend_side="left")
+    draw_panels(averages, bands, f"../plots/D0_bins_pPb{suffix}.pdf", legend_side="split")
 
 
 if __name__ == "__main__":

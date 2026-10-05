@@ -16,7 +16,7 @@ plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.size": 11,
-    "axes.labelsize": 28,
+    "axes.labelsize": 29,
     "axes.titlesize": 20,
     "xtick.labelsize": 25,
     "ytick.labelsize": 25,
@@ -30,8 +30,8 @@ plt.rcParams.update({
     "ytick.minor.size": 5,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "xtick.color": "black",
-    "ytick.color": "black",
+    "xtick.color": "gray",
+    "ytick.color": "gray",
     "xtick.labelcolor": "black",
     "ytick.labelcolor": "black",
     "xtick.major.pad": 8,
@@ -91,30 +91,34 @@ def main():
         ax.plot(pt, diff, color=DIFF_COLOR, linestyle=linestyle, lw=2.0)
         ax.plot(pt, excl, color=EXCL_COLOR, linestyle=linestyle, lw=2.0)
 
-    ax.text(4.7, 4e-8, r"$\sim p_{\perp}^{-6}$", fontsize=22)
-    ax.text(9.8, 5.5e-10, r"$\sim p_{\perp}^{-4}$", fontsize=22)
+    x6 = np.geomspace(4, 8.5, 40)
+    ax.plot(x6, 6e-8 * (x6 / 4.6) ** -6, color="0.5", lw=1.8, zorder=1)
+    x4 = np.geomspace(8.5, 20, 20)
+    ax.plot(x4, 4e-10 * (x4 / 10) ** -4, color="0.5", lw=1.8, zorder=1)
+    ax.text(5.1, 4.5e-8, r"$\sim p_{\perp}^{-6}$", fontsize=23)
+    ax.text(10.3, 5.5e-10, r"$\sim p_{\perp}^{-4}$", fontsize=23)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_ylim(1e-11, 1e-4)
-    ax.set_xlim(0.2, 20)
+    ax.set_xlim(0.9, 20)
     ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
     ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
     ax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=20))
     ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
     ax.set_xlabel(r"$p_{\perp}$ [GeV]", labelpad=6)
     ax.set_ylabel(r"$d\sigma/dy\, d^2\mathbf{p}$ [mb/GeV$^2$]", labelpad=8)
-    ax.set_title(r"$\gamma+A \rightarrow c+A$ at $z=0.5$", pad=15, fontsize=24)
+    ax.set_title(r"$\gamma+A \rightarrow c+A$ at $z=0.5$", pad=15, fontsize=25)
 
-    y_handles = [Line2D([0], [0], color='0.3', lw=3, linestyle=linestyles[i], label=f"$y={y:g}$")
+    y_handles = [Line2D([0], [0], color='black', lw=3, linestyle=linestyles[i], label=f"$y={y:g}$")
                  for i, y in reversed(list(enumerate(y_values)))]
     style_handles = [Line2D([0], [0], color=EXCL_COLOR, lw=3, linestyle='-', label="Exclusive"),
                      Line2D([0], [0], color=DIFF_COLOR, lw=3, linestyle='-',
-                            label=r"Diffractive$_{\mbox{\fontsize{13.5}{13.5}\selectfont TMD}}$")]
-    y_legend = ax.legend(handles=y_handles, fontsize=22, loc='lower left',
+                            label=r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$")]
+    y_legend = ax.legend(handles=y_handles, fontsize=23, loc='lower left',
                          bbox_to_anchor=(0.02, 0.0), frameon=False)
     ax.add_artist(y_legend)
-    ax.legend(handles=style_handles, fontsize=22, loc='upper right', frameon=False)
+    ax.legend(handles=style_handles, fontsize=23, loc='upper right', bbox_to_anchor=(1.0, 0.96), frameon=False)
     plt.tight_layout()
     outname = "../plots/charm_fixed_qp.pdf"
     plt.savefig(outname, dpi=150)
