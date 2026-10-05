@@ -2,10 +2,12 @@ import os
 import sys
 
 
-from D0 import load_results, _summed_results, _scale_combos, SCALE_FACTOR_TAGS, NUCLEUS, CHANNEL, CENTRAL_DIR
+from D0 import (load_results, _summed_results, _scale_combos, SCALE_FACTOR_TAGS, NUCLEUS, CHANNEL, CENTRAL_DIR,
+                OUTPUT_BASE, FLUX_TAG, FLUX_MODEL)
 from pPb_bins import bin_averages, draw_panels, FRAG_SCHEMES, PROCESS
 
-SCALE_BASE = os.environ.get("SCALE_BASE", f"../output/{CHANNEL}/scale_variation")
+FLUX_LABELS = {"STARLIGHT": "STARlight"}
+SCALE_BASE = os.environ.get("SCALE_BASE", f"{OUTPUT_BASE}/{CHANNEL}/scale_variation")
 
 
 def get_results(frag, data_dir, mu_r_factor=1.0):
@@ -33,8 +35,9 @@ def main():
         sys.exit(f"No data found in {CENTRAL_DIR}.")
 
     suffix = "" if PROCESS == "sum" else f"_{PROCESS}"
-    draw_panels(averages, bands, f"../plots/D0_bins_y_{CHANNEL}_{NUCLEUS}{NUCLEUS}{suffix}.pdf", ylabel_x=0.011,
-                left=0.035, legend_side="split")   # the tick numbers are wider here: more room for the axis title
+    draw_panels(averages, bands, f"../plots/D0_bins_y_{CHANNEL}_{NUCLEUS}{NUCLEUS}{FLUX_TAG}{suffix}.pdf", ylabel_x=0.011,
+                left=0.035, legend_side="split",   # the tick numbers are wider here: more room for the axis title
+                flux_text=None if FLUX_MODEL == "EFF" else FLUX_LABELS.get(FLUX_MODEL, FLUX_MODEL) + " flux")
 
 
 if __name__ == "__main__":

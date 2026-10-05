@@ -54,8 +54,13 @@ GEVSQR_TO_MB = GEVSQR_TO_NB * 1e-6
 NUCLEUS = os.environ.get("NUCLEUS", "Pb")
 CHANNEL = os.environ.get("CHANNEL", "An0n").translate(str.maketrans('', '', '() '))
 
-CENTRAL_DIR = os.environ.get("CENTRAL_DIR", f"../output/{CHANNEL}/central_values")
-SCALE_DIR = os.environ.get("SCALE_DIR", f"../output/{CHANNEL}/scale_variation/HymnD")
+# FLUX_MODEL: EFF (default) or another flux, whose files are in ../output/<FLUX_MODEL>/ with a _<FLUX_MODEL> tag
+FLUX_MODEL = os.environ.get("FLUX_MODEL", "EFF")
+FLUX_TAG = "" if FLUX_MODEL == "EFF" else f"_{FLUX_MODEL}"
+OUTPUT_BASE = "../output" if FLUX_MODEL == "EFF" else f"../output/{FLUX_MODEL}"
+
+CENTRAL_DIR = os.environ.get("CENTRAL_DIR", f"{OUTPUT_BASE}/{CHANNEL}/central_values")
+SCALE_DIR = os.environ.get("SCALE_DIR", f"{OUTPUT_BASE}/{CHANNEL}/scale_variation/HymnD")
 
 PROCESSES = ["diffractive", "exclusive"]
 FRAG_TYPES = ["HymnD"]
@@ -145,7 +150,7 @@ def load_results(process, frag, data_dir=None, mu_r_factor=1.0):
     """Read all files for one (process, frag) in data_dir or data_dir/<frag>/
     and return {y: [(pt, cross_section), ...]}."""
     data_dir = CENTRAL_DIR if data_dir is None else data_dir
-    name = f"D0_{process}_{frag}_{CHANNEL}_{NUCLEUS}_y*.dat"
+    name = f"D0_{process}_{frag}_{CHANNEL}_{NUCLEUS}{FLUX_TAG}_y*.dat"
     filenames = glob.glob(f"{data_dir}/{name}") or glob.glob(f"{data_dir}/{frag}/{name}")
     results = {}
     for filename in sorted(filenames):

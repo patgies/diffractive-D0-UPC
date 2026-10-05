@@ -111,10 +111,12 @@ def scale_band(frag):
     return {key: (min(v[key] for v in all_values), max(v[key] for v in all_values)) for key in keys}
 
 
-def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, left=0.015, process_text=None):
+def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, left=0.015, process_text=None,
+                flux_text=None):
     """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
-    The legend goes in the first panel: upper left, or on the right under the pT label."""
+    The legend goes in the first panel: upper left, or on the right under the pT label.
+    flux_text goes in the second panel, under its pT label."""
     fig, axes = plt.subplots(3, 2, figsize=(16, 17), sharex=True)
 
     # Texts at the top of a panel: (bins under the text, fraction of the height that is free below it).
@@ -156,7 +158,10 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
 
         ax.set_xlim(-3, 3)
         y_max = 1.12 * max(bin_top.values())
-        for under_text, free_below in (first_panel_texts if ax is axes.flat[0] else texts):
+        panel_texts = first_panel_texts if ax is axes.flat[0] else texts
+        if flux_text and ax is axes.flat[1]:
+            panel_texts = [(on_the_right, 0.66)]   # pT label and the flux text under it
+        for under_text, free_below in panel_texts:
             y_max = max([y_max] + [top / free_below for y_bin, top in bin_top.items() if under_text(*y_bin)])
         ax.set_ylim(0, y_max)
         ax.xaxis.set_major_locator(MultipleLocator(1))
@@ -179,6 +184,8 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
     if process_text:   # in the first panel, on the side that the legend does not use
         x, y, ha = (0.05, 0.93, "left") if legend_side == "right" else (0.95, 0.82, "right")
         axes.flat[0].text(x, y, process_text, transform=axes.flat[0].transAxes, ha=ha, va="top", fontsize=25)
+    if flux_text:
+        axes.flat[1].text(0.95, 0.81, flux_text, transform=axes.flat[1].transAxes, ha="right", va="top", fontsize=25)
     if legend_side == "split":
         axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=25,
                             frameon=False)
