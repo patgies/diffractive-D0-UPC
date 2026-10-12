@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     par.flux_model = model;
     if (model == "WS") init_ws_form_factor();
 
-    // TARGET=pA: flux of the lead nucleus in p+Pb at 8.16 TeV, with Gamma_pA(b) and no EMD (as in main.cpp)
+    // TARGET=pA: flux of the lead nucleus in p+Pb at 8.16 TeV, with Gamma_pA(b) and no EMD (as in setup.cpp)
     const char* target = std::getenv("TARGET");
     if (target && std::string(target) == "pA") {
         if (model != "WS" && model != "PL") {
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         par.ss     = 8160.0;
         double sigma_NN_mb = std::getenv("SIGMA_NN") ? std::atof(std::getenv("SIGMA_NN")) : 99.0;
         init_pA_flux(sigma_NN_mb);
-        const double R_PL_fm = 7.1;   // point-like radius (see main.cpp)
+        const double R_PL_fm = 7.1;   // point-like radius (see setup.cpp)
         par.bmin = (model == "PL") ? ((bm ? std::atof(bm) : 1.1 * R_PL_fm) / 0.197327) : 1e-3;   // BMIN_FM changes it
         std::cout << "# target         : pA, sqrt(s_NN) = " << par.ss << " GeV, sigma_NN = " << sigma_NN_mb << " mb\n";
     }
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
         if (model == "EFF")       init_effective_flux(par.channel, &par);
         if (model == "STARLIGHT") init_starlight_flux(par.channel);
         for (int iy = 0; iy < ny; iy++) {
-            double z_gamma = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));   // photon energy fraction
+            double z_gamma = std::pow(10.0, -4.0 + 4.0 * iy / (ny - 1.0));
             double qp      = z_gamma * par.ss / std::sqrt(2.0);   // omega = qp/sqrt(2) = z_gamma*sqrt(s)/2
             double dN_domega = is_effective_flux(&par) ? effective_photon_flux(qp, &par) : flux_over_b(z_gamma, qp, par);
             std::cout << par.channel << "  " << z_gamma << "  " << dN_domega * par.ss / 2.0 << "\n";

@@ -1,6 +1,5 @@
 #!/bin/bash
 # Links the BK samples of input/BK/ as data/Pb/bk_posterior/member_NNNN/glauber_mve_<b_d>.
-# Usage: ./run_scripts/setup_bk_posterior_links.sh
 
 set -e
 

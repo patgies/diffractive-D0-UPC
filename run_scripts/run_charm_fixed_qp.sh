@@ -2,8 +2,8 @@
 # Charm cross section at fixed q+ (no photon flux), one file per rapidity in output/charm/.
 # Usage: Y_VALS="0.0 2.0" NPT=60 ./run_scripts/run_charm_fixed_qp.sh
 # With DIPOLE_DIR=data/Pb/mve: one run per Glauber sample, in output/charm/<NUCLEUS>/b<b_d>/.
+# Without DIPOLE_DIR: proton, with the dipole file DIPOLE_FILE (default data/proton/mve.dat).
 
-# Defaults of this script
 : "${Y_VALS:=0.0 1.0 2.0}"
 : "${NPT:=40}"
 set -e
@@ -30,7 +30,7 @@ if [[ -n "$DIPOLE_DIR" ]]; then
 		run_one "$dfile" "$OUTDIR/$NUCLEUS/b$b_d"
 	done
 else
-	run_one data/proton/mve.dat "$OUTDIR"
+	run_one "${DIPOLE_FILE:-data/proton/mve.dat}" "$OUTDIR"
 fi
 
 echo "Done. Next: python3 charm_fixed_qp.py or RpA_fixed_qp.py (from plotting_scripts/) to plot."

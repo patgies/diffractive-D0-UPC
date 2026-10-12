@@ -48,6 +48,8 @@ for proc in $(processes); do
 			echo "# ${description}"
 			echo "# ${proc} D0 cross section, proton target, ${FRAG_TYPE} fragmentation${channel_text}"
 			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+			echo "# photon flux    : dN/dq+ in the q+ integral"
+			echo "# diffractive   : gluon dipole N_g, per d ln(x_po)"
 			echo "# scale_factor   : ${SCALE_FACTOR} (fragmentation scale Q = SCALE_FACTOR * m_T)"
 			echo "# dipole file    : ${DIPOLE_FILE}"
 			echo "# pD0 sweep      : $(echo $PT_VALS)"

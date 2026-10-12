@@ -1,19 +1,26 @@
 import numpy as np
 
-# One-loop running of alpha_s from alpha_s(mZ):
-# 1/alpha_s(mu) = 1/alpha_s(mZ) + 2*b0*ln(mu/mZ), b0 = (33 - 2*Nf)/(12*pi)
+# One-loop running of alpha_s from alpha_s(mZ), with Nf = 5 above the b-quark threshold mb and
+# Nf = 4 below it (alpha_s continuous at mb):
+# 1/alpha_s(mu) = 1/alpha_s(mu0) + 2*b0(Nf)*ln(mu/mu0), b0(Nf) = (33 - 2*Nf)/(12*pi)
 
-alphas_mZ = 0.118    
+alphas_mZ = 0.118
 mZ        = 91.2
+mb        = 4.8
 Nc        = 3
-Nf        = 4        
-b0        = (33 - 2*Nf) / (12*np.pi)
+
+def b0(nf):
+    return (33 - 2*nf) / (12*np.pi)
 
 def alphas_run(mu):
-    return 1.0 / (1.0/alphas_mZ + 2*b0*np.log(mu/mZ))
+    inv_mb = 1.0/alphas_mZ + 2*b0(5)*np.log(mb/mZ)          # 1/alpha_s(mb), Nf = 5 from mZ
+    inv = np.where(mu >= mb,
+                   1.0/alphas_mZ + 2*b0(5)*np.log(mu/mZ),
+                   inv_mb + 2*b0(4)*np.log(mu/mb))
+    return 1.0 / inv
 
 if __name__ == '__main__':
-    print('One-loop running alpha_s  (Nf=%d, alpha_s(mZ)=%.3f)' % (Nf, alphas_mZ))
+    print('One-loop running alpha_s  (Nf=5 above mb=%.1f GeV, 4 below; alpha_s(mZ)=%.3f)' % (mb, alphas_mZ))
     print('=' * 36)
     print('   mu [GeV]    alpha_s(mu)')
     print('-' * 36)

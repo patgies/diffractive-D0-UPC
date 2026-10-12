@@ -10,7 +10,7 @@ from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 
 # Fragmentation functions D(z, Q^2) for c -> D0 at three scales: BCFY, Kniehl-Kramer and HymnD (68% band of
-# the replicas). Reads the grids the same way as src/hymnd_grid.cpp. HymnD replicas: HYMND_DIR or the LHAPDF folder.
+# the replicas). Reads the grids the same way as src/lhapdf_grid.cpp. HymnD replicas: HYMND_DIR or the LHAPDF folder.
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -43,9 +43,9 @@ BCFY_FILE = "../input/BCFY_EKO/bcfy_eko_0000.dat"
 KK_FILE = "../input/KK_EKO/kk_eko_0000.dat"
 HYMND_SET = "prompt-D0-1-109"
 PANELS = [
-    (MC, r"$Q_0=m_c=1.5$ GeV", None),
-    (np.sqrt(3.0**2 + MC**2), r"$Q=m_t={:.2f}$ GeV".format(np.sqrt(3.0**2 + MC**2)), r"$p_{D\perp}=3$ GeV"),
-    (np.sqrt(9.0**2 + MC**2), r"$Q=m_t={:.2f}$ GeV".format(np.sqrt(9.0**2 + MC**2)), r"$p_{D\perp}=9$ GeV"),
+    (MC, r"$\mu_0=m=1.5$ GeV", None),
+    (np.sqrt(3.0**2 + MC**2), r"$\mu=m_t={:.2f}$ GeV".format(np.sqrt(3.0**2 + MC**2)), r"$p_{D\perp}=3$ GeV"),
+    (np.sqrt(9.0**2 + MC**2), r"$\mu=m_t={:.2f}$ GeV".format(np.sqrt(9.0**2 + MC**2)), r"$p_{D\perp}=9$ GeV"),
 ]
 COLORS = {"BCFY": "#2166ac", "KK": "#b2182b", "HymnD": "#1a7f4b"}
 
@@ -83,7 +83,7 @@ def read_blocks(filename, flavor=CHARM):
 
 
 def D_at(blocks, Q):
-    """D(z) at scale Q: linear interpolation in Q, as in src/hymnd_grid.cpp. Returns (z, D)."""
+    """D(z) at scale Q: linear interpolation in Q, as in src/lhapdf_grid.cpp. Returns (z, D)."""
     Q = min(max(Q, blocks[0][1][0]), blocks[-1][1][-1])
     for x, q, values in blocks:
         if q[0] <= Q <= q[-1]:
@@ -125,8 +125,8 @@ def main():
         hidden = ([] if i == 0 else [0]) + ([] if i == len(axes) - 1 else [1])
         ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _, h=hidden: "" if round(v, 6) in h else f"{v:g}"))
 
-    axes[0].set_ylim(0, 7.5)
-    axes[0].set_ylabel(r"$D_{c\to D^0}(z_h, Q^2)$", labelpad=16)
+    axes[0].set_ylim(0, 4.3)   # room for the legend above the curves of the first panel
+    axes[0].set_ylabel(r"$D_{c\to D^0}(z_h, \mu)$", labelpad=16)
 
     handles = [
         Line2D([0], [0], color=COLORS["BCFY"], lw=3, label="BCFY"),
@@ -135,7 +135,8 @@ def main():
         if band else Line2D([0], [0], color=COLORS["HymnD"], lw=3, ls="-."),
     ]
     labels = ["BCFY", r"Kniehl \& Kramer", r"HymnD (68\% CL)" if band else "HymnD"]
-    axes[0].legend(handles, labels, loc="center left", bbox_to_anchor=(0.02, 0.62), fontsize=20, frameon=False)
+    # in the first panel, under its scale label
+    axes[0].legend(handles, labels, loc="upper left", bbox_to_anchor=(0.02, 0.85), fontsize=20, frameon=False)
 
     outname = "../plots/fragmentation_comparison.pdf"
     plt.savefig(outname, bbox_inches="tight")

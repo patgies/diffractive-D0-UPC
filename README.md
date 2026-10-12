@@ -1,6 +1,6 @@
 # Diffractive D0 photoproduction
 
-This project calculates the diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions (UPCs) in the CGC framework. The code supports different UPC channels, photon fluxes and fragmentation functions. It can be used for proton and nuclear targets.
+This project calculates the diffractive D0 photoproduction cross section `dσ / (dy d²p_D0)` in ultraperipheral collisions in the color glass condensate framework. The code supports different UPC channels, photon fluxes and fragmentation functions. It can be used for proton and nuclear targets.
 
 If you use this code, please cite:
 
@@ -40,7 +40,7 @@ Example:
 
 This prints `pD0`, the exclusive and the diffractive cross section, without prefactors.
 
-The other executables are `D0_xpom` (differential in `x_pom`), `charm_fixed_qp` (charm quark at fixed `q+`, no photon flux) and `scan_flux` (photon flux alone).
+The other executables are `D0_xpom` (differential in `x_pom`), `charm_fixed_qp` (charm quark at fixed `q+`, no photon flux), `charm_fixed_qp_xpom` (the same, differential in `x_pom`) and `scan_flux` (photon flux alone).
 
 
 The settings are environment variables, defaults are in [run_scripts/config.sh](run_scripts/config.sh).
@@ -58,15 +58,15 @@ The results go to `output/`.
 The code expects dipole input files of the form
 
 - proton: `data/proton/mve.dat`
-- nucleus: `data/Pb/mve/glauber_mve_<b_d>` or `data/Au/...`, one Glauber-sampled file per impact parameter `b_d`
+- nucleus: `data/Pb/mve/glauber_mve_<b_d>`, one Glauber-sampled file per impact parameter `b_d`
 
 Dipole parametrization MVe from [https://github.com/hejajama/rcbkdipole](https://github.com/hejajama/rcbkdipole).
 
 - `BCFY_EKO/` and `KK_EKO/`: grids of the BCFY and Kniehl-Kramer fragmentation functions, DGLAP-evolved with [eko](https://github.com/NNPDF/eko) in [EKO-FF](https://github.com/patgies/EKO-FF).
 - `HymnD/`: the HymnD fragmentation function set, members 0–100.
 - `WS_photon_flux/`: tables of the hadronic survival factor `Gamma_AA(b)`, for `sigma_NN = 92` mb (default) and `90.85` mb. They are made with [src/make_gamma_aa.py](src/make_gamma_aa.py).
-- `Starlight_photon_flux/`: the photon flux tables of Petja Paakkinen, used with `FLUX_MODEL=STARLIGHT` and in `flux_comparison.py`.
-- `BK/`: the posterior samples of the BK initial condition. `run_scripts/setup_bk_posterior_links.sh` links them as `data/Pb/bk_posterior/member_NNNN/`.
+- `Starlight_photon_flux/`: the photon flux tables of Petja Paakkinen (EMD probabilities from Starlight v313), used with `FLUX_MODEL=STARLIGHT` and in `flux_comparison.py`.
+- `BK/`: the posterior samples of the BK initial condition. `run_scripts/setup_bk_posterior_links.sh` links them as `data/Pb/bk_posterior/member_NNNN/`. The proton dipoles of the same samples are in `data/proton/bk_posterior/`.
 - `inclusive/`: the inclusive D0 cross section from [inclusive-D0-UPC](https://github.com/patgies/inclusive-D0-UPC), only needed for `ratio.py`. 
 
 
@@ -78,7 +78,7 @@ The channel is selected through `CHANNEL`: `An0n`, `Xn0n`, `0n0n`, `AnAn`, `PL(A
 The photon flux is selected through `FLUX_MODEL`:
 
 - `EFF` (default): effective flux of K. J. Eskola, V. Guzey, I. Helenius, P. Paakkinen, and H. Paukkunen, "Spatial resolution of dijet photoproduction in near-encounter ultraperipheral nuclear collisions," Phys. Rev. C 110, 054906 (2024) [arXiv:2404.09731], Eq. (4).
-- `STARLIGHT`: flux tables of Petja Paakkinen from the same paper (only `AnAn` and `An0n`).
+- `STARLIGHT`: flux tables of Petja Paakkinen from the same paper, with EMD probabilities from Starlight v313 (`AnAn`, `An0n` and `0n0n`).
 - `PL`: flux of a point-like nucleus.
 - `WS`: flux for a Woods-Saxon charge distribution.
 
@@ -108,10 +108,12 @@ The plots include the scale uncertainty for the three fragmentation functions (`
 
 The fragmentation scale variation is run with `run_scale_variation.sh`, once per fragmentation function. The renormalization scale variation is done in the plotting scripts and only changes the diffractive cross section.
 
-Two other uncertainties can be computed with `run_members.sh` but are not included in the plots:
+Two other uncertainties can be computed with `run_members.sh`. [D0.py](plotting_scripts/D0.py) and [D0_sum.py](plotting_scripts/D0_sum.py) add them in quadrature to the scale uncertainty when their results are in `output/` (the legend says which band is shown):
 
 - the HymnD replicas (`MEMBER_SET=HymnD`): one run per member of the fragmentation function set.
 - the BK initial condition (`MEMBER_SET=bk`): one run per posterior sample of the BK fit, with the fragmentation function fixed. The samples are in `input/BK/` and `data/Pb/bk_posterior/`.
+
+[RpA_fixed_qp.py](plotting_scripts/RpA_fixed_qp.py) shows the BK uncertainty of `R_pA` for the charm quark, with Pb and proton computed for the same sample (`output/charm_bk/`).
 
 
 
@@ -120,5 +122,7 @@ Two other uncertainties can be computed with `run_members.sh` but are not includ
 The output of the nuclear runs is per impact parameter `b_d`. The plotting scripts integrate over `b_d` (Simpson's rule, multiplied by `2πb_d`) and multiply by the prefactors.
 
 For a proton target, the impact-parameter integral is replaced by the proton normalization `16.36` mb of the MVe dipole parametrization.
+
+The dipole files of the nucleus stop at `b_d = 32 GeV⁻¹`. The plotting scripts add the dilute edge of the nucleus beyond it as a factor (`nuclear_edge_factor` in [D0.py](plotting_scripts/D0.py)) times the proton-target cross section, read from `output/proton_edge/` (made with `run_proton.sh`). `NUCLEAR_EDGE=0` switches it off.
 
 Units are GeV throughout.

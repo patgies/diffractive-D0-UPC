@@ -3,7 +3,7 @@
 # e.g. CHANNEL=0n0n ./run_scripts/run_nucleus.sh
 
 # Collision system and photon flux
-: "${NUCLEUS:=Pb}"                 # target nucleus
+: "${NUCLEUS:=Pb}"
 : "${CHANNEL:=An0n}"               # An0n | Xn0n | 0n0n | AnAn | PL(AnAn)
 : "${FLUX_MODEL:=EFF}"             # EFF | STARLIGHT | PL | WS
 : "${TARGET:=AA}"                  # AA (Pb+Pb, 5.36 TeV) | pA (p+Pb, 8.16 TeV)

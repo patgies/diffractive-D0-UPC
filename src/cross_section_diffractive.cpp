@@ -1,25 +1,20 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
 #include <cmath>
-#include <gsl/gsl_monte_vegas.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_errno.h>
 
 using namespace std;
 
+// Range of the logarithmic sampling of the gluon momentum k, up to pD0/z_h_min.
+static void set_k_range(parameters* par)
+{
+    par->k_upper_frag = par->pD0 / par->z_h_min;
+    par->log_k_frag = log(par->k_upper_frag / K_MIN);
+}
 
-// Diffractive cross section: 7D VEGAS integral.
 double diffractiveCrossSection(void* p)
 {
     parameters* par = (parameters*)p;
-    size_t calls = par->calls_diff;
-
-    double k_lo_frag = 0.01;
-    par->k_upper_frag = par->pD0 / par->z_h_min;
-    par->log_k_frag = log(par->k_upper_frag / k_lo_frag);
-
-    const gsl_rng_type* T = gsl_rng_default;
-    gsl_rng* r = gsl_rng_alloc(T);
+    set_k_range(par);
 
     gsl_monte_function F;
     F.f      = &integrand_diffractive;
@@ -34,37 +29,13 @@ double diffractiveCrossSection(void* p)
     double low[] = {0.,   0.,   0.,   0., b_lo, 0.,  par->z_h_min};
     double up[]  = {rmax, rmax, 1.0,  1., b_hi, 1.,  par->z_h_max};
 
-    double res, err;
-    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
-
-    // short first run so VEGAS can adapt its grid
-    gsl_monte_vegas_integrate(&F, low, up, F.dim, calls/10, r, s, &res, &err);
-
-    // repeat until chi-square is close to 1, at most 3 times
-    int iter = 0;
-    do {
-        gsl_monte_vegas_integrate(&F, low, up, F.dim, calls, r, s, &res, &err);
-        iter++;
-    } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.25 && iter < 3);
-
-    gsl_monte_vegas_free(s);
-    gsl_rng_free(r);
-
-    return res;
+    return vegas_integrate(&F, low, up, par->calls_diff);
 }
 
-// Diffractive cross section at fixed x_po (par->fixed_xpo): 6D VEGAS integral.
 double diffractiveCrossSection_xpom(void* p)
 {
     parameters* par = (parameters*)p;
-    size_t calls = par->calls_diff;
-
-    double k_lo_frag = 0.01;
-    par->k_upper_frag = par->pD0 / par->z_h_min;
-    par->log_k_frag = log(par->k_upper_frag / k_lo_frag);
-
-    const gsl_rng_type* T = gsl_rng_default;
-    gsl_rng* r = gsl_rng_alloc(T);
+    set_k_range(par);
 
     gsl_monte_function F;
     F.f      = &integrand_diffractive_xpom;
@@ -79,59 +50,33 @@ double diffractiveCrossSection_xpom(void* p)
     double low[] = {0.,   0.,   0.,   0., b_lo, par->z_h_min};
     double up[]  = {rmax, rmax, 1.0,  1., b_hi, par->z_h_max};
 
-    double res, err;
-    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
-
-    gsl_monte_vegas_integrate(&F, low, up, F.dim, calls/10, r, s, &res, &err);
-
-    int iter = 0;
-    do {
-        gsl_monte_vegas_integrate(&F, low, up, F.dim, calls, r, s, &res, &err);
-        iter++;
-    } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.25 && iter < 3);
-
-    gsl_monte_vegas_free(s);
-    gsl_rng_free(r);
-
-    return res;
+    return vegas_integrate(&F, low, up, par->calls_diff);
 }
 
-// Diffractive cross section at fixed q+: 4D VEGAS integral over {r1, r2, u_k, u_xpo}.
-//  Set par->k_upper before calling.
-double diffractiveCrossSection_fixed_qp(void* p)
+// VEGAS integral of a fixed-q+ diffractive integrand: r1, r2 in [0, 99], the other variables in [0, 1].
+static double vegas_fixed_qp(double (*integrand)(double*, size_t, void*), size_t dim, parameters* par)
 {
-    parameters* par = (parameters*)p;
-    size_t calls = par->calls_diff;
-
-    double k_lo = 0.01;
-    par->log_k = log(par->k_upper / k_lo);
-
-    const gsl_rng_type* T = gsl_rng_default;
-    gsl_rng* r = gsl_rng_alloc(T);
+    par->log_k = log(par->k_upper / K_MIN);
 
     gsl_monte_function F;
-    F.f      = &integrand_diffractive_fixed_qp;
-    F.dim    = 4;
+    F.f      = integrand;
+    F.dim    = dim;
     F.params = par;
 
-    // integration limits for {r1, r2, u_k, u_xpo}
     double rmax = 99.0;
     double low[] = {0.,   0.,   0., 0.};
     double up[]  = {rmax, rmax, 1., 1.};
 
-    double res, err;
-    gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F.dim);
+    return vegas_integrate(&F, low, up, par->calls_diff);
+}
 
-    gsl_monte_vegas_integrate(&F, low, up, F.dim, calls/10, r, s, &res, &err);
+// Diffractive cross section at fixed q+, and at fixed q+ and x_po. Set par->k_upper before calling.
+double diffractiveCrossSection_fixed_qp(void* p)
+{
+    return vegas_fixed_qp(&integrand_diffractive_fixed_qp, 4, (parameters*)p);
+}
 
-    int iter = 0;
-    do {
-        gsl_monte_vegas_integrate(&F, low, up, F.dim, calls, r, s, &res, &err);
-        iter++;
-    } while (fabs(gsl_monte_vegas_chisq(s) - 1.0) > 0.25 && iter < 3);
-
-    gsl_monte_vegas_free(s);
-    gsl_rng_free(r);
-
-    return res;
+double diffractiveCrossSection_fixed_qp_xpom(void* p)
+{
+    return vegas_fixed_qp(&integrand_diffractive_fixed_qp_xpom, 3, (parameters*)p);
 }

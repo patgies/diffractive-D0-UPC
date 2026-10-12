@@ -35,6 +35,8 @@ for proc in $(processes); do
 		{
 			echo "# ${proc} D0 cross section, ${NUCLEUS} target, ${FRAG_TYPE} fragmentation, ${channel_tag} channel"
 			echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+			echo "# photon flux    : dN/dq+ in the q+ integral"
+			echo "# diffractive   : gluon dipole N_g, per d ln(x_po)"
 			echo "# flux_model     : ${FLUX_MODEL} (TARGET=AA)"
 			echo "# scale_factor   : ${SCALE_FACTOR} (fragmentation scale Q = SCALE_FACTOR * m_T)"
 			echo "# calls          : ${proc_calls} (VEGAS calls per point, see CALLS_EXCL/CALLS_EXCL_FACTORIZED/CALLS_DIFF)"

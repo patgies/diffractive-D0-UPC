@@ -7,13 +7,12 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib import ticker
 
-# Total D0 cross section (diffractive + exclusive) for some rapidities,
-
+# Total D0 cross section (diffractive + exclusive) for some rapidities, with its uncertainty band.
 from D0 import (
-    load_results, load_hymnd_sum_band, NUCLEUS, CHANNEL, FRAG_TYPES, LINEWIDTH,
+    load_results, load_hymnd_sum_band, band_label, NUCLEUS, CHANNEL, FRAG_TYPES, LINEWIDTH,
 )
 
-Y_TO_PLOT = [-1.0, 0.0, 1.0, 2.0]   
+Y_TO_PLOT = [-1.0, 0.0, 1.0, 2.0]
 
 
 def main():
@@ -51,9 +50,9 @@ def main():
 
     plt.yscale("log")
     plt.ylim(3e-8, 1.5 * plt.gca().dataLim.y1)   # just above the highest curve
-    plt.xlim(0, 12)   
-    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=14)
-    plt.ylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", labelpad=16)
+    plt.xlim(0, 12)
+    plt.xlabel(r"$p_{D\perp}$ [GeV]", labelpad=14)
+    plt.ylabel(r"$d\sigma/dy\,dp_{D\perp}$ [mb/GeV]", labelpad=11)
     plt.text(0.95, 0.92, f"{NUCLEUS}-{NUCLEUS} 5.36 TeV\nDiffractive\n{CHANNEL}, HymnD",
              transform=plt.gca().transAxes, ha="right", va="top", fontsize=24, linespacing=1.8)
 
@@ -68,7 +67,7 @@ def main():
     y_handles = [Line2D([0], [0], color=colors[y], linestyle=linestyles[y], linewidth=3, label=f"$y={y:g}$")
                  for y in Y_TO_PLOT]
     if hymnd_band:
-        y_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
+        y_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=band_label()))
     plt.legend(handles=y_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0), fontsize=22,
                frameon=False)
 

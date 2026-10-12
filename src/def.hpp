@@ -4,10 +4,18 @@
 #include "interpolation.hpp"
 #include <memory>
 #include <string>
+#include <gsl/gsl_monte.h>
 
 using namespace std;
 
 enum class FragmentationType { BCFY, KniehlKramer, HymnD };
+
+// Upper limit of x_po, and the value above which the dipole amplitude is frozen (x0 of the BK evolution)
+const double XPO_MAX = 0.1;
+const double XPO_FROZEN = 0.01;
+// Lower ends of the logarithmic sampling of the gluon momentum k [GeV] and of x_po
+const double K_MIN = 0.01;
+const double XPO_MIN = 1e-6;
 
 struct parameters
 {
@@ -15,46 +23,41 @@ struct parameters
     double m;    // charm quark mass
     double y;
     double ss;
-    // Number of VEGAS calls. Exclusive: 5D integral below excl_pt_threshold,
-    // 3D integral at or above it (see cross_section_exclusive.cpp).
+    // VEGAS calls. Exclusive: 5D integral below excl_pt_threshold, 3D integral at or above it.
     size_t calls_excl;
     size_t calls_excl_factorized;
     double excl_pt_threshold;
     size_t calls_diff;
-    double m2;   // m*m, saved so it is not computed again each time
+    double m2;   // m*m
 
     // Photon flux and nucleus parameters
     double alpha, Z, mn, S;
     string channel;
     double bmin, bmax, qpmax;
-    // "AA" (default): Pb-Pb, uses Gamma_AA(b) and the EMD factor of the channel.
-    // "pA": proton target, uses Gamma_pA(b) and no EMD factor.
+    // "AA": Pb-Pb, with Gamma_AA(b) and the EMD factor of the channel. "pA": proton target, with Gamma_pA(b).
     string target = "AA";
     // Flux model: "PL" point-like, "WS" Woods-Saxon. "EFF" and "STARLIGHT" are
     // effective fluxes: the sum over b is already done.
     string flux_model = "PL";
 
-    // Fragmentation c -> D0: pD0 is the D0 momentum we measure. The charm quark
-    // has pc = pD0/z_h, and we integrate over z_h from z_h_min to z_h_max.
+    // Fragmentation c -> D0: the charm quark has pc = pD0/z_h, with z_h from z_h_min to z_h_max.
     double pD0;
     FragmentationType frag_type = FragmentationType::BCFY;
     double z_h_min, z_h_max;
-    // D(z_h) at the fragmentation scale (the memory belongs to main).
+    // D(z_h) at the fragmentation scale
     Interpolator* D_frag_interp = nullptr;
 
     // Diffractive: the gluon momentum k goes up to k_upper_frag = pD0/z_h_min,
     // and points with k > pc give zero.
     double k_upper_frag;
-    double log_k_frag;   // log(k_upper_frag / k_lo_frag), set before each integration
+    double log_k_frag;   // log(k_upper_frag / K_MIN)
 
     // Fixed value of x_po, used by the *_xpom functions.
     double fixed_xpo;
 
-    // Fixed-q+ mode (main_fixed_qp.cpp): no flux, no fragmentation;
-    // p is the charm quark's transverse momentum K.
-    double p, p2, mt;                             // K, K^2, sqrt(K^2 + m^2)
-    double kmax, k_upper, log_k;                  // range for the gluon momentum k
-    double denom4, p4m4, two_m2p2m2, inv_denom8;  // parts of H^2 (see integrand_diffractive_fixed_qp)
+    // Fixed-q+ mode (main_fixed_qp.cpp): no flux, no fragmentation; p is the charm quark's transverse momentum.
+    double p, p2, mt;   // p, p^2, sqrt(p^2 + m^2)
+    double kmax, k_upper, log_k;   // range for the gluon momentum k
 };
 
 // For "EFF"/"STARLIGHT" the sum over b is already done. If not, the b integral starts
@@ -70,6 +73,17 @@ inline double b_integration_min(const parameters* par)
     if (par->target == "pA" || par->channel == "PL(AnAn)") return par->bmin;
     return 0.0;
 }
+
+// Settings of D0 and D0_xpom, read from the environment (setup.cpp).
+bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp, double pD0, double y,
+                      const string& frag_tag, const string& channel);
+
+// VEGAS integral of F between low and up, with `calls` points per run (vegas.cpp).
+double vegas_integrate(gsl_monte_function* F, double* low, double* up, size_t calls);
+
+// The two radial integrals of the exclusive process, I_nu = int dr r J_nu(pc r) K_nu(m r) N(r, x_dip)
+// for nu = 0, 1 (integrands.cpp).
+void exclusive_radial_integrals(double pc, double m, double x_dip, AmplitudeLib* dipole, double& I0, double& I1);
 
 // Exclusive, dsigma/(d2pD0 dy): 5D VEGAS integral over {r1, r2, u_qp, b, z_h}
 // at low pt, 3D integral over {u_qp, b, z_h} at high pt.
@@ -101,7 +115,7 @@ double photon_flux(double b, double qp, void* p);
 // Effective flux (arXiv:2404.09731 Eq. 4): used in place of the b integral of photon_flux().
 double effective_photon_flux(double qp, void* p);
 
-// Bessel functions, defined in integrands.cpp.
+// Bessel functions (integrands.cpp)
 double Jn(int nu, double x);
 double Kn(int nu, double x);
 
@@ -110,5 +124,8 @@ double Kn(int nu, double x);
 double exclusiveCrossSection_fixed_qp(void* p);
 double integrand_diffractive_fixed_qp(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_fixed_qp(void* p);
+// Same at fixed x_po (par->fixed_xpo): dsigma/dln(x_po), 3D VEGAS integral over {r1, r2, u_k}.
+double integrand_diffractive_fixed_qp_xpom(double* vec, size_t dim, void* p);
+double diffractiveCrossSection_fixed_qp_xpom(void* p);
 
 #endif

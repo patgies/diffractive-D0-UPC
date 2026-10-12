@@ -14,8 +14,7 @@ from matplotlib.ticker import MultipleLocator, ScalarFormatter
 
 
 # Reads the output of run_proton.sh (TARGET=pA).
-from D0 import read_rapidity, alphas_run, alphae, mc, e_c, Nc, _scale_combos, SCALE_FACTOR_TAGS
-from RpA import sigma0
+from D0 import read_rapidity, proton_prefactor, _scale_combos, SCALE_FACTOR_TAGS
 
 PROCESS = os.environ.get("PROCESS", "sum")
 PPB_DIR = os.environ.get("PPB_DIR", "../output/pPb/central_values")
@@ -28,10 +27,11 @@ FRAG_SCHEMES = [
     ("KniehlKramer", "KK", "#1b7837", "--"),
     ("HymnD", "HymnD", "#b2182b", ":"),
 ]
-PROCESS_LABELS = {
-    "sum": "exclusive + diffractive",
-    "exclusive": "exclusive",
-    "diffractive": r"diffractive$_{\mbox{\fontsize{13.5}{13.5}\selectfont TMD}}$",
+# Text in the second panel: "Diffractive" is the sum of the two parts, as in the other figures
+PANEL_PROCESS_LABELS = {
+    "sum": "Diffractive",
+    "exclusive": "Exclusive",
+    "diffractive": r"Diffractive$_{\mbox{\fontsize{13.5}{13.5}\selectfont TMD}}$",
 }
 
 
@@ -40,15 +40,6 @@ class TrimmedFormatter(ScalarFormatter):
     def _set_format(self):
         super()._set_format()
         self.format = re.sub(r"%1\.\d+f", "%g", self.format)
-
-
-def proton_prefactor(process, pt, mu_r_factor=1.0):
-    """Prefactor for a proton target (sigma0 in mb). Only the diffractive one has alpha_s,
-    at the scale mu_r_factor * m_T."""
-    if process == "exclusive":
-        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
-    alphas = alphas_run(mu_r_factor * math.sqrt(pt**2 + mc**2))
-    return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
 
 
 def load_pPb(process, frag, data_dir, mu_r_factor=1.0):
@@ -111,12 +102,11 @@ def scale_band(frag):
     return {key: (min(v[key] for v in all_values), max(v[key] for v in all_values)) for key in keys}
 
 
-def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, left=0.015, process_text=None,
-                flux_text=None):
+def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=None, second_panel_text=None):
     """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
-    The legend goes in the first panel: upper left, or on the right under the pT label.
-    flux_text goes in the first panel, under its pT label."""
+    The legend goes in the upper left of the first panel. flux_text goes in the first panel, under
+    its pT label; second_panel_text in the upper left corner of the second one."""
     fig, axes = plt.subplots(3, 2, figsize=(16, 17), sharex=True)
 
     # Texts at the top of a panel: (bins under the text, fraction of the height that is free below it).
@@ -124,19 +114,10 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
     on_the_right = lambda y_lo, y_hi: y_hi > -0.4
     on_the_left = lambda y_lo, y_hi: y_lo < -1
     has_band = any(bands[frag] for frag in bands)
-    texts = [(on_the_right, 0.77)]   # the pT label
-    first_panel_texts = list(texts)
-    if legend_side == "split":   # pT label on the right, legend in the upper left (its last line is the widest)
-        first_panel_texts = [(on_the_right, 0.77), (on_the_left, 0.42 if has_band else 0.6),
-                             (lambda y_lo, y_hi: y_lo < 1, 0.5 if has_band else 1.0)]
-    elif legend_side == "right":
-        first_panel_texts.append((lambda y_lo, y_hi: y_hi > 0, 0.47 if has_band else 0.43))   # legend under the pT label
-        if process_text:
-            first_panel_texts.append((on_the_left, 0.84))
-    else:
-        first_panel_texts.append((on_the_left, 0.38 if has_band else 0.52))   # legend in the upper left
-        if process_text:
-            first_panel_texts.append((on_the_right, 0.72))
+    texts = [(on_the_right, 0.77)]
+    # first panel: pT label on the right, legend in the upper left (its last line is the widest)
+    first_panel_texts = [(on_the_right, 0.77), (on_the_left, 0.42 if has_band else 0.6),
+                         (lambda y_lo, y_hi: y_lo < 1, 0.5 if has_band else 1.0)]
 
     for ax, (pt_lo, pt_hi) in zip(axes.flat, PT_BINS):
         bin_top = {y_bin: 0.0 for y_bin in Y_BINS}   # highest point of each y bin
@@ -160,7 +141,9 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
         y_max = 1.12 * max(bin_top.values())
         panel_texts = first_panel_texts if ax is axes.flat[0] else texts
         if flux_text and ax is axes.flat[0]:
-            panel_texts = panel_texts + [(on_the_right, 0.66)]   # the flux text under the pT label
+            panel_texts = panel_texts + [(on_the_right, 0.66)]
+        if second_panel_text and ax is axes.flat[1]:
+            panel_texts = panel_texts + [(on_the_left, 0.77)]
         for under_text, free_below in panel_texts:
             y_max = max([y_max] + [top / free_below for y_bin, top in bin_top.items() if under_text(*y_bin)])
         ax.set_ylim(0, y_max)
@@ -174,33 +157,26 @@ def draw_panels(averages, bands, outname, legend_side="right", ylabel_x=0.022, l
             ax.yaxis.get_offset_text().set(fontsize=30, color="black")   # the x10^n stays black, unlike the ticks
             ax.yaxis.OFFSETTEXTPAD = 8
         ax.yaxis.set_major_formatter(formatter)
-        ax.text(0.95, 0.93, rf"$p_{{D^0\perp}} \in ({pt_lo:g}, {pt_hi:g})$ GeV", transform=ax.transAxes,
+        ax.text(0.95, 0.93, rf"$p_{{D\perp}} \in ({pt_lo:g}, {pt_hi:g})$ GeV", transform=ax.transAxes,
                 ha="right", va="top", fontsize=27)
 
     frag_handles = [Line2D([0], [0], color=color, linestyle=linestyle, lw=3, label=label)
                     for _, label, color, linestyle in FRAG_SCHEMES]
     if has_band:
-        frag_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
-    if process_text:   # in the first panel, on the side that the legend does not use
-        x, y, ha = (0.05, 0.93, "left") if legend_side == "right" else (0.95, 0.82, "right")
-        axes.flat[0].text(x, y, process_text, transform=axes.flat[0].transAxes, ha=ha, va="top", fontsize=25)
+        frag_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none",
+                                  label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
     if flux_text:
-        axes.flat[0].text(0.95, 0.81, flux_text, transform=axes.flat[0].transAxes, ha="right", va="top", fontsize=25)
-    if legend_side == "split":
-        axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=25,
-                            frameon=False)
-    elif legend_side == "right":
-        axes.flat[0].legend(handles=frag_handles, loc="upper right", bbox_to_anchor=(1.0, 0.87), fontsize=22,
-                            frameon=False)
-    else:
-        axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=22, frameon=False)
-
+        axes.flat[0].text(0.95, 0.79, flux_text, transform=axes.flat[0].transAxes, ha="right", va="top", fontsize=25)
+    if second_panel_text:
+        axes.flat[1].text(0.05, 0.93, second_panel_text, transform=axes.flat[1].transAxes, ha="left", va="top",
+                          fontsize=27)
+    axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=25, frameon=False)
 
     for ax in axes[-1]:
         ax.set_xlabel(r"$y$", labelpad=12, fontsize=34)
-    fig.supylabel(r"$d\sigma/dy\,dp_{D^0\perp}$ [mb/GeV]", fontsize=34, x=ylabel_x)
+    fig.supylabel(r"$d\sigma/dy\,dp_{D\perp}$ [mb/GeV]", fontsize=34, x=ylabel_x)
 
-    plt.tight_layout(h_pad=1.5, w_pad=3.0, rect=(left, 0, 1, 1))
+    plt.tight_layout(h_pad=0.3, w_pad=3.0, rect=(left, 0, 1, 1))
     plt.savefig(outname, bbox_inches="tight")
     print(f"Saved: {outname}")
 
@@ -212,7 +188,8 @@ def main():
         sys.exit(f"No data found in {PPB_DIR} -- run TARGET=pA ../run_scripts/run_proton.sh first.")
 
     suffix = "" if PROCESS == "sum" else f"_{PROCESS}"
-    draw_panels(averages, bands, f"../plots/D0_bins_pPb{suffix}.pdf", legend_side="split")
+    draw_panels(averages, bands, f"../plots/D0_bins_pPb{suffix}.pdf",
+                second_panel_text=f"{PANEL_PROCESS_LABELS[PROCESS]} p-Pb")
 
 
 if __name__ == "__main__":

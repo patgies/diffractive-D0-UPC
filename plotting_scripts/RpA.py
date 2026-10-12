@@ -10,28 +10,14 @@ from matplotlib.transforms import blended_transform_factory
 from matplotlib.ticker import FuncFormatter
 
 from D0 import (
-    read_rapidity, alphae, mc, e_c, Nc, load_results, _summed_results,
-    load_bk_band, load_bk_sum_band, CHANNEL, CENTRAL_DIR,
+    read_rapidity, proton_prefactor, load_results, _summed_results,
+    A_NUCLEUS, NUCLEUS, CHANNEL, CENTRAL_DIR,
 )
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))   # alphas_running.py
-from alphas_running import alphas_run
-
-sigma0 = 16.36
-
-
-def proton_prefactor(process, pt):
-    """Prefactor for a proton target. sigma0 is already in mb (no GEVSQR_TO_MB)."""
-    if process == "exclusive":
-        return alphae * Nc * e_c**2 * sigma0 / (2 * math.pi**2)
-    elif process == "diffractive":
-        alphas = alphas_run(math.sqrt(pt**2 + mc**2))
-        return alphas * alphae * e_c**2 * (Nc**2 - 1) * sigma0 / (8 * math.pi**4)
-    raise ValueError(f"unknown process {process}")
 
 # R_pA = dsigma_AA / (A * dsigma_pA), both with the same nuclear photon flux. Numerator:
-# Pb+Pb sum (D0.py); denominator: run_proton.sh (TARGET=AA) output, no b_d integral.
+# Pb+Pb results (D0.py); denominator: run_proton.sh (TARGET=AA) output, no b_d integral.
 
-A_PB = 208
+A_PB = A_NUCLEUS[NUCLEUS]
 Y_TO_PLOT = [0.0, 0.5, 1.0, 1.5, 2.0]
 
 PROTON_DIR = os.environ.get("PROTON_DIR", f"../output/{CHANNEL}/proton_baseline")
@@ -76,13 +62,9 @@ def make_plot(process):
     if process == "sum":
         aa_results = _summed_results(CENTRAL_DIR, "HymnD")
         pa_results = load_proton_baseline_sum("HymnD")
-        bk_band = load_bk_sum_band("HymnD")
-        label = "exclusive + diffractive"
     else:
         aa_results = load_results(process, "HymnD")
         pa_results = load_proton_baseline(process, "HymnD")
-        bk_band = load_bk_band(process, "HymnD")
-        label = process
 
     y_values = sorted(y for y in set(aa_results) & set(pa_results) if y in Y_TO_PLOT)
     if not y_values:
@@ -104,27 +86,18 @@ def make_plot(process):
         r_pa = [aa_points[pt] / (A_PB * pa_points[pt]) for pt in pt_values]
         plt.plot(pt_values, r_pa, color=colors[y], linestyle=y_linestyles[y], linewidth=2)
 
-        if y in bk_band:
-            bk_pt, bk_mean, bk_std = bk_band[y]
-            rel_bk = {pt: s / m for pt, m, s in zip(bk_pt, bk_mean, bk_std) if m > 0}
-            band_pt = [pt for pt in pt_values if pt in rel_bk]
-            band_r = [aa_points[pt] / (A_PB * pa_points[pt]) for pt in band_pt]
-            band_rel = [rel_bk[pt] for pt in band_pt]
-            lower = [r * (1 - rel) for r, rel in zip(band_r, band_rel)]
-            upper = [r * (1 + rel) for r, rel in zip(band_r, band_rel)]
-            plt.fill_between(band_pt, lower, upper, color=colors[y], alpha=0.25, linewidth=0)
 
     plt.axhline(1.0, color="gray", linestyle=":", linewidth=1)
     plt.xlim(0, 12)
     plt.xticks([0, 2, 4, 6, 8, 10, 12])
-    if process == "diffractive":
+    if process in ("diffractive", "sum"):
         plt.ylim(0.4, 1.15)
     else:
         plt.ylim(bottom=0.85)
     plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
 
-    plt.xlabel(r"$p_{D^0\perp}$ [GeV]", labelpad=15)
-    plt.ylabel(r"$R_{pA}$", labelpad=15)
+    plt.xlabel(r"$p_{D\perp}$ [GeV]", labelpad=15)
+    plt.ylabel(r"$R_{pA}$", labelpad=10)
 
     y_handles = [Line2D([0], [0], color=colors[y], linestyle=y_linestyles[y], linewidth=2, label=f"$y={y:g}$")
                  for y in y_values]
@@ -134,10 +107,12 @@ def make_plot(process):
     if process == "sum":
         ax.text(0.95, 0.93, "Diffractive", transform=ax.transAxes, ha="right", va="top", fontsize=23)
     if process == "diffractive":
-        ax.text(0.95, 0.93, r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$", transform=ax.transAxes, ha="right", va="top", fontsize=23)
+        ax.text(0.95, 0.93, r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$", transform=ax.transAxes,
+                ha="right", va="top", fontsize=23)
+    if process in ("diffractive", "sum"):
         plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 0.03), fontsize=20, frameon=False)
     else:
-        plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 1.16 if process == "sum" else 1.04),
+        plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 1.04),
                    fontsize=20, frameon=False, bbox_transform=blended_transform_factory(ax.transAxes, ax.transData))
 
     plt.tight_layout()

@@ -43,7 +43,7 @@ SCAN_DIR = "../output/flux_scan"
 def load_table(path):
     rows = [l.split() for l in open(path) if l.strip() and not l.startswith("#")]
     a = np.array(rows, dtype=float)
-    return {"y4": a[:, 2], "AnAn": a[:, 3], "An0n": a[:, 4]}
+    return {"y4": a[:, 2], "AnAn": a[:, 3], "An0n": a[:, 4], "0n0n": a[:, 5]}
 
 
 def interp_flux(tab, key, y):
@@ -76,21 +76,19 @@ def load_scan(fn):
     return {k: (np.array([p[0] for p in v]), np.array([p[1] for p in v])) for k, v in d.items()}
 
 
-PL = load_table(os.path.join(TABLE_DIR, "log-flux-tbl-PL.dta"))
-WS = load_table(os.path.join(TABLE_DIR, "log-flux-tbl-WS.dta"))
-scan = {"PL(AnAn)": load_scan(os.path.join(SCAN_DIR, "flux_scan_PL.dat"))["PL(AnAn)"]}
+# AnAn, An0n and 0n0n (EMD from Starlight v313)
+WS = load_table(os.path.join(TABLE_DIR, "log-flux-tbl-PbPb-5.36-TeV-WS.dta"))
+scan = {}
 eff = load_scan(os.path.join(SCAN_DIR, "flux_scan_EFF.dat"))
 for ch in ["AnAn", "An0n", "Xn0n", "0n0n"]:
     scan[ch] = eff[ch]
 
 XN0N_ENTRY = ("Xn0n", None, None, r"$Xn0n$")
-ZN0N_ENTRY = ("0n0n", None, None, r"$0n0n$")
 
 PAIRS = [
-    ("PL(AnAn)", PL, "AnAn", r"PL$(AnAn)$"),
     ("AnAn",     WS, "AnAn", r"$AnAn$"),
     ("An0n",     WS, "An0n", r"$An0n$"),
-    ZN0N_ENTRY,
+    ("0n0n",     WS, "0n0n", r"$0n0n$"),
     XN0N_ENTRY,
 ]
 CHANNEL_COLORS = {
@@ -116,7 +114,8 @@ if __name__ == "__main__":
 
     YMIN = 1e-3
     RATIO_STYLE = {"AnAn":     dict(lw=1.5),
-                   "An0n":     dict(lw=1.5)}
+                   "An0n":     dict(lw=1.5),
+                   "0n0n":     dict(lw=1.5)}
     fig, (ax, axr) = plt.subplots(2, 1, figsize=(8, 9.5), sharex=True, gridspec_kw={"height_ratios": [4, 1]})
     yy = np.logspace(-4, 0, 400)
     for ch, tab, key, label in PAIRS:
@@ -136,8 +135,9 @@ if __name__ == "__main__":
         ax.plot(y, y * f, color=color, **OURS_STYLE)
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_ylim(YMIN, 2.5e2); ax.set_xlim(1e-4, 0.1)
-    ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
-    ax.text(0.95, 0.93, "Pb-Pb 5.36 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=26)
+    ax.set_ylabel(r"$z_\gamma\,F(z_\gamma)$", labelpad=8)
+    ax.text(0.96, 0.96, "Pb-Pb 5.36 TeV" + "\n" + r"$\sigma_{NN} = 90.85$ mb",   # sigma_NN of the Starlight tables
+            transform=ax.transAxes, ha="right", va="top", fontsize=23, linespacing=1.4)
     for a in (ax, axr):
         a.tick_params(labelsize=26)
         a.tick_params(axis="x", pad=9)
@@ -158,17 +158,17 @@ if __name__ == "__main__":
 
     channel_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], lw=3, ls="-", label=label) for ch, _, _, label in PAIRS]
     source_handles = [Line2D([], [], color="0.3", **OURS_STYLE, label=r"$P_b$ (Baur \textit{et al.})"),
-                       Line2D([], [], color="0.3", **TABLE_STYLE, label=r"Starlight (Eskola \textit{et al.})")]
-    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.215),
+                       Line2D([], [], color="0.3", **TABLE_STYLE, label=r"STARlight (Eskola \textit{et al.})")]
+    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.29),
                                 fontsize=18, labelspacing=0.55, frameon=False)
     ax.add_artist(channel_legend)
-    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.0),
+    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.03),
               fontsize=18, labelspacing=0.55, title="Model", title_fontsize=18, frameon=False)
     ratio_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], ls="-", **RATIO_STYLE[ch], label=label)
                      for ch, _, _, label in PAIRS if ch in RATIO_STYLE]
     axr.legend(handles=ratio_handles, loc="upper left", bbox_to_anchor=(0.0, 1.04), ncol=3, fontsize=20,
                frameon=False, handlelength=1.8, columnspacing=1.2)
-    axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/Starlight", labelpad=15, fontsize=20); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
+    axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/STARlight", labelpad=15, fontsize=20); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
     axr.set_yscale("linear"); axr.set_ylim(0.98, 1.02)
     axr.yaxis.set_major_locator(FixedLocator([0.98, 1.0, 1.02]))
     axr.yaxis.set_minor_locator(FixedLocator(np.arange(0.98, 1.0201, 0.005)))

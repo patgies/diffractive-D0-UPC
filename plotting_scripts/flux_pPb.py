@@ -12,8 +12,8 @@ from flux_comparison import load_scan, CHANNEL_COLORS   # also sets the plot sty
 
 SCAN_DIR = "../output/flux_scan"
 CURVES = [   # AnAn first, so the dotted PL curve is drawn on top of it
-    ("WS", "AnAn", r"$AnAn$", "-"),
-    ("PL", "PL(AnAn)", r"PL$(AnAn)$", ":"),
+    ("WS", "AnAn", "Woods-Saxon", "-"),      # no neutron classes in p+Pb: the labels name the charge distribution
+    ("PL", "PL(AnAn)", "point-like", ":"),
 ]
 
 
@@ -28,8 +28,9 @@ def main():
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_ylim(1e-3, 2.5e2); ax.set_xlim(1e-4, 0.3)
     ax.set_xlabel(r"$z_\gamma$", labelpad=6)
-    ax.set_ylabel(r"$z_\gamma\, dF/dz_\gamma$", labelpad=8)
-    ax.text(0.95, 0.93, "p-Pb 8.16 TeV", transform=ax.transAxes, ha="right", va="top", fontsize=26)
+    ax.set_ylabel(r"$z_\gamma\,F(z_\gamma)$", labelpad=8)
+    ax.text(0.95, 0.95, "p-Pb 8.16 TeV" + "\n" + r"$\sigma_{NN} = 99$ mb", transform=ax.transAxes,
+            ha="right", va="top", fontsize=23, linespacing=1.4)
     for axis in (ax.xaxis, ax.yaxis):
         axis.set_major_locator(LogLocator(base=10.0, numticks=20))
         axis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))

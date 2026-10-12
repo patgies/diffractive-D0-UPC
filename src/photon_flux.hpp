@@ -348,9 +348,9 @@ void init_effective_flux(const std::string& channel, void* par,
                           double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
 
 // FLUX_MODEL=STARLIGHT: reads the effective flux table of P. Paakkinen
-// (arXiv:2404.09731). The table only has AnAn and An0n.
+// (arXiv:2404.09731), with EMD probabilities from Starlight v313. The table has AnAn, An0n and 0n0n.
 void init_starlight_flux(const std::string& channel,
-                         const std::string& filename = "./input/Starlight_photon_flux/log-flux-tbl-WS.dta");
+                         const std::string& filename = "./input/Starlight_photon_flux/log-flux-tbl-PbPb-5.36-TeV-WS.dta");
 
 // Effective flux dN/domega. The sum over b is already done.
 double effective_photon_flux(double qp, void* par);

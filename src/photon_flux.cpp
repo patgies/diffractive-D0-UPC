@@ -173,7 +173,6 @@ void init_ws_form_factor(double RA_fm, double a_fm, double mn)
     ws_r_switch = (std::getenv("WS_RSWITCH_FM") ? std::atof(std::getenv("WS_RSWITCH_FM")) : 14.2) / hbarc;
     double a_GeV = a_fm / hbarc;
     ws_form_factor.reset(new WSFormFactor(ws_RA, a_GeV, WS_QMAX));
-    // The r grid stops at that radius (above it we use the point-like flux).
     // Grid sizes can be changed for tests with WS_NZ, WS_NB.
     int nz_gamma = std::getenv("WS_NZ") ? std::atoi(std::getenv("WS_NZ")) : 160;
     int nr = std::getenv("WS_NB") ? std::atoi(std::getenv("WS_NB")) : 260;
@@ -246,18 +245,19 @@ void init_starlight_flux(const std::string& channel, const std::string& filename
     int col;
     if      (channel == "AnAn") col = 3;
     else if (channel == "An0n") col = 4;
-    else throw std::runtime_error("FLUX_MODEL=STARLIGHT: the table only has AnAn and An0n, not " + channel);
+    else if (channel == "0n0n") col = 5;
+    else throw std::runtime_error("FLUX_MODEL=STARLIGHT: the table only has AnAn, An0n and 0n0n, not " + channel);
 
     std::ifstream file(filename);
     if (!file.is_open()) throw std::runtime_error("Could not open file " + filename);
     sl_x.clear(); sl_logf.clear();
     std::string line;
-    // columns: j  y  y^(1/4)  log_AnAn  log_An0n
+    // columns: j  y  y^(1/4)  log_AnAn  log_An0n  log_0n0n
     while (std::getline(file, line)) {
         if (line.empty() || line[0] == '#') continue;
         std::istringstream iss(line);
-        double c[5];
-        if (!(iss >> c[0] >> c[1] >> c[2] >> c[3] >> c[4])) continue;
+        double c[6];
+        if (!(iss >> c[0] >> c[1] >> c[2] >> c[3] >> c[4] >> c[5])) continue;
         sl_x.push_back(c[2]);
         sl_logf.push_back(c[col]);
     }

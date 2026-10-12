@@ -1,5 +1,6 @@
 #include "amplitudelib.hpp"
 #include "def.hpp"
+#include <cstdlib>
 #include <string>
 #include <iostream>
 #include <cmath>
@@ -20,10 +21,15 @@ int main(int argc, char* argv[])
     // optional 4th argument: dipole file (default: proton)
     string datafile = (argc > 4) ? argv[4] : "./data/proton/mve.dat";
 
+    // GSL errors off before loading the dipole (see main.cpp)
+    gsl_set_error_handler_off();
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);
 
-    gsl_set_error_handler_off();
+    if (getenv("DIPOLE_X0")) {
+        inst.SetX0(atof(getenv("DIPOLE_X0")));
+    }
+
     gsl_rng_env_setup();
 
     parameters param;
@@ -47,6 +53,7 @@ int main(int argc, char* argv[])
     cout << "# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2p" << endl;
     cout << "# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y fixed" << endl;
     cout << "# x_pom > 0.1 forced to 0 on both sides" << endl;
+    cout << "# diffractive   : gluon dipole N_g, per d ln(x_po)" << endl;
     cout << "# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)" << endl;
     cout << "# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)" << endl;
     cout << "# ------------------------------------------------------------" << endl;
@@ -76,10 +83,6 @@ int main(int argc, char* argv[])
         p.p  = pt;
         p.p2 = pt * pt;
         double p2m2 = p.p2 + p.m2;
-        p.denom4     = p2m2 * p2m2;
-        p.p4m4       = p.p2*p.p2 + p.m2*p.m2;
-        p.two_m2p2m2 = 2.0 * p.m2 * p.p2;
-        p.inv_denom8 = 1.0 / (p.denom4 * p.denom4);
         p.mt   = sqrt(p2m2);
 
         out_excl[idx] = exclusiveCrossSection_fixed_qp(static_cast<void*>(&p));

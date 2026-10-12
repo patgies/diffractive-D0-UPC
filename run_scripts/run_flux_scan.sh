@@ -2,7 +2,6 @@
 # Photon flux scans for plotting_scripts/flux_comparison.py, in output/flux_scan/ (sigma_NN of the Starlight tables by default).
 # Usage: ./run_scripts/run_flux_scan.sh   (GAMMA_AA_FILE=input/WS_photon_flux/Gamma_AA.dat for sigma_NN = 92 mb)
 
-# Defaults of this script
 : "${GAMMA_AA_FILE:=input/WS_photon_flux/Gamma_AA_sigma90.85.dat}"
 : "${FLUX_CHANNELS:=AnAn An0n Xn0n 0n0n}"
 set -e

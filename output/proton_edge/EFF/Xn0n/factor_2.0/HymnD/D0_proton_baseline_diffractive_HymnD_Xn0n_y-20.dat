@@ -1,0 +1,50 @@
+# proton-target baseline for R_pA (same nuclear photon flux as Pb+Pb, TARGET=AA, flux_model=EFF)
+# diffractive D0 cross section, proton target, HymnD fragmentation, Xn0n channel
+# generated      : 2026-10-11 17:22:17 EEST
+# photon flux    : dN/dq+ in the q+ integral (files without this line used dN/domega, sqrt(2) too large)
+# diffractive   : gluon dipole N_g, per d ln(x_po) (files without this line: quark dipole, d x_po)
+# scale_factor   : 2.0 (fragmentation scale Q = SCALE_FACTOR * m_T)
+# dipole file    : data/proton/mve.dat
+# pD0 sweep      : 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 8.5 9.0 9.5 10.0 10.5 11.0 11.5 12.0
+# fixed rapidity y : -2.0
+# ============================================================
+# pD0  dsigma_dyd2pD0_raw
+0.6  2.52469
+1.1  0.902852
+1.3  0.561982
+1.5  0.36004
+1.8  0.189811
+0.3  3.29853
+0.2  3.32428
+2.5  0.04928
+1.9  0.155962
+0.4  3.16627
+2.0  0.127395
+0.5  2.87505
+0.7  2.13126
+0.8  1.75019
+0.9  1.41339
+1.0  1.13595
+1.2  0.717078
+1.4  0.455289
+1.7  0.233853
+1.6  0.292141
+4.5  0.00290616
+6.0  0.00063053
+6.5  0.000401263
+8.5  8.50371e-05
+10.5  2.28666e-05
+10.0  3.14517e-05
+11.5  1.28647e-05
+5.0  0.00168917
+5.5  0.00101192
+7.0  0.00026599
+7.5  0.000176205
+11.0  1.72043e-05
+3.0  0.0214499
+3.5  0.0101557
+4.0  0.00530862
+9.0  6.05577e-05
+8.0  0.000121494
+9.5  4.29827e-05
+12.0  9.58534e-06

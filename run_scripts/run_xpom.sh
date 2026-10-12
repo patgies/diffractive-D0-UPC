@@ -40,6 +40,8 @@ for y in $Y_VALS; do
 			{
 				echo "# ${proc} D0 dsigma/(d2pD0 dy dx_po), ${NUCLEUS} target, ${FRAG_TYPE} fragmentation, ${channel_tag} channel"
 				echo "# generated      : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+				echo "# photon flux    : dN/dq+ in the q+ integral"
+				echo "# diffractive   : gluon dipole N_g, per d ln(x_po)"
 				echo "# flux_model     : ${FLUX_MODEL} (TARGET=AA)"
 				echo "# scale_factor   : ${SCALE_FACTOR} (fragmentation scale Q = SCALE_FACTOR * m_T)"
 				echo "# calls          : ${CALLS_EXCL_FACTORIZED} (exclusive) / ${CALLS_DIFF} (diffractive) VEGAS calls per point"

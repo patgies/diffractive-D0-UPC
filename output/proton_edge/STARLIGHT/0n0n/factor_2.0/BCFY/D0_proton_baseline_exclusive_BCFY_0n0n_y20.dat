@@ -1,0 +1,50 @@
+# proton-target baseline for R_pA (same nuclear photon flux as Pb+Pb, TARGET=AA, flux_model=STARLIGHT)
+# exclusive D0 cross section, proton target, BCFY fragmentation, 0n0n channel
+# generated      : 2026-10-11 17:22:17 EEST
+# photon flux    : dN/dq+ in the q+ integral (files without this line used dN/domega, sqrt(2) too large)
+# diffractive   : gluon dipole N_g, per d ln(x_po) (files without this line: quark dipole, d x_po)
+# scale_factor   : 2.0 (fragmentation scale Q = SCALE_FACTOR * m_T)
+# dipole file    : data/proton/mve.dat
+# pD0 sweep      : 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 8.5 9.0 9.5 10.0 10.5 11.0 11.5 12.0
+# fixed rapidity y : 2.0
+# ============================================================
+# pD0  dsigma_dyd2pD0_raw
+0.2  0.222154
+0.3  0.162432
+0.5  0.0877601
+0.4  0.119817
+0.6  0.0637143
+0.7  0.0457935
+0.8  0.032663
+1.1  0.0115652
+1.2  0.00819163
+0.9  0.0231749
+1.0  0.0163785
+1.4  0.00413789
+1.3  0.00581566
+1.6  0.00214863
+1.8  0.0011037
+1.7  0.00154385
+1.5  0.00294448
+1.9  0.000805834
+2.0  0.000589515
+2.5  0.000134216
+3.0  3.49008e-05
+3.5  9.92543e-06
+8.0  2.69569e-09
+5.5  1.47228e-07
+4.5  1.04426e-06
+5.0  3.79754e-07
+6.0  6.04873e-08
+6.5  2.60565e-08
+7.0  1.17642e-08
+7.5  5.51852e-09
+4.0  3.10052e-06
+8.5  1.34986e-09
+9.0  6.99099e-10
+9.5  3.71829e-10
+10.0  2.02927e-10
+10.5  1.13238e-10
+11.0  6.45143e-11
+11.5  3.74926e-11
+12.0  2.21741e-11
