@@ -155,19 +155,22 @@ def make_plot(process, aa, pa, bk_spread):
              "diffractive": r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$"}[process]
     # (label top, legend anchor): placed where the curves of each process leave room
     (label_x, label_top, label_ha), legend_loc, legend_anchor, ncol = {
-        "sum": ((0.08, 0.9, "left"), "lower right", (0.97, 0.03), 1),
-        "exclusive": ((0.08, 0.9, "left"), "lower right", (0.97, 0.03), 1),
+        "sum": ((0.95, 0.97, "right"), "lower right", (0.97, 0.03), 1),
+        "exclusive": ((0.08, 0.9, "left"), "lower right", (0.97, 0.02), 1),
         "diffractive": ((0.95, 0.78, "right"), "lower right", (0.97, 0.01), 1)}[process]
     if process == "sum":
-        plt.ylim(0.4, 1.1)
+        plt.ylim(0.4, 1.15)
     ax.text(label_x, label_top, label + "\n" + r"$q^+ = 2p^+$", transform=ax.transAxes, ha=label_ha, va="top",
-            fontsize=23, linespacing=1.6)
+            fontsize=25, linespacing=1.6)
     handles = [Line2D([0], [0], color=y_colors.get(y, "0.3"), linestyle=linestyles[y], linewidth=2, label=f"$y={y:g}$")
                for y in y_values]
     band_parts = (["Dipole fit"] if bk_spread.get(process) else []) + ([r"$\mu_R$"] if process == "sum" else [])
     if band_parts:
         handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r" $\oplus$ ".join(band_parts)))
-    plt.legend(handles=handles, loc=legend_loc, bbox_to_anchor=legend_anchor, ncol=ncol, fontsize=20, frameon=False)
+    if process == "exclusive":
+        plt.ylim(bottom=0.6)
+    plt.legend(handles=handles, loc=legend_loc, bbox_to_anchor=legend_anchor, ncol=ncol, fontsize=23, frameon=False,
+               labelspacing=0.3 if process == "exclusive" else None)
 
     plt.tight_layout()
     suffix = "" if process == "sum" else f"_{process}"

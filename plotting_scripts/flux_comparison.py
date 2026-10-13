@@ -137,7 +137,7 @@ if __name__ == "__main__":
     ax.set_ylim(YMIN, 2.5e2); ax.set_xlim(1e-4, 0.1)
     ax.set_ylabel(r"$z_\gamma\,F(z_\gamma)$", labelpad=8)
     ax.text(0.96, 0.96, "Pb-Pb 5.36 TeV" + "\n" + r"$\sigma_{NN} = 90.85$ mb",   # sigma_NN of the Starlight tables
-            transform=ax.transAxes, ha="right", va="top", fontsize=23, linespacing=1.4)
+            transform=ax.transAxes, ha="right", va="top", fontsize=22, linespacing=1.4)
     for a in (ax, axr):
         a.tick_params(labelsize=26)
         a.tick_params(axis="x", pad=9)
@@ -159,15 +159,15 @@ if __name__ == "__main__":
     channel_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], lw=3, ls="-", label=label) for ch, _, _, label in PAIRS]
     source_handles = [Line2D([], [], color="0.3", **OURS_STYLE, label=r"$P_b$ (Baur \textit{et al.})"),
                        Line2D([], [], color="0.3", **TABLE_STYLE, label=r"STARlight (Eskola \textit{et al.})")]
-    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.29),
-                                fontsize=18, labelspacing=0.55, frameon=False)
+    channel_legend = ax.legend(handles=channel_handles, loc="lower left", bbox_to_anchor=(0.02, 0.31),
+                                fontsize=22, labelspacing=0.55, frameon=False)
     ax.add_artist(channel_legend)
-    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.03),
-              fontsize=18, labelspacing=0.55, title="Model", title_fontsize=18, frameon=False)
+    ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.005),
+              fontsize=22, labelspacing=0.55, title="Model", title_fontsize=22, frameon=False)
     ratio_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], ls="-", **RATIO_STYLE[ch], label=label)
                      for ch, _, _, label in PAIRS if ch in RATIO_STYLE]
-    axr.legend(handles=ratio_handles, loc="upper left", bbox_to_anchor=(0.0, 1.04), ncol=3, fontsize=20,
-               frameon=False, handlelength=1.8, columnspacing=1.2)
+    axr.legend(handles=ratio_handles, loc="upper left", bbox_to_anchor=(0.0, 1.04), ncol=3, fontsize=22,
+               frameon=False, handlelength=1.4, columnspacing=0.9)
     axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/STARlight", labelpad=15, fontsize=20); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
     axr.set_yscale("linear"); axr.set_ylim(0.98, 1.02)
     axr.yaxis.set_major_locator(FixedLocator([0.98, 1.0, 1.02]))

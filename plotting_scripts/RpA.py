@@ -103,17 +103,17 @@ def make_plot(process):
                  for y in y_values]
     ax = plt.gca()
     if process == "exclusive":
-        ax.text(0.08, 0.93, "Exclusive", transform=ax.transAxes, ha="left", va="top", fontsize=23)
+        ax.text(0.08, 0.93, "Exclusive", transform=ax.transAxes, ha="left", va="top", fontsize=25)
     if process == "sum":
-        ax.text(0.95, 0.93, "Diffractive", transform=ax.transAxes, ha="right", va="top", fontsize=23)
+        ax.text(0.95, 0.93, "Diffractive", transform=ax.transAxes, ha="right", va="top", fontsize=25)
     if process == "diffractive":
         ax.text(0.95, 0.93, r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$", transform=ax.transAxes,
-                ha="right", va="top", fontsize=23)
+                ha="right", va="top", fontsize=25)
     if process in ("diffractive", "sum"):
-        plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 0.03), fontsize=20, frameon=False)
+        plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 0.03), fontsize=23, frameon=False)
     else:
         plt.legend(handles=y_handles, loc="lower right", bbox_to_anchor=(0.97, 1.04),
-                   fontsize=20, frameon=False, bbox_transform=blended_transform_factory(ax.transAxes, ax.transData))
+                   fontsize=23, frameon=False, bbox_transform=blended_transform_factory(ax.transAxes, ax.transData))
 
     plt.tight_layout()
     suffix = "" if process == "sum" else f"_{process}"

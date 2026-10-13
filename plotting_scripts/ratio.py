@@ -84,7 +84,7 @@ def plot_ratio_panel(ax, y_values, pt_grid, ratio_grid, label):
     contourf = ax.contourf(Y, PT, ratio_grid, levels=20, cmap="Blues")
     line_levels = [0.04, 0.05, 0.06, 0.08, 0.10, 0.12, 0.15, 0.20, 0.25, 0.30, 0.35]
     contour_lines = ax.contour(Y, PT, ratio_grid, levels=line_levels, colors="navy",
-                                linestyles="-", linewidths=0.6, alpha=0.7)
+                                linestyles="-", linewidths=0.6, alpha=0.4)
     # labels in black, bold and horizontal
     contour_labels = ax.clabel(contour_lines, inline=True, fontsize=14, colors="black",
                                fmt=lambda v: r"\textbf{%.2f}" % v,
@@ -98,13 +98,13 @@ def plot_ratio_panel(ax, y_values, pt_grid, ratio_grid, label):
     ticks = colorbar.get_ticks()
     colorbar.set_ticks(ticks)
     colorbar.ax.set_yticklabels(["0" if abs(tick) < 1e-9 else f"{tick:.2f}" for tick in ticks])   # 0, not 0.00
-    colorbar.ax.tick_params(which="both", color="black", labelsize=25)
+    colorbar.ax.tick_params(which="both", color="black", labelsize=21)
     ax.tick_params(which="both", color="black")
 
-    ax.set_xlabel(r"$y$", fontsize=28)
-    ax.set_ylabel(r"$p_{D\perp}$ [GeV]", fontsize=28, labelpad=10)
-    ax.set_title(label, pad=12, fontsize=24, linespacing=1.5)
-    ax.tick_params(axis="both", labelsize=25)
+    ax.set_xlabel(r"$y$", fontsize=26)
+    ax.set_ylabel(r"$p_{D\perp}$ [GeV]", fontsize=26, labelpad=10)
+    ax.set_title(label, pad=12, fontsize=28, linespacing=1.5)
+    ax.tick_params(axis="both", labelsize=23)
     ax.tick_params(axis="y", pad=9)
     plt.setp(ax.get_xticklabels(), fontweight="normal")
     plt.setp(ax.get_yticklabels(), fontweight="normal")

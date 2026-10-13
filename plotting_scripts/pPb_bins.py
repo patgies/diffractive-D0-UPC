@@ -106,7 +106,7 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
     """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
     The legend goes in the upper left of the first panel. flux_text goes in the first panel, under
-    its pT label; second_panel_text in the upper left corner of the second one."""
+    its pT label; second_panel_text in the second one, also under its pT label."""
     fig, axes = plt.subplots(3, 2, figsize=(16, 17), sharex=True)
 
     # Texts at the top of a panel: (bins under the text, fraction of the height that is free below it).
@@ -143,7 +143,7 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
         if flux_text and ax is axes.flat[0]:
             panel_texts = panel_texts + [(on_the_right, 0.66)]
         if second_panel_text and ax is axes.flat[1]:
-            panel_texts = panel_texts + [(on_the_left, 0.77)]
+            panel_texts = panel_texts + [(on_the_right, 0.66)]
         for under_text, free_below in panel_texts:
             y_max = max([y_max] + [top / free_below for y_bin, top in bin_top.items() if under_text(*y_bin)])
         ax.set_ylim(0, y_max)
@@ -158,7 +158,7 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
             ax.yaxis.OFFSETTEXTPAD = 8
         ax.yaxis.set_major_formatter(formatter)
         ax.text(0.95, 0.93, rf"$p_{{D\perp}} \in ({pt_lo:g}, {pt_hi:g})$ GeV", transform=ax.transAxes,
-                ha="right", va="top", fontsize=27)
+                ha="right", va="top", fontsize=30)
 
     frag_handles = [Line2D([0], [0], color=color, linestyle=linestyle, lw=3, label=label)
                     for _, label, color, linestyle in FRAG_SCHEMES]
@@ -166,11 +166,11 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
         frag_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none",
                                   label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"))
     if flux_text:
-        axes.flat[0].text(0.95, 0.79, flux_text, transform=axes.flat[0].transAxes, ha="right", va="top", fontsize=25)
+        axes.flat[0].text(0.95, 0.79, flux_text, transform=axes.flat[0].transAxes, ha="right", va="top", fontsize=30)
     if second_panel_text:
-        axes.flat[1].text(0.05, 0.93, second_panel_text, transform=axes.flat[1].transAxes, ha="left", va="top",
-                          fontsize=27)
-    axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=25, frameon=False)
+        axes.flat[1].text(0.95, 0.79, second_panel_text, transform=axes.flat[1].transAxes, ha="right", va="top",
+                          fontsize=30)
+    axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=28, frameon=False)
 
     for ax in axes[-1]:
         ax.set_xlabel(r"$y$", labelpad=12, fontsize=34)

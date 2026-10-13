@@ -30,12 +30,12 @@ def main():
     ax.set_xlabel(r"$z_\gamma$", labelpad=6)
     ax.set_ylabel(r"$z_\gamma\,F(z_\gamma)$", labelpad=8)
     ax.text(0.95, 0.95, "p-Pb 8.16 TeV" + "\n" + r"$\sigma_{NN} = 99$ mb", transform=ax.transAxes,
-            ha="right", va="top", fontsize=23, linespacing=1.4)
+            ha="right", va="top", fontsize=22, linespacing=1.4)
     for axis in (ax.xaxis, ax.yaxis):
         axis.set_major_locator(LogLocator(base=10.0, numticks=20))
         axis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
 
-    ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.03), fontsize=24, labelspacing=0.9, frameon=False)
+    ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.03), fontsize=22, labelspacing=0.9, frameon=False)
     ax.tick_params(labelsize=26)
     ax.tick_params(axis="x", pad=9)
     ax.tick_params(axis="y", pad=6)
