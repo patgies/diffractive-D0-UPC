@@ -44,8 +44,8 @@ KK_FILE = "../input/KK_EKO/kk_eko_0000.dat"
 HYMND_SET = "prompt-D0-1-109"
 PANELS = [
     (MC, r"$\mu_0=m=1.5$ GeV", None),
-    (np.sqrt(3.0**2 + MC**2), r"$\mu=m_t={:.2f}$ GeV".format(np.sqrt(3.0**2 + MC**2)), r"$p_{D\perp}=3$ GeV"),
-    (np.sqrt(9.0**2 + MC**2), r"$\mu=m_t={:.2f}$ GeV".format(np.sqrt(9.0**2 + MC**2)), r"$p_{D\perp}=9$ GeV"),
+    (np.sqrt(3.0**2 + MC**2), r"$\mu=m_T={:.2f}$ GeV".format(np.sqrt(3.0**2 + MC**2)), r"$p_{D\perp}=3$ GeV"),
+    (np.sqrt(9.0**2 + MC**2), r"$\mu=m_T={:.2f}$ GeV".format(np.sqrt(9.0**2 + MC**2)), r"$p_{D\perp}=9$ GeV"),
 ]
 COLORS = {"BCFY": "#2166ac", "KK": "#b2182b", "HymnD": "#1a7f4b"}
 

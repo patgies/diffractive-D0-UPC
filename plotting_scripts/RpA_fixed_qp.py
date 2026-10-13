@@ -18,7 +18,7 @@ from D0 import prefactor, nuclear_edge_factor, alphas_run, mc, SIGMA0_MB, GEVSQR
 from RpA import A_PB, Y_TO_PLOT
 
 CHARM_DIR = os.environ.get("CHARM_DIR", "../output/charm")
-MU_R_FACTORS = [0.5, 1.0, 2.0]   # renormalization-scale variation, mu_R = factor * m_t
+MU_R_FACTORS = [0.5, 1.0, 2.0]   # renormalization-scale variation, mu_R = factor * m_T
 # BK posterior samples: member_NNNN/ folders with the layout of output/charm/, each from the Pb dipoles
 # data/Pb/bk_posterior/member_NNNN/ and the proton dipole data/proton/bk_posterior/member_NNNN.dat (see README)
 BK_DIR = os.environ.get("BK_DIR", "../output/charm_bk")

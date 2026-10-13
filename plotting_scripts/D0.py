@@ -417,7 +417,7 @@ def band_label():
                    or glob.glob(f"{OUTPUT_BASE}/{CHANNEL}/bk_band/member_*"))
     if has_members:
         return r"Scale $\oplus$ FF $\oplus$ dipole fit"
-    return r"$\mu_F, \mu_R \in [0.5, 2]\, m_t$"
+    return r"$\mu_F, \mu_R \in [0.5, 2]\, m_T$"
 
 
 def load_hymnd_band(process, frag="HymnD"):
