@@ -7,6 +7,5 @@ __pycache__/
 run_scripts/roihu/
 
 .vscode/
-notes/
 plots/flux_vs_distance.pdf
 plotting_scripts/flux_vs_distance.py

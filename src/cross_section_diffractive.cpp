@@ -4,10 +4,13 @@
 
 using namespace std;
 
-// Range of the logarithmic sampling of the gluon momentum k, up to pD0/z_h_min.
+// Range of the logarithmic sampling of k, up to k_cut_factor * m_T at pc = pD0/z_h_min, which is above
+// both cuts (k_cut_factor * p and k_cut_factor * m_T); K_MAX_NOCUT without a cut.
 static void set_k_range(parameters* par)
 {
-    par->k_upper_frag = par->pD0 / par->z_h_min;
+    double pc_max = par->pD0 / par->z_h_min;
+    par->k_upper_frag = (par->k_cut_factor > 0.0) ? par->k_cut_factor * sqrt(pc_max*pc_max + par->m2)
+                                                  : K_MAX_NOCUT;
     par->log_k_frag = log(par->k_upper_frag / K_MIN);
 }
 

@@ -1,0 +1,156 @@
+\documentclass[12pt]{article}
+\usepackage[margin=0.3in,top=0.25in,bottom=0.4in]{geometry}
+\makeatletter
+\renewcommand{\@maketitle}{\newpage\null\vskip -3.5em\begin{center}{\LARGE \@title \par}\end{center}\par\vskip 0.2em}
+\makeatother
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+\newcommand{\xpo}{x_{\mathbb{P}}}
+
+\title{Two fixes in the diffractive (TMD) integrand}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{In short}
+
+Compared with the derivation in Ref.~[3] (Caucal, Gimeno-Estivill, Iancu, Lappi, Salazar,
+arXiv:2606.04169), the diffractive (TMD) part of the code has two errors:
+\begin{enumerate}
+\item[(a)] it uses the \textbf{quark} dipole amplitude $\mathcal{N}$ instead of the \textbf{gluon}
+  dipole amplitude $\mathcal{N}_g=2\mathcal{N}-\mathcal{N}^2$;
+\item[(b)] it integrates over $\mathrm{d}\xpo$ instead of $\mathrm{d}\ln\xpo$, i.e.\ with an extra factor
+  $\xpo$ in the integrand.
+\end{enumerate}
+Both make the diffractive TMD cross section too small. The exclusive part is correct. After the fix,
+all diffractive results have to be recomputed.
+
+\section*{1. The formula of Ref.~[3]}
+
+At fixed photon energy, Eqs.~(3.38) and (3.43)--(3.45) of Ref.~[3] give
+\[
+  \frac{\mathrm{d}\sigma}{\mathrm{d}z_1\mathrm{d}z_2\,\mathrm{d}^2K\,\mathrm{d}^2P\,\mathrm{d}\ln(1/x)}
+  =\mathcal{H}\,\frac{\mathrm{d}\,xG_{\mathbb{P}}}{\mathrm{d}^2K},\qquad
+  \frac{\mathrm{d}\,xG_{\mathbb{P}}}{\mathrm{d}^2K}=\frac{S_\perp(N_c^2-1)}{8\pi^4(1-x)}\,G^2,
+\]
+\[
+  G=\Omega^2\int_0^\infty\mathrm{d}R_\perp\,R_\perp\,J_2(K_\perp R_\perp)\,K_2(\Omega R_\perp)\,
+  \mathcal{N}_g(R_\perp,\xpo),\qquad \Omega^2=\frac{x}{1-x}K_\perp^2 .
+\]
+The code agrees with this in the hard factor $\mathcal{H}$, in $\Omega^2$, in the radial integral, in
+$1/(1-x)$ and in the prefactor $S_\perp(N_c^2-1)/(8\pi^4)$. It differs in two places.
+
+\section*{2. (a) Quark vs.\ gluon dipole}
+
+In the diffractive process the $q\bar q g$ system scatters effectively as a gluon-gluon dipole, so $G$
+contains $\mathcal{N}_g=2\mathcal{N}-\mathcal{N}^2$ (large $N_c$). The code called
+\texttt{dipole->N(r, x)}, the quark dipole. AmplitudeLib already provides the gluon dipole as
+\texttt{N\_A(r, x)}.
+
+\textbf{Why $\mathcal{N}_g>\mathcal{N}$.} A gluon carries more colour charge than a quark, so a
+gluon--gluon dipole interacts more strongly with the target than a quark--antiquark dipole of the same
+size. At large $N_c$ a gluon behaves like a quark--antiquark pair at the same point, so the gluon
+dipole passes through the target without scattering only if both of its quark dipoles do. The
+``survival'' amplitudes $S=1-\mathcal{N}$ therefore multiply:
+\[
+  S_g=S^2\quad\Longrightarrow\quad 1-\mathcal{N}_g=(1-\mathcal{N})^2\quad\Longrightarrow\quad
+  \mathcal{N}_g=2\mathcal{N}-\mathcal{N}^2\,.
+\]
+The difference is $\mathcal{N}_g-\mathcal{N}=\mathcal{N}(1-\mathcal{N})\geq0$, because
+$0\leq\mathcal{N}\leq1$; the two are equal only at $\mathcal{N}=0$ (no scattering) and
+$\mathcal{N}=1$ (saturation).
+\begin{itemize}
+\item \textbf{Small dipoles} (dilute, $\mathcal{N}\ll1$): $\mathcal{N}_g\approx2\mathcal{N}$. The factor 2
+  is the ratio of colour charges, $C_A/C_F=9/4$, which is 2 at large $N_c$. In the cross section
+  ($\propto G^2\propto\mathcal{N}_g^2$) this is a factor $\approx4$.
+\item \textbf{Large dipoles} (saturated, $\mathcal{N}\to1$): both go to 1, since nothing can scatter with
+  more than 100\% probability, and the gain disappears.
+\end{itemize}
+Equivalently, the gluon dipole saturates earlier: $Q_{s,g}^2\approx(C_A/C_F)\,Q_s^2\approx2\,Q_s^2$.
+
+The fix therefore always increases the cross section, by a factor between 1 and 4. Computed with our dipole amplitudes, the factor $(G[\mathcal{N}_g]/G[\mathcal{N}])^2$ is:
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+$K_\perp$ [GeV] & proton, $\xpo=10^{-2}$ & proton, $\xpo=10^{-3}$ & Pb centre, $\xpo=10^{-2}$ \\
+\midrule
+0.3 & 1.2--2.0 & 1.25--1.95 & 1.06--1.4 \\
+1.0 & 2.8--3.5 & 2.6--3.3   & 1.7--2.7 \\
+3.0 & 3.8--4.0 & 3.7--3.9   & 3.4--3.8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+(ranges over $x=0.1$--$0.9$). It approaches 4 for small dipoles ($\mathcal{N}_g\approx2\mathcal{N}$) and
+1 near saturation. It is smaller for Pb than for the proton, so the diffractive $R_{pA}$ changes as
+well: nuclear suppression becomes stronger.
+
+\section*{3. (b) The $\xpo$ measure}
+
+For given photon momentum and quark kinematics, $x=x_{q\bar q}/\xpo$ with
+$x_{q\bar q}=M_{q\bar q}^2/W^2$ fixed. Hence $\ln(1/x)=\ln\xpo-\ln x_{q\bar q}$ and
+\[
+  \mathrm{d}\ln(1/x)=\mathrm{d}\ln\xpo\quad\Longrightarrow\quad
+  \sigma=\int\mathrm{d}\ln\xpo\;f=\int\frac{\mathrm{d}\xpo}{\xpo}\;f\,,\qquad
+  f=\mathcal{H}\,\frac{\mathrm{d}\,xG_{\mathbb{P}}}{\mathrm{d}^2K}=\frac{\mathrm{d}\sigma}{\mathrm{d}\ln\xpo}\,.
+\]
+The code samples $\xpo$ logarithmically, $\xpo=x_{\min}e^{uL}$ with $u\in[0,1]$ and
+$L=\ln(0.1/x_{\min})$. The Jacobian for $\int\mathrm{d}\ln\xpo$ is $L$, while the code used
+$\xpo L$ (\texttt{x\_po * log\_xpo\_range}), i.e.\ it computed $\int\mathrm{d}\xpo\,f$: an extra factor
+$\xpo\leq0.1$ in the integrand. Correct: \texttt{log\_xpo\_range} only.
+
+The same factor is in \texttt{integrand\_diffractive\_fixed\_qp} (charm at fixed $q^+$).
+
+\section*{4. The $\xpo$ figure}
+
+The figure shows $\mathrm{d}\sigma/\mathrm{d}\ln\xpo$ against $\ln\xpo$, so that the area under the
+curve is the cross section, $\sigma=\int\mathrm{d}\ln\xpo\,\mathrm{d}\sigma/\mathrm{d}\ln\xpo$.
+
+\begin{itemize}
+\item \textbf{So far:} the fixed-$\xpo$ program returns $f$, which by Ref.~[3] already is
+  $\mathrm{d}\sigma/\mathrm{d}\ln\xpo$. The plotting scripts (\texttt{xpom.py},
+  \texttt{charm\_fixed\_qp\_xpom.py}) multiplied it by $\xpo$, treating it as
+  $\mathrm{d}\sigma/\mathrm{d}\xpo$. The area under the figure did equal the cross section the code
+  computed, $\int\mathrm{d}\ln\xpo\,(\xpo f)$: figure and code were consistent with each other, but both
+  carried the extra $\xpo$. This is why the curves rise with $\xpo$ towards the cut at $0.1$.
+\item \textbf{After the fix:} the integrated cross section is $\int\mathrm{d}\ln\xpo\,f$, and the
+  scripts plot $f$ without the extra $\xpo$. The area is again the cross section, now the correct one.
+  The curves become much flatter, so more of the cross section comes from small $\xpo$. The earlier
+  statement that 86--98\% of the diffractive TMD part comes from $\xpo>0.01$ is an artefact of the
+  extra $\xpo$ and should not be used.
+\end{itemize}
+
+\section*{5. Effect on the results}
+
+\begin{itemize}
+\item \textbf{Diffractive (TMD) part:} larger, by a factor 1.2--4 from (a) and by a larger,
+  $\xpo$-dependent factor from (b); the exact size only comes out of the reruns.
+\item \textbf{Exclusive part:} unchanged (it correctly uses the quark dipole and has no $\xpo$
+  integral).
+\item \textbf{$R_{pA}$ of the diffractive part:} changes, because (a) affects Pb and the proton
+  differently.
+\item \textbf{Manuscript:} Eqs.~(12)--(15) should follow Ref.~[3]: $\Omega^2$ (not $\Omega$), the radial
+  integral $\int\mathrm{d}R\,R$ (not $\int\mathrm{d}^2R$), $1/(1-x)$ (not $1/(x(1-x))$) and
+  $\mathcal{N}_g$.
+\end{itemize}
+
+\section*{6. Plan}
+
+\begin{enumerate}
+\item In \texttt{src/integrands.cpp}: \texttt{N} $\to$ \texttt{N\_A} in the three diffractive
+  integrands (\texttt{integrand\_diffractive}, \texttt{integrand\_diffractive\_xpom} and the fixed-$q^+$
+  kernel), and \texttt{x\_po * log\_xpo\_range} $\to$ \texttt{log\_xpo\_range} in the two $\xpo$
+  integrals.
+\item In \texttt{xpom.py} and \texttt{charm\_fixed\_qp\_xpom.py}: no extra factor $\xpo$; a header
+  line in new files so that old and new results are never mixed.
+\item Rerun all diffractive results: the fixed-$q^+$ charm results locally (about an hour), the
+  $D^0$ results on Roihu (central values, scale variations, p--Pb, STARlight, $\xpo$ and the HymnD and
+  BK bands), together with the $\sqrt2$ flux and $\alpha_s$ fixes in one rebuild there.
+\item Regenerate all plots, and the diffractive input of the inclusive subtraction figure.
+\end{enumerate}
+
+\end{document}

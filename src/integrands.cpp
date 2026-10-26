@@ -213,12 +213,12 @@ double integrand_exclusive_mc(double* vec, size_t /*dim*/, void* p)
     return kernel * fragmentation(z_h, par);
 }
 
-// Diffractive TMD cross section at given photon energy (W^2 = w2), quark momentum (p2 = p^2) and
-// z = p+/q+, as in arXiv:2606.04169 (Eqs. 3.38, 3.43-3.45): 2 pi k H(z, p) G(r1) G(r2) / (1 - x),
+// Gluon DTMD part of the diffractive cross section at given photon energy (W^2 = w2), quark momentum
+// (p2 = p^2) and z = p+/q+, as in arXiv:2606.04169 (Eqs. 3.38, 3.43-3.45): 2 pi k H(z, p) G(r1) G(r2) / (1 - x),
 // where G has the gluon-gluon dipole amplitude N_g = 2N - N^2 (N_A) and x = M_qq^2/(x_po W^2). The
 // cross section is per d ln(1/x) = d ln(x_po). The Jacobians of the k and x_po variables are not included.
-static double diffractive_kernel(double r1, double r2, double k, double x_po, double z, double p2,
-                                 double w2, const parameters* par)
+static double gluon_dtmd_kernel(double r1, double r2, double k, double x_po, double z, double p2,
+                                double w2, const parameters* par)
 {
     double m2 = par->m2;
     double zbar = 1.0 - z;
@@ -252,6 +252,68 @@ static double diffractive_kernel(double r1, double r2, double k, double x_po, do
     return 2.0*M_PI * k * D1*D2 * fun;
 }
 
+// Quark DTMD part, arXiv:2606.04169 (Eqs. 4.21, 4.23, 4.48, 4.50, 4.52-4.54) at Q^2 = 0 (notes/quark_dtmd.pdf),
+// with the roles of quark and antiquark exchanged (charge conjugation): the measured charm (momentum p,
+// fraction z) and a gluon (1 - z) are hard, and the other charm, with momentum k, is semi-hard. With the
+// same prefactor as the gluon part (2 C_F N_c = N_c^2 - 1), it is
+//   2 pi k z * z (1 + zbar^2)/p^4 * x/(1-x) (k^2+m^2)/(x k^2+m^2) [Q_1^2 + (1-x) m^2/(x k^2+m^2) Q_0^2],
+// where the first z is the Jacobian dz/dy (as in the gluon part), the hard factor is massless,
+// Q_n = omega^2 int dr r J_n(k r) K_n(omega r) N(r) with the quark dipole N, omega^2 = (m^2 + x k^2)/(1-x),
+// and x = M^2/(x_po W^2) with the charm-gluon mass M^2 = p^2/(z zbar) + m^2/z. Per d ln(1/x) = d ln(x_po).
+static double quark_dtmd_kernel(double r1, double r2, double k, double x_po, double z, double p2,
+                                double w2, const parameters* par)
+{
+    double m2 = par->m2;
+    double zbar = 1.0 - z;
+    double k2 = k * k;
+
+    double M2 = p2 / (z * zbar) + m2 / z;
+    double x  = M2 / (x_po * w2);
+    if (x <= 0.0 || x >= 1.0) return 0.0;
+
+    double omega2 = (m2 + x * k2) / (1.0 - x);
+    double omega  = sqrt(omega2);
+
+    // hard factor
+    double H = z * z * (1.0 + zbar*zbar) / (p2 * p2);
+
+    // quark diffractive TMD: Q_1^2 and Q_0^2 from the two radial variables
+    double x_po_dip = min(x_po, XPO_FROZEN);
+    double D1 = par->dipole->N(r1, x_po_dip);
+    double D2 = par->dipole->N(r2, x_po_dip);
+    double radial = omega2 * omega2 * r1*r2 * D1*D2;
+    double Q1sq = radial * Jn(1, k*r1) * Kn(1, omega*r1) * Jn(1, k*r2) * Kn(1, omega*r2);
+    double Q0sq = radial * Jn(0, k*r1) * Kn(0, omega*r1) * Jn(0, k*r2) * Kn(0, omega*r2);
+
+    double xk2m2 = x * k2 + m2;
+    double qDTMD = x / (1.0 - x) * (k2 + m2) / xk2m2 * (Q1sq + (1.0 - x) * m2 / xk2m2 * Q0sq);
+
+    return 2.0*M_PI * k * H * qDTMD;
+}
+
+// True if k is below the cut k_cut_factor * scale (no cut for k_cut_factor <= 0)
+static bool below_k_cut(double k, double scale, const parameters* par)
+{
+    return par->k_cut_factor <= 0.0 || k <= par->k_cut_factor * scale;
+}
+
+// Diffractive cross section: gluon and/or quark DTMD parts (par->dtmd), same variables as above.
+// Gluon part: k <= k_cut_factor * p, or * m_T with k_cut_scale = "mt" (its hard scale contains m).
+// Quark part: k <= k_cut_factor * p (m is semi-hard), and only for p >= quark_p_min.
+static double diffractive_kernel(double r1, double r2, double k, double x_po, double z, double p2,
+                                 double w2, const parameters* par)
+{
+    double p = sqrt(p2);
+    double gluon_scale = (par->k_cut_scale == "mt") ? sqrt(p2 + par->m2) : p;
+
+    double result = 0.0;
+    if (par->dtmd != "quark" && below_k_cut(k, gluon_scale, par))
+        result += gluon_dtmd_kernel(r1, r2, k, x_po, z, p2, w2, par);
+    if (par->dtmd != "gluon" && p >= par->quark_p_min && below_k_cut(k, p, par))
+        result += quark_dtmd_kernel(r1, r2, k, x_po, z, p2, w2, par);
+    return result;
+}
+
 // Diffractive at given x_po, for the VEGAS variables {r1, r2, u_k, u_qp, b, z_h}: the kernel with the
 // photon flux, the fragmentation function and the Jacobians of u_qp and u_k.
 static double diffractive_at_xpo(double r1, double r2, double u_k, double u_qp, double b, double z_h,
@@ -262,7 +324,6 @@ static double diffractive_at_xpo(double r1, double r2, double u_k, double u_qp, 
     double k = K_MIN * exp(u_k * par->log_k_frag);
 
     Kinematics kin;
-    if (k > par->pD0 / z_h) return 0.0;   // the gluon cannot have more momentum than the charm quark
     if (!photon_kinematics(z_h, u_qp, par, kin)) return 0.0;
 
     double flux = flux_per_qp(b, kin.qp, p);
@@ -293,8 +354,6 @@ double integrand_diffractive_xpom(double* vec, size_t /*dim*/, void* p)
 // without the Jacobians of the k and x_po variables.
 static double diffractive_fixed_qp_kernel(double r1, double r2, double k, double x_po, const parameters* par)
 {
-    if (k > par->p) return 0.0;
-
     double z = 0.5;   // q+ = 2p+, so p+/q+ = 1/2
     double pp = (par->mt / M_SQRT2) * exp(par->y);
     double qp = 2.0 * pp;

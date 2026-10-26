@@ -35,6 +35,21 @@ bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp
     param.calls_excl_factorized = (size_t)env_number("CALLS_EXCL_FACTORIZED", 2e3);
     param.excl_pt_threshold     = env_number("EXCL_PT_THRESHOLD", 3.0);
     param.calls_diff            = (size_t)env_number("CALLS_DIFF", 1e5, "CALLS");
+    // K_CUT_FACTOR: diffractive cut k <= K_CUT_FACTOR*scale (<= 0: no cut, default 1), with the scale pc,
+    // or m_T for the gluon DTMD with K_CUT_SCALE=mt. QUARK_P_MIN: quark DTMD only for pc >= QUARK_P_MIN.
+    param.k_cut_factor          = env_number("K_CUT_FACTOR", 1.0);
+    param.k_cut_scale           = getenv("K_CUT_SCALE") ? getenv("K_CUT_SCALE") : "p";
+    param.quark_p_min           = env_number("QUARK_P_MIN", 5.0);
+    if (param.k_cut_scale != "p" && param.k_cut_scale != "mt") {
+        cerr << "Error: unknown K_CUT_SCALE '" << param.k_cut_scale << "'. Expected p or mt." << endl;
+        return false;
+    }
+    // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
+    param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
+    if (param.dtmd != "gluon" && param.dtmd != "quark" && param.dtmd != "both") {
+        cerr << "Error: unknown DTMD '" << param.dtmd << "'. Expected gluon, quark or both." << endl;
+        return false;
+    }
     param.m        = 1.5;
     param.m2       = param.m * param.m;
 

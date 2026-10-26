@@ -47,6 +47,8 @@ int main(int argc, char* argv[])
     double p2m2 = param.p2 + param.m2;
     param.mt   = sqrt(p2m2);
     param.k_upper = param.kmax;
+    // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
+    param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
 
     int n_xpo = (argc > 3) ? atoi(argv[3]) : 40;
     double xpo_min = 1e-5, xpo_max = 0.1;   // x_po > 0.1 is zero, as in charm_fixed_qp
@@ -61,7 +63,8 @@ int main(int argc, char* argv[])
     cout << "# ============================================================" << endl;
     cout << "# Date        =  " << date_buf << endl;
     cout << "# Fixed-q+ (no photon flux) diffractive dsigma/(d2p dln x_po)" << endl;
-    cout << "# diffractive   : gluon dipole N_g, per d ln(x_po)" << endl;
+    cout << "# diffractive   : gluon DTMD (dipole N_g) and/or quark DTMD (dipole N), per d ln(x_po)" << endl;
+    cout << "# DTMD          : " << param.dtmd << " (gluon, quark or both)" << endl;
     cout << "# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y and p fixed" << endl;
     cout << "# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)" << endl;
     cout << "# ------------------------------------------------------------" << endl;

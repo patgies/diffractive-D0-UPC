@@ -43,7 +43,8 @@ int main(int argc, char* argv[])
     cout << "# target        : " << param.target << " (sqrt(s_NN)=" << param.ss << " GeV, flux_model=" << param.flux_model << ")" << endl;
     cout << "# channel       : " << param.channel << (param.target == "pA" ? " (unused: no EMD for pA)" : "") << endl;
     cout << "# dipole file   : " << datafile << endl;
-    cout << "# pD0  x_po  exclusive_dxpo  diffractive_dlnxpo (gluon dipole N_g)" << endl;
+    cout << "# DTMD          : " << param.dtmd << " (gluon, quark or both)" << endl;
+    cout << "# pD0  x_po  exclusive_dxpo  diffractive_dlnxpo" << endl;
 
     double result_excl = exclusiveCrossSection_xpom(static_cast<void*>(&param));
     double result_diff = diffractiveCrossSection_xpom(static_cast<void*>(&param));

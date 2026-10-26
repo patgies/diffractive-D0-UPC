@@ -47,7 +47,7 @@ PANELS = [
     (np.sqrt(3.0**2 + MC**2), r"$\mu=m_T={:.2f}$ GeV".format(np.sqrt(3.0**2 + MC**2)), r"$p_{D\perp}=3$ GeV"),
     (np.sqrt(9.0**2 + MC**2), r"$\mu=m_T={:.2f}$ GeV".format(np.sqrt(9.0**2 + MC**2)), r"$p_{D\perp}=9$ GeV"),
 ]
-COLORS = {"BCFY": "#2166ac", "KK": "#b2182b", "HymnD": "#1a7f4b"}
+COLORS = {"BCFY": "#2166ac", "KK": "#1b7837", "HymnD": "#b2182b"}   # same as FRAG_SCHEMES in pPb_bins.py
 
 
 def hymnd_dir():

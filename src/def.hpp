@@ -16,6 +16,8 @@ const double XPO_FROZEN = 0.01;
 // Lower ends of the logarithmic sampling of the gluon momentum k [GeV] and of x_po
 const double K_MIN = 0.01;
 const double XPO_MIN = 1e-6;
+// Upper end of the k sampling of D0 and D0_xpom when there is no cut on k (K_CUT_FACTOR <= 0)
+const double K_MAX_NOCUT = 400.0;
 
 struct parameters
 {
@@ -47,8 +49,17 @@ struct parameters
     // D(z_h) at the fragmentation scale
     Interpolator* D_frag_interp = nullptr;
 
-    // Diffractive: the gluon momentum k goes up to k_upper_frag = pD0/z_h_min,
-    // and points with k > pc give zero.
+    // Diffractive: cut on the semi-hard momentum k <= k_cut_factor * scale, k_cut_factor <= 0: no cut
+    // (environment variable K_CUT_FACTOR). The scale is pc for the quark DTMD; for the gluon DTMD
+    // it is pc, or m_T = sqrt(pc^2 + m^2) with k_cut_scale = "mt" (K_CUT_SCALE). k is sampled up to
+    // k_upper_frag = k_cut_factor * m_T(pD0/z_h_min).
+    double k_cut_factor = 1.0;
+    string k_cut_scale = "p";
+    // The quark DTMD part is included only for pc >= quark_p_min [GeV] (QUARK_P_MIN), where pc >> Q_s, m:
+    // above 5 GeV its dependence on the cut k <= pc is below ~10-15% (fixed-q+ scan, proton and Pb)
+    double quark_p_min = 5.0;
+    // DTMD parts of the diffractive cross section: "gluon", "quark" or "both" (environment variable DTMD)
+    string dtmd = "both";
     double k_upper_frag;
     double log_k_frag;   // log(k_upper_frag / K_MIN)
 

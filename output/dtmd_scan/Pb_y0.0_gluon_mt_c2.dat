@@ -1,0 +1,50 @@
+# ============================================================
+# Date        =  2026-10-26 16:31:25
+# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2p
+# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y fixed
+# x_pom > 0.1 forced to 0 on both sides
+# diffractive   : gluon DTMD (dipole N_g) and/or quark DTMD (dipole N), per d ln(x_po)
+# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)
+# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)
+# ------------------------------------------------------------
+# Dipole data =  data/Pb/mve/glauber_mve_0
+# sqrt(s)     =  5360 GeV
+# y (fixed)   =  0
+# m_charm     =  1.5 GeV
+# pt grid     =  30 pts in [0.2, 20] GeV (log)
+# DTMD        =  gluon (gluon, quark or both)
+# k cut       =  k <= 2 * scale (<= 0: no cut), gluon scale mt, quark scale p
+# quark DTMD  =  for p >= 0 GeV
+# VEGAS calls =  1000000 (diffractive only; exclusive is deterministic)
+# ============================================================
+# p  exclusive_fixed_qp  diffractive_fixed_qp
+0.2  0.0188194  1.35783
+0.23442  0.0184244  1.35551
+0.274765  0.0178987  1.35268
+0.322052  0.0172073  1.34879
+0.377478  0.0163121  1.3392
+0.442443  0.015177  1.32263
+0.518589  0.0137773  1.29395
+0.607839  0.0121131  1.25297
+0.71245  0.0102262  1.18452
+0.835064  0.0082098  1.08168
+0.97878  0.00620655  0.950527
+1.14723  0.00438172  0.795853
+1.34467  0.00287469  0.623392
+1.57609  0.00175294  0.455247
+1.84734  0.000996951  0.310043
+2.16527  0.00053076  0.197124
+2.53792  0.000263762  0.118083
+2.9747  0.00012142  0.0670846
+3.48666  5.13393e-05  0.0365775
+4.08672  1.9904e-05  0.0194218
+4.79005  7.11576e-06  0.0100346
+5.61443  2.36748e-06  0.0051286
+6.58069  7.41162e-07  0.00259252
+7.71324  2.2087e-07  0.0012957
+9.04071  6.32729e-08  0.000645435
+10.5966  1.75628e-08  0.000318908
+12.4203  4.75637e-09  0.000156807
+14.5579  1.26607e-09  7.67887e-05
+17.0634  3.34635e-10  3.72654e-05
+20  8.83289e-11  1.80011e-05

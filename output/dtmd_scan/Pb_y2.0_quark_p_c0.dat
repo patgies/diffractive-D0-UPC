@@ -1,0 +1,50 @@
+# ============================================================
+# Date        =  2026-10-26 16:31:25
+# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2p
+# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y fixed
+# x_pom > 0.1 forced to 0 on both sides
+# diffractive   : gluon DTMD (dipole N_g) and/or quark DTMD (dipole N), per d ln(x_po)
+# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)
+# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)
+# ------------------------------------------------------------
+# Dipole data =  data/Pb/mve/glauber_mve_0
+# sqrt(s)     =  5360 GeV
+# y (fixed)   =  2
+# m_charm     =  1.5 GeV
+# pt grid     =  30 pts in [0.2, 20] GeV (log)
+# DTMD        =  quark (gluon, quark or both)
+# k cut       =  k <= 0 * scale (<= 0: no cut), gluon scale p, quark scale p
+# quark DTMD  =  for p >= 0 GeV
+# VEGAS calls =  1000000 (diffractive only; exclusive is deterministic)
+# ============================================================
+# p  exclusive_fixed_qp  diffractive_fixed_qp
+0.2  0.0273642  253.957
+0.23442  0.0268419  135.163
+0.274765  0.0261456  69.6709
+0.322052  0.0252272  37.148
+0.377478  0.0240334  19.5638
+0.442443  0.0225117  10.0906
+0.518589  0.0206215  5.32499
+0.607839  0.0183519  2.81089
+0.71245  0.0157439  1.4536
+0.835064  0.012907  0.7305
+0.97878  0.0100219  0.38195
+1.14723  0.00731311  0.18887
+1.34467  0.00498958  0.0968362
+1.57609  0.00318001  0.0494837
+1.84734  0.00189766  0.0244529
+2.16527  0.00106476  0.0123215
+2.53792  0.000562215  0.00607732
+2.9747  0.000278629  0.00306906
+3.48666  0.000128876  0.00151281
+4.08672  5.54751e-05  0.00075069
+4.79005  2.22637e-05  0.000378073
+5.61443  8.37348e-06  0.000186081
+6.58069  2.97504e-06  9.27954e-05
+7.71324  1.00803e-06  4.63637e-05
+9.04071  3.28589e-07  2.31322e-05
+10.5966  1.03819e-07  1.14111e-05
+12.4203  3.19962e-08  5.70125e-06
+14.5579  9.67893e-09  2.80323e-06
+17.0634  2.89637e-09  1.40167e-06
+20  8.5973e-10  6.96481e-07

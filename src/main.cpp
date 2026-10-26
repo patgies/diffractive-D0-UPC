@@ -51,6 +51,7 @@ int main(int argc, char* argv[])
     cout << "# channel       : " << param.channel << (param.target == "pA" ? " (unused: no EMD for pA)" : "") << endl;
     cout << "# dipole file   : " << datafile << endl;
     cout << "# process       : " << process_mode << endl;
+    cout << "# DTMD          : " << param.dtmd << " (gluon, quark or both)" << endl;
     cout << "# pD0  exclusive  diffractive" << endl;
 
     double result_excl = 0.0, result_diff = 0.0;

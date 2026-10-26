@@ -49,5 +49,10 @@ target_link_libraries(charm_fixed_qp_xpom PRIVATE ${CROSS_SECTION_LIBRARIES})
 add_executable(scan_flux scan_flux.cpp photon_flux.cpp)
 target_link_libraries(scan_flux PRIVATE GSL::gsl GSL::gslcblas)
 
-set_target_properties(D0 D0_xpom charm_fixed_qp charm_fixed_qp_xpom scan_flux PROPERTIES
+# Saturation scale of a dipole file (fundamental and adjoint) as a function of x
+# (plotting_scripts/saturation_scale.py).
+add_executable(saturation_scale saturation_scale.cpp fourier.c)
+target_link_libraries(saturation_scale PRIVATE amplitude GSL::gsl GSL::gslcblas)
+
+set_target_properties(D0 D0_xpom charm_fixed_qp charm_fixed_qp_xpom scan_flux saturation_scale PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

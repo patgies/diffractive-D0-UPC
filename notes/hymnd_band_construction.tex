@@ -1,0 +1,226 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.3in,top=0.25in,bottom=0.4in]{geometry}
+\makeatletter
+\renewcommand{\@maketitle}{\newpage\null\vskip -3.5em\begin{center}{\LARGE \@title \par}\end{center}\par\vskip 0.2em}
+\makeatother
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{The ``HymnD'' Theory-Uncertainty Band: Construction, and the\\
+Low-$p_{D^0}$ Diffractive Artifact}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{The three uncertainty sources}
+
+The band shown on the $D^0$ cross-section plots (\texttt{python/cross\_section.py},
+\texttt{cross\_section\_sum.py}) combines three independent sources, all evaluated
+at the LHAPDF fragmentation function and central BK dipole amplitude unless
+stated otherwise:
+
+\begin{description}
+\item[Replica (fit) uncertainty.] The LHAPDF grid ships 101 fit replicas.
+Each replica's cross section is computed exactly like the central one; the
+band is the plain mean $\pm$ standard deviation across the 101 results, at
+fixed $(y,p_{D^0})$ (\texttt{load\_lhapdf\_band}). This is a genuine
+statistical sample, so mean/std is the right summary.
+\item[BK initial-condition (BK-IC) uncertainty.] 100 samples from a
+Bayesian posterior over the BK small-$x$ evolution's initial condition,
+with the fragmentation function held at the central LHAPDF replica. Same
+treatment: mean $\pm$ std across the 100 dipole-amplitude posterior samples
+(\texttt{load\_bk\_band}).
+\item[Fragmentation-scale variation.] Not a statistical sample -- a
+conventional envelope from varying the fragmentation scale
+$Q=C\cdot m_T$, $m_T=\sqrt{m_c^2+p_{D^0}^2}$, with $C\in\{0.5,1,2\}$ around
+the central choice $C=1$. The envelope is the min/max of the three runs at
+each $(y,p_{D^0})$, and its half-width $(\max-\min)/2$ is what enters the
+quadrature sum below (\texttt{load\_scale\_band}).
+\end{description}
+
+\section{Combining them in quadrature}
+
+At each $(y,p_{D^0})$, the three contributions are added in quadrature
+around the plain central curve:
+\[
+\sigma_{\rm total} = \sqrt{\sigma_{\rm rep}^2+\sigma_{\rm BK}^2+\sigma_{\rm scale}^2},
+\qquad
+\text{band} = [\,\sigma_{\rm central}-\sigma_{\rm total},\ \ \sigma_{\rm central}+\sigma_{\rm total}\,]
+\]
+(\texttt{\_combine\_in\_quadrature}), matching \texttt{inclusive-D0-UPC}'s own
+construction exactly. This treats all three sources as independent and
+roughly symmetric around the central value -- a good approximation for the
+two statistical samples, but only an approximation for the scale envelope,
+which is bounded (a cross section can't go negative) and not necessarily
+symmetric. Section~3 shows where that approximation breaks down.
+
+\section{What goes wrong at low $p_{D^0}$ in the diffractive channel}
+
+At small $p_{D^0}$, $m_T\approx m_c$, so the $C=0.5$ scale choice pushes
+$Q=0.5\,m_T$ down toward half the charm mass -- below the charm-production
+threshold built into the LHAPDF fragmentation-function grid. There, the
+charm fragmentation function (and hence the cross section computed with
+that scale) is \emph{exactly zero}. This is real, physical behavior of the
+grid, not a bug.
+
+Concretely, at $y=0$ (diffractive, LHAPDF central):
+
+\begin{center}
+\begin{tabular}{lrrrrr}
+\toprule
+$p_{D^0}$ [GeV] & central & $\sigma_{\rm rep}$ & $\sigma_{\rm BK}$ &
+scale range $[\min,\max]$ & $\sigma_{\rm scale}$ (half-width) \\
+\midrule
+0.2 & 0.00859 & 0.00156 & 0.0000442 & $[0,\ 0.0215]$ & 0.01073 \\
+0.3 & 0.01843 & 0.00291 & 0.0000993 & $[0,\ 0.0318]$ & 0.01591 \\
+0.4 & 0.02990 & 0.00395 & 0.0002005 & $[0,\ 0.0416]$ & 0.02082 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+(all cross sections in mb/GeV). At $p_{D^0}=0.2$~GeV, the scale envelope's
+lower end is the exact zero described above, and its half-width
+($0.01073$) alone already exceeds the central value ($0.00859$). Combining
+in quadrature,
+\[
+\sigma_{\rm total}=\sqrt{0.00156^2+0.0000442^2+0.01073^2}=0.01085 \ >\ \text{central},
+\]
+so the naive lower edge $\sigma_{\rm central}-\sigma_{\rm total}=-0.00226$
+is \emph{negative} -- meaningless for a cross section, and exactly the
+symmetric-uncertainty approximation from Section~2 breaking down.
+
+This does not happen for \textbf{exclusive}, nor for the diffractive+
+exclusive \textbf{sum}: at the same point, exclusive's central value is
+$\approx\!1.65$~mb/GeV, roughly 200$\times$ diffractive's -- the same
+absolute scale-zero effect is comparably sized in absolute terms, but tiny
+relative to exclusive's much larger central value, so it never drives
+exclusive's (or the sum's) lower edge negative.
+
+\section{How it's handled on the plot}
+
+Three approaches were tried, in order:
+
+\begin{enumerate}
+\item \emph{Clamp to a floor.} Plot
+$\max(\sigma_{\rm central}-\sigma_{\rm total},\,10^{-30})$. On a log axis,
+this makes the shaded band plunge in a near-vertical spike from a normal
+value at neighboring $p_{D^0}$ bins down to the bottom of the visible axis
+at the one affected bin -- visually alarming and easy to mistake for a
+numerical error, even though the number itself isn't wrong.
+\item \emph{Drop the point.} Only shade $p_{D^0}$ bins where
+$\sigma_{\rm central}-\sigma_{\rm total}>0$. This removes the spike but
+leaves a bare gap with \emph{no} shading at that bin -- which reads as
+``zero uncertainty here,'' the opposite of the truth.
+\item \emph{Interpolate/extrapolate the lower edge (current).} For bins
+where $\sigma_{\rm central}-\sigma_{\rm total}\le0$, replace the lower
+edge with a value inferred from the nearest \emph{valid} neighboring bins,
+log-linearly: between two valid bins, log-linear interpolation; past the
+edge of the valid range (as is the case here, since $p_{D^0}=0.2$~GeV is
+the very first point), log-linear \emph{extrapolation} continuing the
+slope of the nearest two valid bins, rather than copying the nearest
+valid value flat (a flat copy was tried first and produces a visible
+plateau/blunted corner instead of the sharp taper the band naturally has
+elsewhere). For the table above this gives a filled lower edge of
+$\approx\!5.8\times10^{-4}$ at $p_{D^0}=0.2$~GeV.
+\end{enumerate}
+
+\paragraph{Important caveat.} The interpolated/extrapolated value is
+\textbf{not a measurement} -- it is a smoothing choice made purely so the
+plot stays legible and continuous, by assuming the band's shape at
+$p_{D^0}=0.2$ continues the trend visible at $p_{D^0}=0.3$-$0.4$. The
+actual computed lower edge at that bin is negative (equivalently, the true
+scale-variation envelope there touches zero), i.e.\ the real relative
+uncertainty at that single point is $\gtrsim100\%$, larger than what the
+smoothed curve shows. This affects only the diffractive channel, only at
+the lowest one or two plotted $p_{D^0}$ bins, well outside the region of
+any physical interest for the spectrum -- but should not be read as a
+precise numerical result at that specific bin.
+
+\section{Why the band is wider at low $p_{D^0}$ in general}
+
+Section~3 covered one specific, pathological bin. But the band is visibly
+wider at low $p_{D^0}$ than at high $p_{D^0}$ \emph{everywhere}, not just at
+that one point -- this is a separate, broader effect worth spelling out on
+its own.
+
+\subsection{The scale-variation piece dominates the whole band}
+
+Breaking $\sigma_{\rm total}/\sigma_{\rm central}$ down into its three
+pieces at $y=0$ (LHAPDF central, exclusive and diffractive):
+
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\toprule
+& \multicolumn{3}{c}{exclusive} & \multicolumn{3}{c}{diffractive} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+$p_{D^0}$ [GeV] & rel.\ total & rel.\ rep & rel.\ scale
+                & rel.\ total & rel.\ rep & rel.\ scale \\
+\midrule
+1.0 & 0.50 & 0.037 & 0.500 & 0.50 & 0.054 & 0.500 \\
+2.0 & 0.50 & 0.034 & 0.500 & 0.50 & 0.034 & 0.500 \\
+4.0 & 0.29 & 0.053 & 0.286 & 0.19 & 0.031 & 0.189 \\
+8.0 & 0.27 & 0.071 & 0.243 & 0.18 & 0.032 & 0.173 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+(rel.\ BK-IC is omitted -- it never exceeds a few percent anywhere and
+plays essentially no role.) At every $p_{D^0}$, rel.\ total $\approx$
+rel.\ scale: the replica and BK-IC pieces are small and nearly flat in
+$p_{D^0}$, so essentially \emph{all} of the band's width, and all of its
+$p_{D^0}$-dependence, comes from the fragmentation-scale-variation
+envelope alone.
+
+\subsection{Scale variation is a stand-in for missing higher orders, and
+that shrinks at large scale}
+
+Scale variation ($Q\to C\cdot Q$, $C\in\{0.5,2\}$) is not a real physical
+uncertainty in the strict sense -- it is a conventional estimate of the
+size of the perturbative orders this calculation does \emph{not} include
+(this is leading-order in the strong coupling; a full NLO calculation would
+change less under a scale variation because it explicitly includes the next
+term in the series). How much the result moves under this shift is
+governed by two ingredients evaluated at $Q=C\cdot m_T$, $m_T=\sqrt{m_c^2+p_{D^0}^2}$:
+the running coupling $\alpha_s(Q)$, and the DGLAP evolution of the LHAPDF
+fragmentation function up to scale $Q$. Both change fast with $Q$ when $Q$
+is small, and flatten out (change only logarithmically) as $Q$ grows --
+this is the ordinary running of $\alpha_s$ and of parton/fragmentation
+evolution, not something specific to this calculation.
+
+At low $p_{D^0}$, $m_T\approx m_c\approx1.5$~GeV: the whole $C=0.5$-to-$2$
+range sits in the region of small, rapidly-varying $\alpha_s(Q)$ and steep
+fragmentation-function evolution, right next to the charm-production
+threshold discussed in Section~3 -- so the same factor-of-4 range in $Q$
+swings the result by a large relative amount ($\sim\!50\%$ here). At high
+$p_{D^0}$, $m_T$ grows well past $m_c$, the same factor-of-4 range in $Q$
+now sits in a region where $\alpha_s$ runs slowly and the fragmentation
+function has settled into its scaling behavior, so the relative swing
+shrinks (down to $\sim\!20$-$30\%$ by $p_{D^0}=8$~GeV in the table above).
+
+This is the standard perturbative-QCD pattern -- missing-order
+(scale-variation) uncertainty is largest near a process's characteristic
+low scale and shrinks at high scale -- applied here with $m_T$ (not
+$p_{D^0}$ alone) as the relevant hard scale, which is why the effect is
+tied to the charm mass rather than vanishing at $p_{D^0}\to0$. The Section~3
+artifact is a more extreme version of exactly this same mechanism: instead
+of just varying quickly, at the very lowest $p_{D^0}$ bins in the
+diffractive channel the low end of the scale range ($C=0.5$) crosses
+entirely below the grid's charm-production threshold and hits zero.
+
+\section{Summary}
+
+The HymnD band is a straightforward quadrature sum of three uncertainty
+sources that is exact for the two statistical ones (replica, BK-IC) but
+only approximate for the bounded scale-variation envelope. At the lowest
+diffractive $p_{D^0}$ bins, that approximation fails outright (the naive
+lower edge goes negative) because the scale envelope there includes a real
+physical zero from the charm-mass threshold. The plot handles this by
+extrapolating a smooth-looking lower edge from neighboring bins rather than
+showing the literal (negative, or floor-clamped) result -- a cosmetic fix
+for legibility, not a claim that the true uncertainty at those specific
+bins is smaller than it actually is.
+
+\end{document}

@@ -1,0 +1,97 @@
+\documentclass[12pt]{article}
+\usepackage[margin=0.3in,top=0.25in,bottom=0.4in]{geometry}
+\makeatletter
+\renewcommand{\@maketitle}{\newpage\null\vskip -3.5em\begin{center}{\LARGE \@title \par}\end{center}\par\vskip 0.2em}
+\makeatother
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\newcommand{\xpo}{x_{\mathbb{P}}}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+\title{The photon-flux fix: $\mathrm{d}N/\mathrm{d}q^+$ instead of $\mathrm{d}N/\mathrm{d}\omega$}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{In short}
+
+The code integrated over the photon momentum $q^+$ but weighted it with the photon flux per unit
+energy, $\mathrm{d}N/\mathrm{d}\omega$. Since $q^+=\sqrt2\,\omega$, all absolute UPC cross sections
+were $\sqrt2\approx1.41$ too large. This is fixed in the code, and the existing results are
+corrected in the plotting scripts, so no reruns are needed. Ratios such as $R_{pA}$ do not change.
+
+\section*{1. The problem}
+
+In a UPC, the cross section is the photon-level cross section $\sigma_\gamma$ (Eq.~(1) of the
+manuscript) weighted with the number of photons and integrated over the photon energy:
+\[
+  \sigma=\int\mathrm{d}\omega\,\frac{\mathrm{d}N}{\mathrm{d}\omega}\,\sigma_\gamma(\omega)\,.
+\]
+The code integrates over the photon momentum $q^+$ instead. With $q^+=\sqrt2\,\omega$,
+$\mathrm{d}\omega=\mathrm{d}q^+/\sqrt2$, so the correct integrand is
+\[
+  \sigma=\int\mathrm{d}q^+\,\frac{\mathrm{d}N}{\mathrm{d}q^+}\,\sigma_\gamma\,,\qquad
+  \frac{\mathrm{d}N}{\mathrm{d}q^+}=\frac{1}{\sqrt2}\,\frac{\mathrm{d}N}{\mathrm{d}\omega}\,.
+\]
+The code multiplied $\mathrm{d}q^+$ by $\mathrm{d}N/\mathrm{d}\omega$ (which is what the flux functions
+return) without the $1/\sqrt2$. Every absolute cross section --- exclusive and diffractive, Pb--Pb and
+p--Pb --- was therefore $\sqrt2$ too large.
+
+The inclusive code (\texttt{inclusive-D0-UPC}) already did this correctly: it converts its flux,
+$F(z_\gamma)=\mathrm{d}N/\mathrm{d}z_\gamma$, into $\mathrm{d}N/\mathrm{d}q^+$ before the $q^+$ integral.
+
+\section*{2. The fix}
+
+\begin{enumerate}
+\item \textbf{C++:} the five $q^+$ integrals (exclusive 3D and 5D, diffractive, and the two
+  fixed-$\xpo$ variants) now use the helper \texttt{flux\_per\_qp},
+  $(\mathrm{d}N/\mathrm{d}\omega)/\sqrt2$ (\texttt{src/integrands.cpp}). The flux functions
+  themselves still return $\mathrm{d}N/\mathrm{d}\omega$, so the flux scans and comparisons are
+  unchanged. A test point with the rebuilt program gives $0.705$ (exclusive) and $0.695$ (diffractive)
+  of the old values, i.e.\ $1/\sqrt2=0.707$ within the Monte Carlo noise.
+\item \textbf{Existing results:} the factor is an exact constant, so they do not need to be rerun.
+  The plotting scripts multiply every file produced before the fix by $1/\sqrt2$
+  (\texttt{flux\_convention\_factor} in \texttt{plotting\_scripts/D0.py}, used by \texttt{D0.py},
+  \texttt{pPb\_bins.py}, \texttt{RpA.py} and \texttt{xpom.py}).
+\item \textbf{New results:} the run scripts (\texttt{run\_nucleus.sh}, \texttt{run\_proton.sh},
+  \texttt{run\_xpom.sh}) write a header line \texttt{\# photon flux : dN/dq+} into every new file.
+  Files with this line are used as they are, so old and new files can be mixed safely.
+\item \textbf{Plots:} all regenerated.
+\end{enumerate}
+
+\section*{3. Effect on the results}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Quantity & Change \\
+\midrule
+Absolute cross sections (exclusive, diffractive; Pb--Pb, p--Pb) & $\times\,1/\sqrt2\approx0.71$ \\
+$R_{pA}$ (Pb and proton baseline use the same flux code) & unchanged \\
+Comparison of fragmentation functions & unchanged \\
+Comparison of photon fluxes (EFF vs.\ target centre, STARlight) & unchanged \\
+Diffractive/inclusive ratio & now consistent (both use $\mathrm{d}N/\mathrm{d}q^+$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{4. Still open}
+
+The C++ code on Roihu is still the old version. This does not produce wrong results in the
+meantime: files written there without the new header line get the factor $1/\sqrt2$ in the plots
+automatically. Before the next runs, the fixed code and run scripts have to be copied to Roihu and
+rebuilt --- best together with the pending fix of the diffractive integrand (gluon dipole
+$\mathcal{N}_g$ and $\mathrm{d}\ln\xpo$ measure), so that only one rebuild is needed.
+
+\section*{5. The manuscript}
+
+With the photon flux written as $F(z_\gamma)=\mathrm{d}N/\mathrm{d}z_\gamma$ and the integral over
+$z_\gamma$ in the cross section formula, the normalization is already right:
+$\int\mathrm{d}z_\gamma\,F(z_\gamma)$ counts the photons correctly. No change to the text is needed for
+this fix.
+
+\end{document}

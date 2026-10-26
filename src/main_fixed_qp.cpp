@@ -40,6 +40,13 @@ int main(int argc, char* argv[])
     param.m2       = param.m * param.m;
     param.y        = (argc > 1) ? atof(argv[1]) : 0.0;
     param.kmax     = 400.0;
+    // K_CUT_FACTOR: diffractive cut k <= K_CUT_FACTOR*scale (<= 0: no cut, default 1), with the scale p,
+    // or m_T for the gluon DTMD with K_CUT_SCALE=mt. QUARK_P_MIN: quark DTMD only for p >= QUARK_P_MIN.
+    param.k_cut_factor = getenv("K_CUT_FACTOR") ? atof(getenv("K_CUT_FACTOR")) : 1.0;
+    param.k_cut_scale  = getenv("K_CUT_SCALE") ? getenv("K_CUT_SCALE") : "p";
+    param.quark_p_min  = getenv("QUARK_P_MIN") ? atof(getenv("QUARK_P_MIN")) : 5.0;
+    // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
+    param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
 
     int n_pt = (argc > 2) ? atoi(argv[2]) : 40;
     double pt_min = 0.2, pt_max = 20.0;
@@ -53,7 +60,7 @@ int main(int argc, char* argv[])
     cout << "# Fixed-q+ (no photon flux) exclusive & diffractive dsigma/d2p" << endl;
     cout << "# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y fixed" << endl;
     cout << "# x_pom > 0.1 forced to 0 on both sides" << endl;
-    cout << "# diffractive   : gluon dipole N_g, per d ln(x_po)" << endl;
+    cout << "# diffractive   : gluon DTMD (dipole N_g) and/or quark DTMD (dipole N), per d ln(x_po)" << endl;
     cout << "# exclusive column:   missing prefactor alpha*Nc*ef^2*Sperp/(2pi^2)" << endl;
     cout << "# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)" << endl;
     cout << "# ------------------------------------------------------------" << endl;
@@ -62,6 +69,10 @@ int main(int argc, char* argv[])
     cout << "# y (fixed)   =  " << param.y << endl;
     cout << "# m_charm     =  " << param.m << " GeV" << endl;
     cout << "# pt grid     =  " << n_pt << " pts in [" << pt_min << ", " << pt_max << "] GeV (log)" << endl;
+    cout << "# DTMD        =  " << param.dtmd << " (gluon, quark or both)" << endl;
+    cout << "# k cut       =  k <= " << param.k_cut_factor << " * scale (<= 0: no cut), gluon scale "
+         << param.k_cut_scale << ", quark scale p" << endl;
+    cout << "# quark DTMD  =  for p >= " << param.quark_p_min << " GeV" << endl;
     cout << "# VEGAS calls =  " << param.calls_diff << " (diffractive only; exclusive is deterministic)" << endl;
     cout << "# ============================================================" << endl;
     cout << "# p  exclusive_fixed_qp  diffractive_fixed_qp" << endl;

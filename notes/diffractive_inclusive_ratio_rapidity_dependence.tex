@@ -1,0 +1,156 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.3in,top=0.25in,bottom=0.4in]{geometry}
+\makeatletter
+\renewcommand{\@maketitle}{\newpage\null\vskip -3.5em\begin{center}{\LARGE \@title \par}\end{center}\par\vskip 0.2em}
+\makeatother
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{Why the diffractive/inclusive $D^0$ ratio falls with rapidity in\\
+this dipole-model calculation}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{The puzzle}
+
+Plotting the ratio $d\sigma^{\rm diff}/d\sigma^{\rm incl}$ (this project's
+diffractive calculation over \texttt{inclusive-D0-UPC}'s inclusive one) as a
+contour in $(y,p_T)$, the ratio \emph{decreases} with increasing rapidity
+$y$ in our dipole-model calculation. This is the opposite trend to
+Guzey, Innocenti, Sta\'sto \& Strikman, arXiv:2606.05469 (collinear
+factorization with nuclear diffractive PDFs, the ``LTA'' shadowing
+framework), whose Fig.~7 and Conclusions state explicitly that the
+diffractive fraction is \emph{largest} at forward $y$, ``corresponding to
+the small values of $x$ in the Pomeron-emitting target nucleus,'' and
+decreases at negative rapidity.
+
+Three explanations were checked, two ruled out, one confirmed and
+quantified below.
+
+\section{Ruled out: a sign-convention mismatch}
+
+Both projects define $x\propto e^{-y}$ (smaller $x$ at larger $y$): this
+project's photon plus-momentum threshold $pp=(m_T/\sqrt2)\,e^{y}$ grows
+with $y$, and the sibling inclusive project's own
+$x_{bj}=(m_{T0}/\sqrt{s})\,e^{-y}$ shrinks with $y$ -- the same direction.
+arXiv:2606.05469's own stated convention (Sec.~7: forward $y\Rightarrow$
+small $x$ in the target) matches this too. So all three sources agree on
+what ``positive $y$'' means; this is not a mislabeled axis.
+
+\section{Ruled out: the diffractive integrand's own kinematic ceiling}
+
+The diffractive integrand enforces $qp\ge pp$, capping the integration at
+$qp_{\max}=800$~GeV (\texttt{jac\_qp = qpmax - pp; if (jac\_qp<=0) return
+0;}). At $p_T=1$~GeV, $pp$ only reaches $\sim 26$~GeV by $y=3$ -- nowhere
+near the 800~GeV ceiling, so this constraint never actually activates in
+the plotted range and cannot explain the suppression.
+
+Also ruled out: \texttt{inclusive-D0-UPC} lacking an analogous
+kinematic threshold. It does have one -- \texttt{inclusive\_spectrum.cpp}
+recomputes the identical $pp$ formula locally per sample
+(\texttt{pp\_zh}), with the same \texttt{qpmax} ceiling. The unused
+\texttt{param.qpmin} field in its \texttt{main.cpp} is dead code, but the
+physical constraint itself is present and applied the same way in both
+calculations.
+
+\section{Confirmed: the dipole amplitude does grow -- but the
+\emph{flux-weighted} $x$ diffraction effectively probes doesn't shrink
+as fast as $x_{bj}$}
+
+\subsection{$N(r,x)$ does grow toward small $x$}
+
+Querying this project's own Pb dipole amplitude directly
+(\texttt{AmplitudeLib::N(r,x)}, central impact parameter,
+$r=1/m_c\approx0.667$~GeV$^{-1}$, the charm-mass dipole size):
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+$x$ & $N(r{=}1/m_c,\,x)$ \\
+\midrule
+$10^{-2}$ (or larger, clamped) & 0.093 \\
+$10^{-3}$ & 0.153 \\
+$10^{-4}$ & 0.228 \\
+$10^{-5}$ & 0.321 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$N$ more than triples over this range and stays well below 1 (not
+saturated). For small $N$, $d(N^2)/N^2 = 2\,dN/N$ -- i.e.\ $N^2$
+(diffractive-like scaling) grows \emph{faster in relative terms} than
+$N$ itself as $x$ falls. Naively this predicts the diffractive/inclusive
+ratio should \emph{increase} with $y$, matching arXiv:2606.05469's
+finding and contradicting what we compute. The dipole amplitude itself is
+behaving exactly as expected; the discrepancy must be elsewhere.
+
+\subsection{The diffractive integral doesn't sample $x_{\mathbb P}$ at
+$x_{bj}$}
+
+The diffractive kernel evaluates $N(r,x_{\mathbb P})$ with
+\[
+x_{\mathbb P} = \frac{M_{q\bar q}^2}{w^2}, \qquad
+w^2 = \sqrt2\,qp\,\sqrt{s}, \qquad
+M_{q\bar q}^2 = \frac{p_T^2+m_c^2}{z_1 z_2}, \qquad
+z_1=\frac{pp}{qp},\ z_2=1-z_1,
+\]
+integrated over $qp\in[pp,\,qp_{\max}]$ and weighted by the photon flux.
+At the upper end of that range ($qp\to\infty$, $z_1\to0$),
+$x_{\mathbb P}\to m_T e^{-y}/\sqrt{s} = x_{bj}$ exactly -- the two
+variables coincide there. But at the \emph{lower} end ($qp\to pp$,
+$z_1\to1$), $M_{q\bar q}^2\to\infty$ and $x_{\mathbb P}$
+\emph{diverges}. The photon flux is steeply peaked at low $qp$ -- right
+next to that divergent lower edge -- so the flux-weighted average
+$x_{\mathbb P}$ the integral actually samples is pulled well above
+$x_{bj}$, not equal to it.
+
+Computed directly (\texttt{photon\_flux()}, central impact parameter,
+$p_T=1$~GeV, $\sqrt{s_{NN}}=5.36$~TeV):
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+$y$ & $x_{bj}$ (inclusive) & $\langle x_{\mathbb P}\rangle_{\rm flux}$ (diffractive) & ratio \\
+\midrule
+$-2.0$ & $2.49\times10^{-3}$ & $6.96\times10^{-3}$ & 2.8 \\
+$0.0$  & $3.36\times10^{-4}$ & $1.32\times10^{-3}$ & 3.9 \\
+$1.5$  & $7.50\times10^{-5}$ & $4.55\times10^{-4}$ & 6.1 \\
+$3.0$  & $1.67\times10^{-5}$ & $2.15\times10^{-4}$ & 12.8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The offset is not constant: it \emph{widens} from $\sim2.8\times$ at
+$y=-2$ to $\sim12.8\times$ at $y=3$ -- roughly a factor of 4.6 in
+relative terms across the plotted range. As $y$ increases, the
+diffractive calculation effectively probes a progressively \emph{larger}
+$x$ than the $x_{bj}$ that governs inclusive production at the same
+nominal $y$, starving diffraction of exactly the low-$x$ enhancement
+that's driving inclusive's growth. This directly explains the observed
+sign of the effect and is large enough to plausibly account for its
+size, though that has not been checked point-by-point against the
+full numerical ratio.
+
+\section{Conclusion}
+
+The falling diffractive/inclusive ratio with $y$ is not a sign-convention
+bug or an artificial kinematic cutoff; it traces to how the photon flux
+weights the $qp$ integration relative to the $y$-dependent lower bound
+$pp$, which systematically shifts the effective $x_{\mathbb P}$ sampled
+by the diffractive calculation above the $x_{bj}$ relevant for inclusive,
+increasingly so at large $y$. This is a real feature of \emph{this
+formula} for how $x_{\mathbb P}$ enters the diffractive dipole
+amplitude -- it is not obviously a coding error, but it is a legitimate
+open question whether this is the physically correct way to define/average
+$x_{\mathbb P}$ in this kind of calculation, or whether the disagreement
+with arXiv:2606.05469 simply reflects the two frameworks (dipole/CGC vs.\
+collinear factorization + nuclear diffractive PDFs) genuinely predicting
+different rapidity dependence. Resolving that fully would need literature
+comparison with other dipole-model diffractive-DIS treatments of
+$x_{\mathbb P}$, beyond what code inspection alone can settle.
+
+\end{document}

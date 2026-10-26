@@ -1,0 +1,278 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.3in,top=0.25in,bottom=0.4in]{geometry}
+\makeatletter
+\renewcommand{\@maketitle}{\newpage\null\vskip -3.5em\begin{center}{\LARGE \@title \par}\end{center}\par\vskip 0.2em}
+\makeatother
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+
+\title{D0-level fragmentation and nuclear (Glauber) targets in \texttt{flux2d}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+This extends \texttt{flux2d} (see \texttt{flux2d\_overview.pdf}) with two
+pieces of infrastructure ported from \texttt{inclusive-D0-UPC} and
+\texttt{D0CS}:
+
+\begin{itemize}
+\item \textbf{Fragmentation}: convolving the bare charm-quark exclusive and
+diffractive cross sections with a $c\to D^0$ fragmentation function, giving
+$D^0$-level spectra differential in the \emph{observed meson's} transverse
+momentum $p_{D^0}$ instead of the charm quark's own $p_T$. Three
+fragmentation functions are available: BCFY, Kniehl--Kramer, LHAPDF.
+\item \textbf{Nucleus targets}: looping the calculation over
+Glauber-sampled dipole amplitude files to build the full nuclear-target
+(Pb or Au) cross section, via the same impact-parameter ($b$) integration
+used by \texttt{inclusive-D0-UPC}'s \texttt{run\_many\_Pb.sh} /
+\texttt{cross\_section.py}.
+\end{itemize}
+
+Unlike either source repository, here \emph{both} the exclusive and the
+diffractive channel get fragmented — neither D0CS nor inclusive-D0-UPC
+has a fragmented exclusive (no-gluon dijet) calculation.
+
+\section{Fragmentation}
+
+The observed $D^0$ carries momentum fraction $z_h$ of the charm quark that
+actually scatters, so the charm quark's transverse momentum is
+\[
+p_c = \frac{p_{D^0}}{z_h}, \qquad z_h\in[0.05,\,1.0],
+\]
+and $z_h$ is integrated out as an extra VEGAS dimension. The convolution
+weight is $D(z_h)/z_h^2$ (\texttt{fragmentation\_weight()},
+\texttt{src/integrand.cpp}), with $D(z_h)$ one of:
+
+\begin{itemize}
+\item \textbf{BCFY} (\texttt{Dc\_to\_D0()}, \texttt{src/fragmentation.cpp}):
+a pseudoscalar + vector-feeddown parametrization with non-perturbative
+parameter $r=0.1$.
+\item \textbf{Kniehl--Kramer} (\texttt{D\_kniehl\_kramer()}):
+$D(z)=N\,z(1-z)^2/[(1-z)^2+\epsilon z]^2$, $N=0.694$, $\epsilon=0.101$.
+\item \textbf{LHAPDF} (\texttt{MakeLHAPDFZInterpolator()},
+\texttt{src/lhapdf\_grid.cpp}): reads an LHAPDF lhagrid1-format member file
+(default \texttt{data/prompt-D0-1-109/prompt-D0-1-109\_0000.dat}, member 0
+only — the other 100 replicas are not shipped here, unlike
+inclusive-D0-UPC's full 471~MB set) and interpolates $D(z,Q{=}m_c)$.
+\end{itemize}
+
+Selected via \texttt{flux\_grid\_d0}'s optional \texttt{frag\_type}
+command-line argument (\texttt{BCFY}\,|\,\texttt{KniehlKramer}\,|
+\texttt{LHAPDF}, default \texttt{BCFY} if omitted) — an explicit argument
+rather than an environment variable, since it's a physics selection, not a
+tuning knob (see Section~\ref{sec:target} for the same reasoning applied
+to \texttt{channel}). \texttt{LHAPDF\_FILE} (still an environment
+variable, since it only matters when \texttt{frag\_type=LHAPDF}) overrides
+the grid file path.
+
+\subsection{Where the BCFY $D^0$ coefficients (0.168, 0.39) come from}
+\label{sec:bcfy-coeffs}
+
+\texttt{Dc\_to\_D0()} combines the raw BCFY pseudoscalar/vector
+fragmentation functions $D_P(z;r)$, $D_V(z;r)$ (Braaten, Cheung, Fleming,
+Yuan, Phys.\ Rev.\ D51 (1995) 4819, hep-ph/9409316, their eqs.\ 31--32)
+into the physical $c\to D^0$ fragmentation function following Cacciari \&
+Nason, ``Charm Cross Sections for the Tevatron Run~II''
+(hep-ph/0306212), Section~2. Physically, an observed $D^0$ can come from
+three sources: primary (direct) $c\to D^0$, feed-down from $c\to D^{*0}$
+followed by $D^{*0}\to D^0\,(\pi^0/\gamma)$, and feed-down from
+$c\to D^{*+}$ followed by $D^{*+}\to D^0\pi^+$:
+\[
+F(c\to D^0) = F_p(c\to D^0) + F(c\to D^{*0})\otimes F(D^{*0}\to D^0)
+                             + F(c\to D^{*+})\otimes F(D^{*+}\to D^0).
+\]
+Cacciari \& Nason assume isospin symmetry for the \emph{production} step
+— $c\to D^{*0}$ and $c\to D^{*+}$ share the same fragmentation function
+and are treated as kinematically degenerate, i.e.\ a single representative
+$D^*$ mass is used for both (the actual $m_{D^{*0}}=2.0067$~GeV vs.\
+$m_{D^{*+}}=2.010$~GeV splitting, $\sim$0.2\%, is neglected as below the
+precision of the model) — with all of the flavor dependence pushed into
+the measured \emph{decay} branching ratios. The $D^*\to D^0$ decay is
+modeled as a rescaling of the momentum fraction by $m_D/m_{D^*}$,
+\[
+\tilde D_V(z;r) = \Theta\!\left(\frac{m_D}{m_{D^*}}-z\right)
+                   D_V\!\left(\frac{m_{D^*}}{m_D}z;\,r\right)\frac{m_{D^*}}{m_D},
+\]
+(this is \texttt{BCFY\_DV(z\_scaled,r)*mass\_ratio} gated by
+\texttt{theta\_step()} in \texttt{src/fragmentation.cpp}), and because
+both decay chains share this same rescaled shape, their branching
+fractions simply \emph{add} inside one overall coefficient rather than
+needing two separate mass-dependent terms:
+\[
+D^{c\to D^0}(z;r) = \mathrm{BR}(c\to D^0_p)\,D_P(z;r)
+   + \mathrm{BR}(c\to D^*)\big[\mathrm{BR}(D^{*0}\to D^0)
+   + \mathrm{BR}(D^{*+}\to D^0)\big]\,\tilde D_V(z;r).
+\]
+With $\mathrm{BR}(c\to D^0_p)=0.168$, $\mathrm{BR}(c\to D^*)=0.233$,
+$\mathrm{BR}(D^{*0}\to D^0)=1$, $\mathrm{BR}(D^{*+}\to D^0)=0.677$ (from
+ALEPH, hep-ph/0306212 eqs.\ 1 and 4):
+\[
+0.233\times(1+0.677) = 0.390,
+\]
+giving exactly the $0.168$/$0.39$ pair hard-coded in
+\texttt{Dc\_to\_D0()}. So the \texttt{0.39} coefficient already sums
+\emph{both} the $D^{*0}\to D^0$ and $D^{*+}\to D^0$ feed-down channels —
+the single \texttt{mDstar} mass in the code is not literally
+``the $D^{*0}$ only'', it is the isospin-averaged $D^*$ mass standing in
+for both charge states under the degenerate-mass approximation above.
+
+\subsection{New integrands}
+
+\texttt{integrand\_exclusive\_frag()} and
+\texttt{integrand\_diffractive\_xpo\_frag()} (\texttt{src/integrand.cpp})
+are self-contained siblings of \texttt{integrand\_exclusive()} /
+\texttt{integrand\_diffractive\_xpo()} — not thin wrappers around them —
+because $p_c$ now varies \emph{within} a single VEGAS call (once $z_h$ is
+sampled), so the $H^2$-related quantities ($p_c^2+m^2$, etc.) must be
+recomputed fresh on every call rather than read from the parent
+integrands' precomputed, fixed-$p_T$ struct fields.
+
+\textbf{Exclusive+frag}: 5D VEGAS over $\{r_1,r_2,u_{qp},b,z_h\}$
+(\texttt{exclusiveCrossSection\_frag()}). Identical physics to the bare
+exclusive kernel, evaluated at $p_c$ instead of $p_T$.
+
+\textbf{Diffractive+frag}: 7D VEGAS over
+$\{r_1,r_2,u_k,u_{qp},b,u_{x_{\mathbb P}},z_h\}$
+(\texttt{diffractiveCrossSection\_xpo\_frag()}).
+
+\subsection{Why the gluon-$k$ cutoff has to be applied differently}
+
+The bare diffractive integrand caps the gluon momentum at $k\le p_T$ via a
+hard VEGAS box edge, since $p_T$ is fixed for the whole call (see
+\texttt{flux2d\_overview.pdf}, ``Diffractive process''). That specific
+\emph{mechanism} can't be reused here: $p_c=p_{D^0}/z_h$ varies per
+sample, so a VEGAS box edge that depends on another sampled dimension
+isn't representable (VEGAS needs one fixed hyper-rectangle for the whole
+call). The physical cutoff itself is unchanged though — $k\le p_c$ still
+holds exactly, just enforced differently:
+\begin{enumerate}
+\item $k$'s VEGAS box is set to the \emph{widest} range reachable at this
+$p_{D^0}$: $k\in[k_{\rm lo},\,k_{\rm upper,frag}]$ with $k_{\rm lo}=0.01$
+and $k_{\rm upper,frag}=p_{D^0}/z_{\min}$ — the largest $p_c$ possible
+over the whole $z_h$ range (since $p_c=p_{D^0}/z_h$ is largest at the
+smallest $z_h$). This is computed once per call to
+\texttt{diffractiveCrossSection\_xpo\_frag()} (like \texttt{par->log\_k}
+in the bare case), not once globally, since it depends on $p_{D^0}$.
+\item The exact constraint $k\le p_c$ is then applied as an explicit
+per-sample check inside the integrand (\texttt{if (k > pc) return 0.0;}),
+the same way other kinematic bounds (e.g.\ $0<x<1$) are enforced elsewhere
+in this file.
+\end{enumerate}
+These are \texttt{par->k\_upper\_frag} / \texttt{par->log\_k\_frag} in
+\texttt{def.hpp} — the fragmented analogs of the bare integrand's
+\texttt{par->k\_upper} / \texttt{par->log\_k}, just recomputed on every
+call instead of assumed fixed. (An earlier version of this note described
+a Gaussian UV-suppression scheme, matching D0CS/inclusive-D0-UPC's
+approach; that was replaced by this exact cutoff, which needs no arbitrary
+suppression-scale parameter.)
+
+\section{Nucleus targets (Glauber averaging)}
+\label{sec:target}
+
+The dipole amplitude $N(r,x)$ describes scattering off a specific target;
+for a nucleus, different \texttt{data/<Pb,Au>/mve/glauber\_mve\_<b>} files
+are independent Glauber samples at different target-nucleus impact
+parameters $b$ (a different physical $b$ from the photon-flux impact
+parameter already integrated inside the cross sections themselves). The
+full nuclear cross section needs the additional 2D transverse-plane
+integral $\int d^2b = 2\pi\int b\,db$ over these samples.
+
+\subsection{\texttt{flux\_grid\_d0}: one point at a time}
+
+\texttt{src/main\_grid\_d0.cpp} (built as \texttt{flux\_grid\_d0}) is
+deliberately simple, matching \texttt{inclusive-D0-UPC}'s
+\texttt{src/main.cpp} exactly: it computes both fragmented cross sections
+at \emph{one} $(p_{D^0},y)$ point, for \emph{one} dipole file, and prints
+the result — no grid, no OpenMP:
+\[
+\texttt{./flux\_grid\_d0 <dipole\_file> <pD0> <y> [frag\_type] [channel]}
+\]
+\texttt{frag\_type} and \texttt{channel} are optional positional arguments
+(defaulting to \texttt{BCFY} and \texttt{An0n} if omitted) rather than
+environment variables — both are physics selections that change which
+formula gets used inside the integrand, so they're spelled out explicitly
+on the command line rather than picked up implicitly from the shell
+environment; \texttt{CALLS} and \texttt{LHAPDF\_FILE} remain environment
+variables, since those are tuning knobs (how many VEGAS samples, which
+grid file) rather than a choice between physical formulas. Output is a
+few \texttt{\#}-prefixed header lines (fragmentation type, channel,
+dipole file) followed by one data line,
+\texttt{pD0 exclusive diffractive}. All of the looping over many
+$(p_{D^0},y)$ points and many nucleus-target Glauber samples ($b$) —
+previously done inside this program with an OpenMP grid — is now entirely
+\texttt{run\_many\_nucleus.sh}'s job, described next.
+
+\subsection{\texttt{run\_many\_nucleus.sh}: the loops and file bookkeeping}
+
+\[
+\texttt{NUCLEUS=Pb ./run\_many\_nucleus.sh}
+\]
+runs \texttt{flux\_grid\_d0} once for every combination of dipole file
+(every \texttt{data/\$NUCLEUS/mve/glauber\_mve\_<b>} sample), $p_{D^0}$
+(a plain linear sweep, \texttt{PT\_MIN} to \texttt{PT\_MAX} in steps of
+\texttt{PT\_STEP} — no log-spacing trick, unlike the old internal grid),
+and $y$ (\texttt{Y\_VALS}) — the same three nested \texttt{bash} loops as
+\texttt{inclusive-D0-UPC}'s \texttt{run\_many\_Pb.sh}, backgrounded up to
+\texttt{CORES} at once. This script is the only place \texttt{frag\_type}
+and \texttt{channel} get decided (from its own \texttt{FRAG\_TYPE}/
+\texttt{CHANNEL} environment variables, same defaults as
+\texttt{flux\_grid\_d0}) — every invocation is then handed them explicitly
+as its 4th/5th command-line arguments.
+
+Unlike \texttt{run\_many\_Pb.sh} (and an earlier version of this script),
+no temp files are used. Because \texttt{frag\_type}/\texttt{channel} (and
+hence the filename tags built from them) are already known before any
+point has run, every output file's header —
+\texttt{files/flux\_grid\_d0\_<process>\_<frag>\_<channel>\_<NUCLEUS>\_y<Y>.dat},
+rows \texttt{b pD0 dsigma} — can be written once, upfront. Each point then
+captures \texttt{flux\_grid\_d0}'s output straight into a shell variable,
+pulls out column 2 (exclusive) / column 3 (diffractive) with \texttt{awk},
+and appends one short line directly to the corresponding file. This is
+safe with many points running at once: appends under $\sim$4KB are atomic
+on Linux, so concurrent points can't interleave or corrupt each other's
+lines — they just can't control what \emph{order} the lines land in, so
+unlike \texttt{run\_many\_Pb.sh}'s final \texttt{sort} pass, these files
+come out with rows in whatever order their jobs finished, not sorted by
+$b$ then $p_{D^0}$. That's immaterial downstream:
+\texttt{combine\_nucleus.py} sorts by $b$ itself before integrating, so
+the output file format and everything past it is unchanged.
+
+\subsection{\texttt{combine\_nucleus.py}: the $b$ integral}
+
+Reads all accumulated per-$y$ files for a given
+(\texttt{NUCLEUS}, \texttt{FRAG\_TYPE}, \texttt{CHANNEL}), and for each
+$p_{D^0}$ integrates $b\cdot d\sigma(b)$ over $b$ via Simpson's rule
+(scipy), then applies:
+\[
+\frac{d\sigma}{dy\,dp_{D^0}} = 2\pi\Big[\!\int\! b\,d\sigma(b)\,db\Big]_{\rm Simpson}
+\times \text{(prefactor)} \times 2\pi p_{D^0} \times \text{(GeV}^{-2}\to\text{mb)}.
+\]
+The two $2\pi$ factors are geometrically distinct: one is the Glauber-$b$
+angular integral, the other is the standard $d^2p_{D^0}\to dp_{D^0}$
+Jacobian (matching \texttt{plot\_flux\_grid.py}'s convention). The
+per-process prefactor also matches \texttt{plot\_flux\_grid.py} exactly
+(exclusive: constant; diffractive: running $\alpha_s(m_T)$) —
+\emph{not} \texttt{cross\_section.py}'s \texttt{factor\_A}, which
+normalizes a different physical channel (the momentum-space/S$_k$
+``inclusive'' calculation that inclusive-D0-UPC computes, not ported
+here). Writes \texttt{files/combined\_d0\_<process>\_...\_y<Y>.dat} and
+one summary plot, \texttt{plots/combined\_d0\_<frag>\_<channel>\_<nucleus>.png}.
+
+\section{Data files added}
+
+\begin{itemize}
+\item \texttt{data/prompt-D0-1-109/prompt-D0-1-109\_0000.dat} (+ \texttt{.info}):
+central-member LHAPDF grid only (4.9~MB) — the full 101-replica set
+(471~MB in \texttt{inclusive-D0-UPC}) was not copied; \texttt{LHAPDF\_FILE}
+can point elsewhere if a replica band is ever needed.
+\item \texttt{data/\{Pb,Au,proton\}/} were already present in
+\texttt{flux2d/data} (copied from \texttt{exclusive/data} when this
+repository was created) and already include the Glauber-sampled
+\texttt{glauber\_mve\_<b>} files used above.
+\end{itemize}
+
+\end{document}
