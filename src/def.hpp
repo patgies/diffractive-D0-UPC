@@ -53,10 +53,10 @@ struct parameters
     // (environment variable K_CUT_FACTOR). The scale is pc for the quark DTMD; for the gluon DTMD
     // it is pc, or m_T = sqrt(pc^2 + m^2) with k_cut_scale = "mt" (K_CUT_SCALE). k is sampled up to
     // k_upper_frag = k_cut_factor * m_T(pD0/z_h_min).
-    double k_cut_factor = 1.0;
-    string k_cut_scale = "p";
+    double k_cut_factor = 2.0;
+    string k_cut_scale = "mt";
     // The quark DTMD part is included only for pc >= quark_p_min [GeV] (QUARK_P_MIN), where pc >> Q_s, m:
-    // above 5 GeV its dependence on the cut k <= pc is below ~10-15% (fixed-q+ scan, proton and Pb)
+    // at 5 GeV its dependence on the cut (c = 1 vs 2) is 10-20%, below 10% from 8 GeV (fixed-q+ scan, proton and Pb)
     double quark_p_min = 5.0;
     // DTMD parts of the diffractive cross section: "gluon", "quark" or "both" (environment variable DTMD)
     string dtmd = "both";

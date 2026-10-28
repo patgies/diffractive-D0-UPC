@@ -42,8 +42,8 @@ int main(int argc, char* argv[])
     param.kmax     = 400.0;
     // K_CUT_FACTOR: diffractive cut k <= K_CUT_FACTOR*scale (<= 0: no cut, default 1), with the scale p,
     // or m_T for the gluon DTMD with K_CUT_SCALE=mt. QUARK_P_MIN: quark DTMD only for p >= QUARK_P_MIN.
-    param.k_cut_factor = getenv("K_CUT_FACTOR") ? atof(getenv("K_CUT_FACTOR")) : 1.0;
-    param.k_cut_scale  = getenv("K_CUT_SCALE") ? getenv("K_CUT_SCALE") : "p";
+    param.k_cut_factor = getenv("K_CUT_FACTOR") ? atof(getenv("K_CUT_FACTOR")) : 2.0;
+    param.k_cut_scale  = getenv("K_CUT_SCALE") ? getenv("K_CUT_SCALE") : "mt";
     param.quark_p_min  = getenv("QUARK_P_MIN") ? atof(getenv("QUARK_P_MIN")) : 5.0;
     // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
     param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";

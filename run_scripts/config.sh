@@ -32,6 +32,14 @@
 : "${XPO_MAX:=0.1}"
 : "${XPO_N:=25}"
 
+# Diffractive part: cut k <= K_CUT_FACTOR * scale on the semi-hard momentum (scale m_T for the gluon DTMD
+# with K_CUT_SCALE=mt, pc for the quark DTMD), quark DTMD only for pc >= QUARK_P_MIN [GeV].
+# See notes/kt_cut_and_quark_dtmd and notes/correlation_limit.
+: "${K_CUT_FACTOR:=2}"
+: "${K_CUT_SCALE:=mt}"             # mt | p
+: "${QUARK_P_MIN:=5}"
+: "${DTMD:=both}"                  # gluon | quark | both
+
 # Folder for all results
 : "${OUTPUT_ROOT:=output}"
 
@@ -40,6 +48,9 @@
 
 export OUTPUT_ROOT NUCLEUS CHANNEL FLUX_MODEL TARGET FRAG_TYPE HYMND_FILE SCALE_FACTOR PROCESS
 export CALLS CALLS_EXCL CALLS_DIFF CALLS_EXCL_FACTORIZED EXCL_PT_THRESHOLD
+export K_CUT_FACTOR K_CUT_SCALE QUARK_P_MIN DTMD
+# header line of the diffractive output files
+diffractive_text="DTMD=${DTMD} (quark for pc >= ${QUARK_P_MIN} GeV), k <= ${K_CUT_FACTOR} * scale (gluon: ${K_CUT_SCALE}, quark: pc), per d ln(x_po)"
 
 # Tags used in folder and file names
 channel_tag=$(echo "$CHANNEL" | tr -d '() ')

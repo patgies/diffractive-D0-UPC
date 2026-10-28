@@ -32,7 +32,7 @@ plt.rcParams.update({
 
 # Validity of the correlation limit: hard scale against the saturation scale, for a charm quark at fixed
 # q+ = 2p+ (z = 1/2). Left, gluon DTMD: M_h = 2 m_T against the adjoint Q_s. Right, quark DTMD: p_perp
-# (and m_c) against the fundamental Q_s. The bands span y = 0 to 2, with Q_s at the smallest x_po of each
+# (and m_c) against the fundamental Q_s. The bands span y = 0 to 3, with Q_s at the smallest x_po of each
 # term (x < 1), where it is largest. Proton and Pb at b_d = 0.
 # Inputs: output/saturation_scale/ (run_scripts/run_saturation_scale.sh).
 
@@ -61,24 +61,21 @@ def main():
 
     fig, (left, right) = plt.subplots(1, 2, figsize=(13, 6), sharey=True)
 
-    # Q_s bands (y = 0 to 2): gluon DTMD with M_qqbar^2 = 4 m_T^2, quark DTMD with M_qg^2 = 4 p^2 + 2 m^2
-    for name, qs_file, color in TARGETS:
-        qs_A = [qs_at(f"{QS_DIR}/{qs_file}", xpo_min(p, y, 4 * mt**2), 2) for y in (0.0, 2.0)]
-        qs_F = [qs_at(f"{QS_DIR}/{qs_file}", xpo_min(p, y, 4 * p**2 + 2 * M_CHARM**2), 1) for y in (0.0, 2.0)]
-        left.fill_between(p, qs_A[0], qs_A[1], color=color, alpha=0.35, lw=0)
-        right.fill_between(p, qs_F[0], qs_F[1], color=color, alpha=0.35, lw=0)
-        left.text(0.23, qs_A[1][0] * 1.08, rf"$Q_{{s,A}}$ {name}", fontsize=18, color=color)
-        right.text(8, qs_F[1][-1] * 1.12, rf"$Q_s$ {name}", fontsize=18, color=color)
+    # hard scales first so that they lead the legend; zorder keeps them above the bands
+    left.plot(p, 2 * mt, color="k", lw=2.4, zorder=3, label=r"$2\sqrt{p_\perp^2+m_c^2}$")
+    right.plot(p, p, color="k", lw=2.4, zorder=3, label=r"$p_\perp$")
+    right.axhline(M_CHARM, color="0.3", lw=1.5, linestyle="--", zorder=3, label=r"$m_c$")
 
-    left.plot(p, 2 * mt, color="k", lw=2.4)
-    left.text(0.23, 2 * M_CHARM * 1.15, r"$M_h=2m_T$", fontsize=20)
-    right.plot(p, p, color="k", lw=2.4)
-    right.text(5, 6.6, r"$p_\perp$", fontsize=20)
-    right.axhline(M_CHARM, color="0.3", lw=1.5, linestyle="--")
-    right.text(0.23, M_CHARM * 1.08, r"$m_c$", fontsize=20, color="0.3")
+    # Q_s bands (y = 0 to 3): gluon DTMD with M_qqbar^2 = 4 m_T^2, quark DTMD with M_qg^2 = 4 p^2 + 2 m^2.
+    # Pb first, as it lies above the proton.
+    for name, qs_file, color in reversed(TARGETS):
+        qs_A = [qs_at(f"{QS_DIR}/{qs_file}", xpo_min(p, y, 4 * mt**2), 2) for y in (0.0, 3.0)]
+        qs_F = [qs_at(f"{QS_DIR}/{qs_file}", xpo_min(p, y, 4 * p**2 + 2 * M_CHARM**2), 1) for y in (0.0, 3.0)]
+        left.fill_between(p, qs_A[0], qs_A[1], color=color, alpha=0.35, lw=0, label=rf"$Q_{{s,A}}$ {name}")
+        right.fill_between(p, qs_F[0], qs_F[1], color=color, alpha=0.35, lw=0, label=rf"$Q_s$ {name}")
 
-    left.set_title("gluon DTMD", pad=12)
-    right.set_title("quark DTMD", pad=12)
+    for ax, title in ((left, "gluon DTMD"), (right, "quark DTMD")):
+        ax.legend(title=title, loc="upper left", fontsize=22, title_fontsize=22, frameon=False)
     for ax in (left, right):
         ax.set_xscale("log")
         ax.set_yscale("log")

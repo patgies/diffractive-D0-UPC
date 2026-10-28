@@ -31,7 +31,7 @@ proton and Pb at $b_d=0$, $y=0$ and $2$):
   With $K_\perp\leq c\,m_T$ the result converges: for the proton and for $p_\perp\gtrsim3$~GeV within
   a few \%, for Pb at $p_\perp\lesssim2$~GeV within 10--25\%.
 \item The quark DTMD (Sec.~4 of Ref.~[3]; see the note \texttt{quark\_dtmd}) is a valid TMD contribution
-  only for $p_\perp\gtrsim5$~GeV, where it is 0.6--2\% of the gluon DTMD. It is now included for
+  only for $p_\perp\gtrsim5$~GeV, where it is 0.6--1.6\% of the gluon DTMD. It is now included for
   $p_c\geq5$~GeV.
 \item With the cut on $m_T$, the diffractive part at $p_\perp\lesssim1$~GeV grows by a factor 2--20,
   so the exclusive part may no longer dominate the lowest $p_{D\perp}$ bins.
@@ -42,8 +42,11 @@ proton and Pb at $b_d=0$, $y=0$ and $2$):
 $Q_s^2=2/r_s^2$ with $\mathcal{N}(r_s)=1-e^{-1/2}$ (fundamental, from
 \texttt{AmplitudeLib::}\allowbreak\texttt{SaturationScale}) or $\mathcal{N}_A(r_s)=1-e^{-1/2}$ (adjoint, $\mathcal{N}_A=2\mathcal{N}-\mathcal{N}^2$, which enters the
 gluon DTMD); program \texttt{saturation\_scale}, figure \texttt{plots/saturation\_scale.pdf}.
-For given $p_\perp$ and $y$, $\xpo\geq\xpo^{\min}\approx m_Te^{-y}/\sqrt{s}$ (at $z_h=1$ and
-$q^+=800$~GeV), and $Q_s$ decreases with $\xpo$, so $Q_s(\xpo^{\min})$ is the largest relevant value:
+For given $p_\perp$ and $y$, $x<1$ gives $\xpo\geq M_{q\bar q}^2/W^2=m_T^2/(\bar z\sqrt2\,p^+\sqrt{s})$, whose
+minimum over the photon energy is $\xpo^{\min}\approx m_Te^{-y}/\sqrt{s}$ ($z\to0$, at $z_h=1$). $Q_s$
+decreases with $\xpo$, so $Q_s(\xpo^{\min})$ is the largest relevant value at any photon energy. (The note
+\texttt{correlation\_limit} fixes $z=\tfrac12$ instead, with $\xpo^{\min}$ twice as large, and $y=0$--3;
+its $Q_s$ are $\approx10\%$ lower at the same $y$.)
 \begin{center}
 \begin{tabular}{lcccc}
 \toprule
@@ -123,26 +126,36 @@ scale of Ref.~[3], with $c=1$--$4$ (or no cut) as the variation.
 
 The quark DTMD term has a massless hard factor $\propto1/p_\perp^4$ (the charm mass is semi-hard), so it
 needs $p_\perp\gg Q_s,m$; its natural cut is $K_\perp\leq c\,p_\perp$. Quark DTMD with $K_\perp\leq c\,p_\perp$
-divided by its result without cut, and its size relative to the gluon DTMD (without cut):
+divided by its result without cut, and its size relative to the gluon DTMD (without cut), at
+round $p_\perp$ (log interpolation of the 30-point scan; VEGAS noise $<1\%$):
 \begin{center}
-\begin{tabular}{c|ccc|ccc}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{c|ccc|ccc|ccc|ccc}
 \toprule
- & \multicolumn{3}{c|}{proton, $y=0$} & \multicolumn{3}{c}{Pb, $y=2$} \\
-$p_\perp$ [GeV] & $c=1$ & $c=2$ & quark/gluon & $c=1$ & $c=2$ & quark/gluon \\
+ & \multicolumn{3}{c|}{proton, $y=0$} & \multicolumn{3}{c|}{proton, $y=2$}
+ & \multicolumn{3}{c|}{Pb, $y=0$} & \multicolumn{3}{c}{Pb, $y=2$} \\
+$p_\perp$ [GeV] & $c=1$ & $c=2$ & q/g [\%] & $c=1$ & $c=2$ & q/g [\%] & $c=1$ & $c=2$ & q/g [\%] & $c=1$ & $c=2$ & q/g [\%] \\
 \midrule
-0.20 & 0.010 & 0.039 & 0.36   & 0.005 & 0.022 & 0.44  \\
-0.84 & 0.16  & 0.43  & 0.021  & 0.094 & 0.29  & 0.029 \\
-2.17 & 0.60  & 0.85  & 0.0070 & 0.43  & 0.72  & 0.013 \\
-3.49 & 0.81  & 0.94  & 0.0060 & 0.67  & 0.87  & 0.014 \\
-5.61 & 0.92  & 0.97  & 0.0058 & 0.84  & 0.94  & 0.015 \\
-9.04 & 0.97  & 0.99  & 0.0057 & 0.92  & 0.97  & 0.015 \\
+0.5 & 0.06 & 0.21 & 5.5 & 0.05 & 0.16 & 6.1 & 0.05 & 0.17 & 8.3 & 0.03 & 0.12 & 7.1 \\
+1   & 0.22 & 0.53 & 1.5 & 0.17 & 0.43 & 1.8 & 0.18 & 0.47 & 2.5 & 0.13 & 0.36 & 2.2 \\
+2   & 0.56 & 0.82 & 0.7 & 0.46 & 0.75 & 0.9 & 0.50 & 0.78 & 1.4 & 0.39 & 0.69 & 1.3 \\
+3   & 0.76 & 0.92 & 0.6 & 0.65 & 0.85 & 0.8 & 0.71 & 0.89 & 1.4 & 0.59 & 0.82 & 1.3 \\
+4   & 0.85 & 0.95 & 0.6 & 0.77 & 0.91 & 0.8 & 0.82 & 0.94 & 1.4 & 0.73 & 0.90 & 1.4 \\
+5   & 0.90 & 0.97 & 0.6 & 0.84 & 0.95 & 0.8 & 0.88 & 0.96 & 1.5 & 0.80 & 0.92 & 1.4 \\
+6   & 0.93 & 0.98 & 0.6 & 0.87 & 0.95 & 0.8 & 0.92 & 0.98 & 1.5 & 0.85 & 0.95 & 1.5 \\
+8   & 0.96 & 0.99 & 0.6 & 0.92 & 0.97 & 0.8 & 0.95 & 0.99 & 1.6 & 0.90 & 0.96 & 1.5 \\
+10  & 0.98 & 1.00 & 0.6 & 0.95 & 0.98 & 0.8 & 0.97 & 0.99 & 1.6 & 0.93 & 0.97 & 1.5 \\
 \bottomrule
 \end{tabular}
 \end{center}
-(quark/gluon: quark with $c=1$ over gluon without cut.) At small $p_\perp$ the quark term is dominated by
+(q/g: quark with $c=1$ over gluon without cut.) At small $p_\perp$ the quark term is dominated by
 $K_\perp\gg p_\perp$, outside the correlation limit, and without cut the $1/p_\perp^4$ makes it 20--50 times
-the gluon term: it must be excluded there. It is stable within $\approx10$--15\% from
-$p_\perp\approx5$~GeV, and there it is 0.6--0.8\% (proton) and 1.4--2\% (Pb) of the gluon term.
+the gluon term: it must be excluded there. The cut $K_\perp\leq p_\perp$ removes 10--20\% of it at
+$p_\perp=5$~GeV (10\% proton $y=0$, 20\% Pb $y=2$), $<10\%$ from $p_\perp\approx8$~GeV, and 25--40\% at
+3~GeV. Above 5~GeV it is 0.6--0.8\% (proton) and 1.4--1.6\% (Pb) of the gluon term.
+The threshold 5~GeV is a practical round choice, not derived: moving it to 3--4~GeV would change the
+diffractive cross section by $\approx1\%$.
 The code includes it for $p_c\geq5$~GeV (\texttt{QUARK\_P\_MIN}, default 5).
 
 \section*{5. Exclusive vs.\ diffractive at low $p_\perp$}
@@ -163,8 +176,9 @@ at any $p_\perp$; the new balance comes out of the $D^0$ reruns.
   $K_\perp\leq c\,p$. The cut is applied in \texttt{diffractive\_kernel} (\texttt{src/integrands.cpp}).
 \item \texttt{DTMD} = \texttt{gluon}, \texttt{quark} or \texttt{both} (default);
   \texttt{QUARK\_P\_MIN} (default 5~GeV).
-\item With the defaults (\texttt{DTMD=gluon}, $K_\perp\leq p_\perp$) the results are identical to the
-  previous ones.
+\item With the defaults ($K_\perp\leq p_\perp$, \texttt{DTMD=both}) the results are the previous ones
+  for $p_c<5$~GeV; for $p_c\geq5$~GeV the quark term adds 0.6--1.6\%. \texttt{DTMD=gluon} reproduces the
+  previous results exactly.
 \item Scans: \texttt{run\_scripts/roihu/run\_dtmd\_scan\_roihu.sbatch} (32 tasks, $\approx5$~min on
   Roihu; outputs in \texttt{/scratch/lappi/patricia/D0/dtmd\_scan/}).
 \end{itemize}

@@ -1,0 +1,197 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{Rapidity shape of the Pb--Pb cross section:\\
+why our peak is at more negative $y$ than in arXiv:2606.05469}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+
+\texttt{plotting\_scripts/PbPb\_bins.py} plots our exclusive + diffractive
+$D^0$ cross section in Pb--Pb (An0n) in the bins of Fig.~6 of Guzey,
+Innocenti, Sta\'sto and Strikman (arXiv:2606.05469). At high $p_T$ the two
+shapes in rapidity are different:
+\begin{itemize}
+  \item In the paper the bin $-1<y<0$ is clearly the highest.
+  \item In our result the bin $-2<y<-1$ is as high as, or higher than, the bin
+    $-1<y<0$. Our peak is about half a unit of rapidity further towards
+    negative $y$.
+\end{itemize}
+The most likely reason is the region $x_\mathbb{P}>0.01$. Negative rapidity
+needs large $x_\mathbb{P}$. The paper suppresses large $x_\mathbb{P}$ with the
+nuclear form factor; our calculation has no suppression there. This is tested
+only at $p_{D^0\perp}=2$~GeV (Sec.~\ref{sec:test}), so it is a strong hint and
+not a proof.
+
+\section{The difference in numbers}
+
+Bin averages of $d\sigma/dy\,dp_{D^0\perp}$ in mb/GeV, BCFY, An0n. The values
+of the paper are read off the ``high shadowing'' band of its Fig.~6 and are
+approximate.
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{ours (central value)} & \multicolumn{2}{c}{arXiv:2606.05469} \\
+$p_{D^0\perp}$ bin & $-2<y<-1$ & $-1<y<0$ & $-2<y<-1$ & $-1<y<0$ \\
+\midrule
+2--3 GeV   & $0.150$ & $0.149$ & $\sim0.68$ & $\sim0.73$ \\
+6--7 GeV   & $6.6\times10^{-4}$ & $6.2\times10^{-4}$ & $\sim6.4\times10^{-3}$ & $\sim8.4\times10^{-3}$ \\
+10--11 GeV & $5.24\times10^{-5}$ & $5.20\times10^{-5}$ & $\sim3.3\times10^{-4}$ & $\sim4.8\times10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+At 2--3 GeV the two shapes are similar. The difference grows with
+$p_{D^0\perp}$.
+
+\section{The two parts of our result}
+
+Our cross section at $p_{D^0\perp}=10.5$~GeV (BCFY, An0n), in units of
+$10^{-5}$~mb/GeV:
+\begin{center}
+\begin{tabular}{lccccccc}
+\toprule
+$y$ & $-2.5$ & $-2$ & $-1.5$ & $-1$ & $-0.5$ & $0$ & $0.5$ \\
+\midrule
+diffractive & 1.8 & 3.6 & 5.0 & 5.5 & 5.0 & 3.8 & 2.4 \\
+exclusive   & 0.42 & 0.42 & 0.37 & 0.31 & 0.27 & 0.24 & 0.19 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item The diffractive part has its maximum at $y=-1$ and is symmetric around
+    it. The bins $(-2,-1)$ and $(-1,0)$ are then equal.
+  \item The exclusive part keeps growing towards negative $y$. It makes the
+    sum slightly larger in $(-2,-1)$.
+\end{itemize}
+In the paper the maximum is at about $y=-0.5$.
+
+\section{Negative rapidity needs large $x_\mathbb{P}$}
+
+In the code (\texttt{src/integrands.cpp}) the charm quark has
+$p^+=m_T e^{y}/\sqrt2$, the photon has $q^+=p^+/z$, and
+\begin{equation}
+  W^2=\sqrt2\,q^+\sqrt{s_{NN}}, \qquad
+  M_{q\bar q}^2=\frac{m_T^2}{z(1-z)}, \qquad
+  x_\mathbb{P}=\frac{M_{q\bar q}^2}{\beta\,W^2}
+  =\frac{m_T\,e^{-y}}{\beta\,(1-z)\sqrt{s_{NN}}} ,
+\end{equation}
+with $\beta=1$ for the exclusive part (in the code $\beta$ is called
+\texttt{x}). Here $m_T$ is the transverse mass of the charm quark,
+$m_T^2=p_{D^0\perp}^2/z_h^2+m_c^2$. So $x_\mathbb{P}$ grows as $e^{-y}$ and
+linearly with $m_T$.
+
+For $z=1/2$ and $\beta=1$ this is $x_\mathbb{P}=2m_Te^{-y}/\sqrt{s_{NN}}$. As
+an example take $p_{D^0\perp}=10.5$~GeV and $z_h\approx0.7$, so
+$m_T\approx15$~GeV, with $\sqrt{s_{NN}}=5.36$~TeV:
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+$y$ & $0$ & $-1$ & $-2$ & $-3$ \\
+\midrule
+$x_\mathbb{P}$ & $0.006$ & $0.015$ & $0.04$ & $0.11$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+For the diffractive part $\beta<1$ and $x_\mathbb{P}$ is larger than this.
+At high $p_T$ and $y<-1$ all the cross section comes from
+$x_\mathbb{P}>0.01$.
+
+\section{How large $x_\mathbb{P}$ is treated}
+
+\paragraph{Our code.} The dipole amplitude is known for $x<0.01$. For larger
+$x_\mathbb{P}$ the code uses the amplitude at $x=0.01$
+(\texttt{min(x\_po, 0.01)}). There is no nuclear form factor for the
+longitudinal momentum transfer. The only limit is the cut
+$x_\mathbb{P}<0.1$. So nothing reduces the cross section between
+$x_\mathbb{P}=0.01$ and $0.1$.
+
+\paragraph{arXiv:2606.05469.} The nuclear diffractive PDFs (their Eq.~8)
+have the factor $e^{i z' x_\mathbb{P} m_N}$ inside the integral over the
+nuclear density. This is the nuclear form factor at
+$|t_{\min}|\simeq x_\mathbb{P}^2m_N^2$: the nucleus stays intact only if the
+longitudinal momentum transfer $x_\mathbb{P}m_N$ is small compared with
+$1/R_A$. The paper also says that the cross section decreases at large
+negative rapidity because larger momentum fractions are probed there.
+
+\paragraph{Size of the form factor.} For lead, with
+\begin{equation}
+  F_A(q)=\frac{3\left[\sin(qR_A)-qR_A\cos(qR_A)\right]}{(qR_A)^3}\,
+  \frac{1}{1+a^2q^2}, \qquad q=x_\mathbb{P}m_N,
+  \label{eq:FA}
+\end{equation}
+$R_A=6.62$~fm and $a=0.7$~fm:
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+$x_\mathbb{P}$ & 0.01 & 0.02 & 0.03 & 0.05 & 0.07 & 0.1 \\
+\midrule
+$F_A^2$ & 0.98 & 0.92 & 0.82 & 0.57 & 0.32 & 0.07 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Test with our $x_\mathbb{P}$-differential results}
+\label{sec:test}
+
+\texttt{run\_xpom.sh} gives $d\sigma/d\ln x_\mathbb{P}$ at
+$p_{D^0\perp}=2$~GeV (BCFY, An0n; \texttt{output/An0n/xpom/}). The table shows
+the integral over $x_\mathbb{P}$, the part of it that comes from
+$x_\mathbb{P}>0.01$, and the integral after multiplying the integrand by
+$F_A^2$ of Eq.~\eqref{eq:FA}. Cross sections are in mb/GeV.
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+ & $y$ & total & from $x_\mathbb{P}>0.01$ & with $F_A^2$ & ratio \\
+\midrule
+diffractive & $-2$ & 0.0523  & 99\% & 0.0215  & 0.41 \\
+            & $-1$ & 0.0508  & 97\% & 0.0237  & 0.47 \\
+            & $0$  & 0.0378  & 94\% & 0.0188  & 0.50 \\
+            & $1$  & 0.0211  & 92\% & 0.0109  & 0.52 \\
+            & $2$  & 0.00754 & 91\% & 0.0040  & 0.53 \\
+            & $3$  & 0.00126 & 90\% & 0.00067 & 0.54 \\
+\midrule
+exclusive   & $-2$ & 0.269  & 40\% & 0.244  & 0.91 \\
+            & $-1$ & 0.281  & 13\% & 0.273  & 0.97 \\
+            & $0$  & 0.272  & 4\%  & 0.270  & 0.99 \\
+            & $1$  & 0.210  & 1\%  & 0.210  & 1.00 \\
+            & $2$  & 0.106  & 0.4\% & 0.106 & 1.00 \\
+            & $3$  & 0.0242 & 0.1\% & 0.0242 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item More than 90\% of the diffractive part comes from
+    $x_\mathbb{P}>0.01$, at every rapidity. The $x_\mathbb{P}$ integral is
+    dominated by its upper end, where the dipole is frozen.
+  \item The form factor reduces the diffractive part by about one half, and
+    more at negative rapidity. The ratio
+    $\sigma(y=-2)/\sigma(y=-1)$ goes from $1.03$ to $0.91$. The maximum moves
+    towards less negative $y$, as in the paper.
+  \item The exclusive part changes by at most 9\% (at $y=-2$).
+\end{itemize}
+
+\section{What is not checked}
+
+\begin{itemize}
+  \item The test is only at $p_{D^0\perp}=2$~GeV. There are no
+    $x_\mathbb{P}$-differential runs at 6--7 or 10--11~GeV, where the
+    difference with the paper is largest. One run of \texttt{run\_xpom.sh}
+    with \texttt{PT\_VALS="6.5 10.5"} and $y$ from $-2$ to $0$ would test it.
+  \item Eq.~\eqref{eq:FA} is a simple form factor applied to the final
+    integrand. It is not the factor of the paper, which is inside the nuclear
+    PDF together with the shadowing.
+  \item The form factor does not explain the difference in size: at high
+    $p_T$ our result is already 5--10 times below the paper, and the form
+    factor makes it smaller.
+  \item Whether a coherence factor belongs in our formula is a physics
+    decision. It is not in the code.
+\end{itemize}
+
+\end{document}

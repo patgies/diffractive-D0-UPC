@@ -1,5 +1,6 @@
 import glob
 import math
+import os
 import sys
 import matplotlib
 matplotlib.use('Agg')
@@ -9,7 +10,7 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import LogLocator
 
 # Charm quark cross section at fixed q+ = 2p+ (z = 0.5) on a proton: no photon flux, no fragmentation.
-# Reads the output of run_charm_fixed_qp.sh.
+# Reads the output of run_charm_fixed_qp.sh, from CHARM_DIR (default ../output/charm).
 from D0 import alphas_run, alphae, mc, e_c, Nc, SIGMA0_MB   # also sets the plot style
 
 plt.rcParams["axes.labelsize"] = 29
@@ -40,7 +41,7 @@ def read_data(filename):
 
 
 def main():
-    pattern = "../output/charm/charm_fixed_qp_y*.dat"
+    pattern = os.environ.get("CHARM_DIR", "../output/charm") + "/charm_fixed_qp_y*.dat"
     files = sorted(glob.glob(pattern), key=read_y)
     if not files:
         sys.exit(f"No files found matching {pattern} -- run ../run_scripts/run_charm_fixed_qp.sh first.")
