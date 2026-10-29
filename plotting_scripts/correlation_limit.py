@@ -8,10 +8,10 @@ plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.size": 11,
-    "axes.labelsize": 24,
-    "axes.titlesize": 22,
-    "xtick.labelsize": 20,
-    "ytick.labelsize": 20,
+    "axes.labelsize": 28,
+    "axes.titlesize": 26,
+    "xtick.labelsize": 25,
+    "ytick.labelsize": 25,
     "xtick.direction": "in",
     "ytick.direction": "in",
     "xtick.top": True,
@@ -74,8 +74,9 @@ def main():
         left.fill_between(p, qs_A[0], qs_A[1], color=color, alpha=0.35, lw=0, label=rf"$Q_{{s,A}}$ {name}")
         right.fill_between(p, qs_F[0], qs_F[1], color=color, alpha=0.35, lw=0, label=rf"$Q_s$ {name}")
 
-    for ax, title in ((left, "gluon DTMD"), (right, "quark DTMD")):
-        ax.legend(title=title, loc="upper left", fontsize=22, title_fontsize=22, frameon=False)
+    for ax, title in ((left, "Gluon DTMD"), (right, "Quark DTMD")):
+        ax.set_title(title, pad=15)
+        ax.legend(loc="upper left", fontsize=22, frameon=False)
     for ax in (left, right):
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -85,7 +86,7 @@ def main():
         ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
         ax.yaxis.set_minor_formatter(NullFormatter())
         ax.set_xlabel(r"$p_\perp$ [GeV]", labelpad=6)
-    left.set_ylabel("scale [GeV]", labelpad=6)
+    left.set_ylabel("scale [GeV]", labelpad=14)
 
     plt.tight_layout()
     outname = "../plots/correlation_limit.pdf"

@@ -15,7 +15,7 @@ from D0 import alphas_run, alphae, mc, e_c, Nc, SIGMA0_MB   # also sets the plot
 
 plt.rcParams["axes.labelsize"] = 29
 
-PREFACTOR_EXCL = alphae * Nc * e_c**2 * SIGMA0_MB / (2 * math.pi**2)
+PREFACTOR_EXCL =alphae * Nc * e_c**2 * SIGMA0_MB / (2 * math.pi**2)
 
 
 def prefactor_diff(pt):
@@ -51,6 +51,10 @@ def main():
     y_values = [read_y(f) for f in files]
 
     EXCL_COLOR, DIFF_COLOR = "#2166ac", "#b2182b"
+    QUARK_COLOR = "#4dac26"   # the quark DTMD part of the diffractive
+    # quark-DTMD-only run (DTMD=quark), from QUARK_DIR (default: CHARM_DIR + "_quark")
+    quark_dir = os.environ.get("QUARK_DIR", os.path.dirname(pattern) + "_quark")
+    quark_files = {read_y(f): f for f in glob.glob(quark_dir + "/charm_fixed_qp_y*.dat")}
     linestyle_cycle = ["-", "--", ":"]   # solid, dashed, dotted
     linestyles = [linestyle_cycle[i % len(linestyle_cycle)] for i in range(len(y_values))]
 
@@ -62,6 +66,12 @@ def main():
         data_by_y[y] = (pt, excl, diff)
         ax.plot(pt, diff, color=DIFF_COLOR, linestyle=linestyle, lw=2.0)
         ax.plot(pt, excl, color=EXCL_COLOR, linestyle=linestyle, lw=2.0)
+        if y in quark_files:
+            pq, _, quark = read_data(quark_files[y])
+            assert np.allclose(pq, pt), "quark and total runs on different p grids"
+            on = quark > 0   # the quark DTMD is only used for p >= QUARK_P_MIN
+            # (the gluon part, diff - quark, is > 99% of diff: on top of the red curve, so not drawn)
+            ax.plot(pt[on], quark[on], color=QUARK_COLOR, linestyle=linestyle, lw=1.5)
 
     # guide lines with their labels: p^-8 under the exclusive curves, p^-4 above the diffractive ones
     # (between the two sets of curves there is no room for a label)
@@ -83,13 +93,15 @@ def main():
     ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=20))
     ax.set_xlabel(r"$p_{\perp}$ [GeV]", labelpad=6)
     ax.set_ylabel(r"$d\sigma/dy\, d^2\mathbf{p}$ [mb/GeV$^2$]", labelpad=4, fontsize=27)
-    ax.set_title(r"$\gamma+p \rightarrow c+p$ at $z=0.5$", pad=15, fontsize=28)
+    ax.set_title(r"$\gamma+p \rightarrow c\bar c\,(g)+p$ at $z=0.5$", pad=15, fontsize=28)
 
     y_handles = [Line2D([0], [0], color='black', lw=3, linestyle=linestyles[i], label=f"$y={y:g}$")
                  for i, y in reversed(list(enumerate(y_values)))]
     style_handles = [Line2D([0], [0], color=EXCL_COLOR, lw=3, linestyle='-', label="Exclusive"),
                      Line2D([0], [0], color=DIFF_COLOR, lw=3, linestyle='-',
                             label=r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$")]
+    if quark_files:
+        style_handles += [Line2D([0], [0], color=QUARK_COLOR, lw=3, linestyle='-', label="quark DTMD")]
     y_legend = ax.legend(handles=y_handles, fontsize=21, loc='lower left',
                          bbox_to_anchor=(0.02, 0.0), frameon=False)
     ax.add_artist(y_legend)

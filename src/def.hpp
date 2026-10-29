@@ -132,7 +132,7 @@ double Kn(int nu, double x);
 
 // Fixed-q+ mode (q+ = 2p+, no flux, no fragmentation). The results do not have
 // the prefactors yet (they are applied in plotting_scripts/charm_fixed_qp.py).
-double exclusiveCrossSection_fixed_qp(void* p);
+double exclusiveCrossSection_fixed_qp(void* p, double* q0 = nullptr, double* q1 = nullptr);
 double integrand_diffractive_fixed_qp(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_fixed_qp(void* p);
 // Same at fixed x_po (par->fixed_xpo): dsigma/dln(x_po), 3D VEGAS integral over {r1, r2, u_k}.

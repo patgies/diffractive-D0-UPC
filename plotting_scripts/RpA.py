@@ -10,7 +10,7 @@ from matplotlib.transforms import blended_transform_factory
 from matplotlib.ticker import FuncFormatter
 
 from D0 import (
-    read_rapidity, proton_prefactor, load_results, _summed_results,
+    read_rapidity, proton_prefactor, load_results, _summed_results, sum_with_limit,
     A_NUCLEUS, NUCLEUS, CHANNEL, CENTRAL_DIR,
 )
 
@@ -49,10 +49,7 @@ def load_proton_baseline_sum(frag="HymnD"):
     diff = load_proton_baseline("diffractive", frag)
     results = {}
     for y in set(excl) | set(diff):
-        excl_points = dict(excl.get(y, []))
-        diff_points = dict(diff.get(y, []))
-        pt_values = sorted(set(excl_points) | set(diff_points))
-        results[y] = [(pt, excl_points.get(pt, 0.0) + diff_points.get(pt, 0.0)) for pt in pt_values]
+        results[y] = sum_with_limit(dict(excl.get(y, [])), dict(diff.get(y, [])))
     return results
 
 

@@ -14,7 +14,7 @@ from matplotlib.ticker import MultipleLocator, ScalarFormatter
 
 
 # Reads the output of run_proton.sh (TARGET=pA).
-from D0 import read_rapidity, proton_prefactor, _scale_combos, SCALE_FACTOR_TAGS
+from D0 import read_rapidity, proton_prefactor, sum_with_limit, _scale_combos, SCALE_FACTOR_TAGS
 
 PROCESS = os.environ.get("PROCESS", "sum")
 PPB_DIR = os.environ.get("PPB_DIR", "../output/pPb/central_values")
@@ -66,8 +66,7 @@ def get_results(frag, data_dir, mu_r_factor=1.0):
         return load_pPb(PROCESS, frag, data_dir, mu_r_factor)
     excl = load_pPb("exclusive", frag, data_dir)
     diff = load_pPb("diffractive", frag, data_dir, mu_r_factor)
-    return {y: [(pt, value + dict(diff[y])[pt]) for pt, value in excl[y] if pt in dict(diff[y])]
-            for y in excl if y in diff}
+    return {y: sum_with_limit(dict(excl[y]), dict(diff[y])) for y in excl if y in diff}
 
 
 def pt_integrate(points, pt_lo, pt_hi):

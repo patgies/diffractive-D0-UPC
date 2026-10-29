@@ -122,7 +122,7 @@ def load_process_results(process, frag):
 
 def main():
     frag = os.environ.get("FRAG_TYPE", "BCFY")
-    process = "sum"
+    process = os.environ.get("PROCESS", "sum")   # sum, diffractive (TMD part at all pT) or exclusive
 
     proc_results = load_process_results(process, frag)
     incl_results = load_inclusive_results(frag)
@@ -138,11 +138,13 @@ def main():
 
     fig, ax = plt.subplots(figsize=(8, 6.5))
     # "Diffractive" = exclusive + diffractive TMD, as in the other figures
-    title = r"$\sigma^{\rm diffractive}/\sigma^{\rm inclusive}$"
+    numerator = {"sum": r"\rm diffractive", "diffractive": r"\rm diffractive,\,TMD", "exclusive": r"\rm exclusive"}
+    title = rf"$\sigma^{{{numerator[process]}}}/\sigma^{{\rm inclusive}}$"
     plot_ratio_panel(ax, y_values, pt_grid, ratio, title)
 
     plt.tight_layout()
-    outname = f"../plots/ratio_{CHANNEL}_{NUCLEUS}{NUCLEUS}_{frag}.pdf"
+    suffix = "" if process == "sum" else f"_{process}"
+    outname = f"../plots/ratio_{CHANNEL}_{NUCLEUS}{NUCLEUS}_{frag}{suffix}.pdf"
     plt.savefig(outname)
     print(f"Saved: {outname}")
     print(f"y range used: {y_range[0]:g} to {y_range[1]:g} ({y_range[2]} points)")

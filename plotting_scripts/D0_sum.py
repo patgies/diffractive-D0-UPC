@@ -9,7 +9,8 @@ from matplotlib import ticker
 
 # Total D0 cross section (diffractive + exclusive) for some rapidities, with its uncertainty band.
 from D0 import (
-    load_results, load_hymnd_sum_band, band_label, NUCLEUS, CHANNEL, FRAG_TYPES, LINEWIDTH,
+    load_results, load_hymnd_sum_band, band_label, sum_with_limit, NUCLEUS, CHANNEL, FRAG_TYPES, LINEWIDTH,
+    P_D_MIN_DIFF,
 )
 
 Y_TO_PLOT = [-1.0, 0.0, 1.0, 2.0]
@@ -42,12 +43,12 @@ def main():
             plt.plot(pt_values, central_values, color=colors[y], linestyle=linestyles[y], lw=LINEWIDTH)
             continue
 
-        diff_points = dict(results_diff.get(y, []))
-        excl_points = dict(results_excl.get(y, []))
-        pt_values = sorted(set(diff_points) | set(excl_points))
-        totals = [diff_points.get(pt, 0.0) + excl_points.get(pt, 0.0) for pt in pt_values]
+        pt_values, totals = zip(*sum_with_limit(dict(results_excl.get(y, [])), dict(results_diff.get(y, []))))
         plt.plot(pt_values, totals, color=colors[y], linestyle=linestyles[y], lw=LINEWIDTH)
 
+    # below P_D_MIN_DIFF the sum is the exclusive part alone (see D0.sum_with_limit)
+    if P_D_MIN_DIFF > 0:
+        plt.axvline(P_D_MIN_DIFF, color="0.5", lw=1.5, linestyle=":", zorder=0)
     plt.yscale("log")
     plt.ylim(3e-8, 1.5 * plt.gca().dataLim.y1)   # just above the highest curve
     plt.xlim(0, 12)

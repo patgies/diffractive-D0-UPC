@@ -71,6 +71,9 @@ FRAG_TYPES = ["HymnD"]
 MIN_Y_TO_PLOT = -1.0
 MAX_Y_TO_PLOT = 2.0
 MIN_B_D_SAMPLES = 10   # a pT point needs at least this many impact parameters to be integrated
+# The diffractive+exclusive sum has the diffractive TMD part only for pD >= P_D_MIN_DIFF (GeV), where its
+# dependence on the K_perp cut is < 10%; below, the sum is the exclusive part alone. 0: no limit.
+P_D_MIN_DIFF = float(os.environ.get("P_D_MIN_DIFF", 3.0))
 
 SCALE_FACTOR_TAGS = {0.5: "0.5", 1.0: None, 2.0: "2.0"}
 SCALE_FACTORS = list(SCALE_FACTOR_TAGS)
@@ -286,21 +289,31 @@ def load_bk_band(process, frag="HymnD"):
     return _band_from_members(process, frag, f"{OUTPUT_BASE}/{CHANNEL}/bk_band/member_*")
 
 
+def sum_with_limit(excl_points, diff_points):
+    """Exclusive + diffractive TMD per pt ({pt: value} each), with the diffractive part only from
+    P_D_MIN_DIFF on: below it, it depends on the K_perp cut (2 m_T is not >> Q_s,A). A point just below
+    the limit, exclusive alone, makes the step sharp (also in the pT bin integrals).
+    Returns [(pt, total), ...]."""
+    pt_values = sorted(set(diff_points) | set(excl_points))
+    totals = [(pt, excl_points.get(pt, 0.0) + (diff_points.get(pt, 0.0) if pt >= P_D_MIN_DIFF else 0.0))
+              for pt in pt_values]
+    if excl_points and pt_values[0] < P_D_MIN_DIFF <= pt_values[-1]:
+        excl_pt = sorted(excl_points)
+        below = P_D_MIN_DIFF * (1 - 1e-6)
+        totals.append((below, float(np.interp(below, excl_pt, [excl_points[pt] for pt in excl_pt]))))
+    return sorted(totals)
+
+
 def _summed_results(data_dir, frag="HymnD", mu_r_factor=1.0):
-    """diffractive+exclusive summed per (y, pt) for one directory of D0_*.dat
-    files. Returns {y: [(pt, total), ...]}, or {} if neither process has data there.
+    """diffractive+exclusive summed per (y, pt) for one directory of D0_*.dat files, the diffractive
+    part only from P_D_MIN_DIFF on (sum_with_limit). Returns {y: [(pt, total), ...]}, or {} if neither
+    process has data there.
     """
     diff = load_results("diffractive", frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
     excl = load_results("exclusive", frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
     if not diff and not excl:
         return {}
-    totals = {}
-    for y in set(diff) | set(excl):
-        diff_points = dict(diff.get(y, []))
-        excl_points = dict(excl.get(y, []))
-        pt_values = sorted(set(diff_points) | set(excl_points))
-        totals[y] = [(pt, diff_points.get(pt, 0.0) + excl_points.get(pt, 0.0)) for pt in pt_values]
-    return totals
+    return {y: sum_with_limit(dict(excl.get(y, [])), dict(diff.get(y, []))) for y in set(diff) | set(excl)}
 
 
 def _summed_band_from_members(member_dir_pattern, frag="HymnD"):

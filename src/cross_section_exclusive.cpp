@@ -62,7 +62,8 @@ double exclusiveCrossSection_xpom(void* p)
 
 // Exclusive cross section at fixed q+ (q+ = 2p+, no flux, no fragmentation):
 // two 1D integrals over r, I0 and I1. No Monte Carlo.
-double exclusiveCrossSection_fixed_qp(void* p)
+// If q0, q1 are given, they get the I0^2 and (z^2+zbar^2) I1^2 terms (their sum is the result).
+double exclusiveCrossSection_fixed_qp(void* p, double* q0, double* q1)
 {
     parameters* par = (parameters*)p;
 
@@ -83,5 +84,7 @@ double exclusiveCrossSection_fixed_qp(void* p)
     double factor = z*z + zbar*zbar;
     double g = factor * I1*I1 + I0*I0;
 
+    if (q0) *q0 = z * par->m2 * I0*I0;
+    if (q1) *q1 = z * par->m2 * factor * I1*I1;
     return z * par->m2 * g;
 }

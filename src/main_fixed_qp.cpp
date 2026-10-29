@@ -75,9 +75,10 @@ int main(int argc, char* argv[])
     cout << "# quark DTMD  =  for p >= " << param.quark_p_min << " GeV" << endl;
     cout << "# VEGAS calls =  " << param.calls_diff << " (diffractive only; exclusive is deterministic)" << endl;
     cout << "# ============================================================" << endl;
-    cout << "# p  exclusive_fixed_qp  diffractive_fixed_qp" << endl;
+    cout << "# exclusive = excl_Q0 + excl_Q1: the m^2 I0^2 and m^2 (z^2+zbar^2) I1^2 terms" << endl;
+    cout << "# p  exclusive_fixed_qp  diffractive_fixed_qp  excl_Q0  excl_Q1" << endl;
 
-    vector<double> p_grid(n_pt), out_excl(n_pt), out_diff(n_pt);
+    vector<double> p_grid(n_pt), out_excl(n_pt), out_diff(n_pt), out_q0(n_pt), out_q1(n_pt);
     double log_lo = log(pt_min), log_hi = log(pt_max);
     for (int i = 0; i < n_pt; ++i)
         p_grid[i] = exp(log_lo + i * (log_hi - log_lo) / (n_pt - 1));
@@ -96,7 +97,7 @@ int main(int argc, char* argv[])
         double p2m2 = p.p2 + p.m2;
         p.mt   = sqrt(p2m2);
 
-        out_excl[idx] = exclusiveCrossSection_fixed_qp(static_cast<void*>(&p));
+        out_excl[idx] = exclusiveCrossSection_fixed_qp(static_cast<void*>(&p), &out_q0[idx], &out_q1[idx]);
 
         p.k_upper = p.kmax;
         out_diff[idx] = diffractiveCrossSection_fixed_qp(static_cast<void*>(&p));
@@ -108,7 +109,8 @@ int main(int argc, char* argv[])
          << (int)(elapsed/60)%60 << "m " << (int)elapsed%60 << "s" << endl;
 
     for (int idx = 0; idx < n_pt; ++idx)
-        cout << p_grid[idx] << "  " << out_excl[idx] << "  " << out_diff[idx] << endl;
+        cout << p_grid[idx] << "  " << out_excl[idx] << "  " << out_diff[idx]
+             << "  " << out_q0[idx] << "  " << out_q1[idx] << endl;
 
     return 0;
 }

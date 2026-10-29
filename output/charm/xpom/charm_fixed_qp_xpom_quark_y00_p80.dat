@@ -1,0 +1,48 @@
+# ============================================================
+# Date        =  2026-10-28 19:50:57
+# Fixed-q+ (no photon flux) diffractive dsigma/(d2p dln x_po)
+# diffractive   : gluon DTMD (dipole N_g) and/or quark DTMD (dipole N), per d ln(x_po)
+# DTMD          : quark (gluon, quark or both)
+# W^2 = sqrt(2)*ss*2*pp fixed via qp=2*pp (z=1/2); y and p fixed
+# diffractive column: missing prefactor alpha_s*alpha*ef^2*(Nc^2-1)*Sperp/(8pi^4)
+# ------------------------------------------------------------
+# Dipole data =  ./data/proton/mve.dat
+# sqrt(s)     =  5360 GeV
+# y (fixed)   =  0
+# p (fixed)   =  8
+# m_charm     =  1.5 GeV
+# x_po (excl) =  0.00303709 (exclusive x_po, start of the diffractive one)
+# x_po grid   =  30 pts in [1e-05, 0.1] (log)
+# VEGAS calls =  100000
+# ============================================================
+# x_po  diffractive_fixed_qp_dlnxpo
+1e-05  0
+1.37382e-05  0
+1.88739e-05  0
+2.59294e-05  0
+3.56225e-05  0
+4.8939e-05  0
+6.72336e-05  0
+9.23671e-05  0
+0.000126896  0
+0.000174333  0
+0.000239503  0
+0.000329034  0
+0.000452035  0
+0.000621017  0
+0.000853168  0
+0.0011721  0
+0.00161026  0
+0.00221222  0
+0.0030392  1.7294e-08
+0.00417532  1.10277e-06
+0.00573615  1.23642e-06
+0.00788046  9.26773e-07
+0.0108264  6.41119e-07
+0.0148735  4.92571e-07
+0.0204336  3.73215e-07
+0.0280722  2.76376e-07
+0.0385662  2.02062e-07
+0.0529832  1.4608e-07
+0.0727895  1.0749e-07
+0.1  8.04671e-08
