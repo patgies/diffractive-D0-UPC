@@ -47,6 +47,8 @@ int main(int argc, char* argv[])
     param.quark_p_min  = getenv("QUARK_P_MIN") ? atof(getenv("QUARK_P_MIN")) : 5.0;
     // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
     param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
+    // DIFF_METHOD: diffractive part by VEGAS (default) or by quadrature without Monte Carlo ("quad")
+    string diff_method = getenv("DIFF_METHOD") ? getenv("DIFF_METHOD") : "vegas";
 
     int n_pt = (argc > 2) ? atoi(argv[2]) : 40;
     double pt_min = 0.2, pt_max = 20.0;
@@ -73,7 +75,10 @@ int main(int argc, char* argv[])
     cout << "# k cut       =  k <= " << param.k_cut_factor << " * scale (<= 0: no cut), gluon scale "
          << param.k_cut_scale << ", quark scale p" << endl;
     cout << "# quark DTMD  =  for p >= " << param.quark_p_min << " GeV" << endl;
-    cout << "# VEGAS calls =  " << param.calls_diff << " (diffractive only; exclusive is deterministic)" << endl;
+    if (diff_method == "quad")
+        cout << "# diffractive =  quadrature, no Monte Carlo (DIFF_METHOD=quad); exclusive is deterministic" << endl;
+    else
+        cout << "# VEGAS calls =  " << param.calls_diff << " (diffractive only; exclusive is deterministic)" << endl;
     cout << "# ============================================================" << endl;
     cout << "# exclusive = excl_Q0 + excl_Q1: the m^2 I0^2 and m^2 (z^2+zbar^2) I1^2 terms" << endl;
     cout << "# p  exclusive_fixed_qp  diffractive_fixed_qp  excl_Q0  excl_Q1" << endl;
@@ -100,7 +105,8 @@ int main(int argc, char* argv[])
         out_excl[idx] = exclusiveCrossSection_fixed_qp(static_cast<void*>(&p), &out_q0[idx], &out_q1[idx]);
 
         p.k_upper = p.kmax;
-        out_diff[idx] = diffractiveCrossSection_fixed_qp(static_cast<void*>(&p));
+        out_diff[idx] = (diff_method == "quad") ? diffractiveCrossSection_fixed_qp_quad(static_cast<void*>(&p))
+                                                : diffractiveCrossSection_fixed_qp(static_cast<void*>(&p));
     }
 
     auto t_end = std::chrono::steady_clock::now();

@@ -71,9 +71,9 @@ FRAG_TYPES = ["HymnD"]
 MIN_Y_TO_PLOT = -1.0
 MAX_Y_TO_PLOT = 2.0
 MIN_B_D_SAMPLES = 10   # a pT point needs at least this many impact parameters to be integrated
-# The diffractive+exclusive sum has the diffractive TMD part only for pD >= P_D_MIN_DIFF (GeV), where its
-# dependence on the K_perp cut is < 10%; below, the sum is the exclusive part alone. 0: no limit.
-P_D_MIN_DIFF = float(os.environ.get("P_D_MIN_DIFF", 3.0))
+# The diffractive+exclusive sum has the diffractive TMD part only for pD >= P_D_MIN_DIFF (GeV); below, the
+# sum is the exclusive part alone. Default 0: the TMD part (K_perp <= 2 m_T) at all pD.
+P_D_MIN_DIFF = float(os.environ.get("P_D_MIN_DIFF", 0.0))
 
 SCALE_FACTOR_TAGS = {0.5: "0.5", 1.0: None, 2.0: "2.0"}
 SCALE_FACTORS = list(SCALE_FACTOR_TAGS)

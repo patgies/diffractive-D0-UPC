@@ -19,6 +19,8 @@ from D0 import (
 
 A_PB = A_NUCLEUS[NUCLEUS]
 Y_TO_PLOT = [0.0, 0.5, 1.0, 1.5, 2.0]
+# The diffractive (TMD) R_pA is shown only for pT >= PT_MIN_DIFF (GeV), where the correlation limit holds better
+PT_MIN_DIFF = float(os.environ.get("PT_MIN_DIFF", 1.0))
 
 PROTON_DIR = os.environ.get("PROTON_DIR", f"../output/{CHANNEL}/proton_baseline")
 
@@ -79,7 +81,8 @@ def make_plot(process):
     for y in y_values:
         aa_points = dict(aa_results[y])
         pa_points = dict(pa_results[y])
-        pt_values = sorted(set(aa_points) & set(pa_points))
+        pt_values = sorted(pt for pt in set(aa_points) & set(pa_points)
+                           if process != "diffractive" or pt >= PT_MIN_DIFF)
         r_pa = [aa_points[pt] / (A_PB * pa_points[pt]) for pt in pt_values]
         plt.plot(pt_values, r_pa, color=colors[y], linestyle=y_linestyles[y], linewidth=2)
 
@@ -87,6 +90,9 @@ def make_plot(process):
     plt.axhline(1.0, color="gray", linestyle=":", linewidth=1)
     plt.xlim(0, 12)
     plt.xticks([0, 2, 4, 6, 8, 10, 12])
+    if process == "diffractive":
+        plt.xlim(PT_MIN_DIFF, 12)
+        plt.xticks([1, 2, 4, 6, 8, 10, 12])
     if process in ("diffractive", "sum"):
         plt.ylim(0.4, 1.15)
     else:

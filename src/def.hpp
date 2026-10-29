@@ -135,6 +135,10 @@ double Kn(int nu, double x);
 double exclusiveCrossSection_fixed_qp(void* p, double* q0 = nullptr, double* q1 = nullptr);
 double integrand_diffractive_fixed_qp(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_fixed_qp(void* p);
+// Same without Monte Carlo: radial integrals and k, x_po by Gauss-Legendre quadrature (integrands.cpp).
+double diffractiveCrossSection_fixed_qp_quad(void* p);
+// int_0^rmax dr r J_nu(k r) K_nu(omega r) N(r, x_dip) (N_A if adjoint), by Gauss-Legendre quadrature.
+double dtmd_radial_integral(int nu, double k, double omega, double x_dip, bool adjoint, AmplitudeLib* dipole);
 // Same at fixed x_po (par->fixed_xpo): dsigma/dln(x_po), 3D VEGAS integral over {r1, r2, u_k}.
 double integrand_diffractive_fixed_qp_xpom(double* vec, size_t dim, void* p);
 double diffractiveCrossSection_fixed_qp_xpom(void* p);

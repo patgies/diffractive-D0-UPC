@@ -15,9 +15,10 @@ from matplotlib.ticker import FuncFormatter
 # R_pA at fixed photon energy q+ = 2p+ (z = 0.5), for the charm quark: no photon flux, no fragmentation.
 # Pb: run_charm_fixed_qp.sh with DIPOLE_DIR=data/Pb/mve (integrated over b_d); proton: run_charm_fixed_qp.sh.
 from D0 import prefactor, nuclear_edge_factor, alphas_run, mc, SIGMA0_MB, GEVSQR_TO_MB, NUCLEUS, NUCLEAR_EDGE
-from RpA import A_PB, Y_TO_PLOT
+from RpA import A_PB, Y_TO_PLOT, PT_MIN_DIFF
 
-CHARM_DIR = os.environ.get("CHARM_DIR", "../output/charm")
+# Default: gluon DTMD only, by quadrature (DIFF_METHOD=quad DTMD=gluon run_charm_fixed_qp.sh), no Monte Carlo noise
+CHARM_DIR = os.environ.get("CHARM_DIR", "../output/charm_quad")
 MU_R_FACTORS = [0.5, 1.0, 2.0]   # renormalization-scale variation, mu_R = factor * m_T
 # BK posterior samples: member_NNNN/ folders with the layout of output/charm/, each from the Pb dipoles
 # data/Pb/bk_posterior/member_NNNN/ and the proton dipole data/proton/bk_posterior/member_NNNN.dat (see README)
@@ -122,13 +123,15 @@ def make_plot(process, aa, pa, bk_spread):
     for y in y_values:
         procs = PROCESS_PARTS[process]
         pt = aa[y][procs[0]][0]
-        central = r_pa(aa, pa, y, procs)
+        keep = pt >= (PT_MIN_DIFF if process == "diffractive" else 0)
+        pt = pt[keep]
+        central = r_pa(aa, pa, y, procs)[keep]
         plt.plot(pt, central, color=y_colors.get(y, "0.3"), linestyle=linestyles[y], linewidth=2)
 
         # band: BK samples (relative spread), plus the mu_R variation for the sum, in quadrature
         half_width = np.zeros_like(central)
         if y in bk_spread.get(process, {}):
-            half_width = bk_spread[process][y] * central
+            half_width = bk_spread[process][y][keep] * central
         if process == "sum":
             # mu_R band: alpha_s only multiplies the diffractive part, the same in Pb and in the proton,
             # so it changes the weight of the two processes (no band for each process alone)
@@ -157,7 +160,7 @@ def make_plot(process, aa, pa, bk_spread):
     (label_x, label_top, label_ha), legend_loc, legend_anchor, ncol = {
         "sum": ((0.95, 0.97, "right"), "lower right", (0.97, 0.03), 1),
         "exclusive": ((0.08, 0.9, "left"), "lower right", (0.97, 0.02), 1),
-        "diffractive": ((0.95, 0.78, "right"), "lower right", (0.97, 0.01), 1)}[process]
+        "diffractive": ((0.05, 0.97, "left"), "lower right", (0.97, 0.01), 1)}[process]
     if process == "sum":
         plt.ylim(0.4, 1.15)
     ax.text(label_x, label_top, label + "\n" + r"$q^+ = 2p^+$", transform=ax.transAxes, ha=label_ha, va="top",
@@ -169,6 +172,11 @@ def make_plot(process, aa, pa, bk_spread):
         handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=r" $\oplus$ ".join(band_parts)))
     if process == "exclusive":
         plt.ylim(bottom=0.6)
+    if process == "diffractive":
+        plt.ylim(top=0.99)   # room for the label in the upper left
+        plt.yticks([0.85, 0.9, 0.95])
+        plt.xlim(PT_MIN_DIFF, 12)
+        plt.xticks([1, 2, 4, 6, 8, 10, 12])
     plt.legend(handles=handles, loc=legend_loc, bbox_to_anchor=legend_anchor, ncol=ncol, fontsize=23, frameon=False,
                labelspacing=0.3 if process == "exclusive" else None)
 

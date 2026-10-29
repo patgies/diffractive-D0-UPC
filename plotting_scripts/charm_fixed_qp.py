@@ -52,9 +52,10 @@ def main():
 
     EXCL_COLOR, DIFF_COLOR = "#2166ac", "#b2182b"
     QUARK_COLOR = "#4dac26"   # the quark DTMD part of the diffractive
-    # quark-DTMD-only run (DTMD=quark), from QUARK_DIR (default: CHARM_DIR + "_quark")
-    quark_dir = os.environ.get("QUARK_DIR", os.path.dirname(pattern) + "_quark")
-    quark_files = {read_y(f): f for f in glob.glob(quark_dir + "/charm_fixed_qp_y*.dat")}
+    # quark-DTMD-only run (DTMD=quark), drawn only if QUARK_DIR is set (e.g. ../output/charm_quark);
+    # the diffractive curve already includes it
+    quark_dir = os.environ.get("QUARK_DIR")
+    quark_files = {read_y(f): f for f in glob.glob(quark_dir + "/charm_fixed_qp_y*.dat")} if quark_dir else {}
     linestyle_cycle = ["-", "--", ":"]   # solid, dashed, dotted
     linestyles = [linestyle_cycle[i % len(linestyle_cycle)] for i in range(len(y_values))]
 

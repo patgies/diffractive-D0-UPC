@@ -20,7 +20,7 @@ PROCESS = os.environ.get("PROCESS", "sum")
 PPB_DIR = os.environ.get("PPB_DIR", "../output/pPb/central_values")
 SCALE_BASE = os.environ.get("SCALE_BASE", "../output/pPb/scale_variation")
 
-PT_BINS = [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (6.0, 7.0), (10.0, 11.0)]
+PT_BINS = [(1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (6.0, 7.0), (10.0, 11.0)]
 Y_BINS = [(-3.0, -2.0), (-2.0, -1.0), (-1.0, 0.0), (0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]
 FRAG_SCHEMES = [
     ("BCFY", "BCFY", "#2166ac", "-"),
@@ -101,7 +101,7 @@ def scale_band(frag):
     return {key: (min(v[key] for v in all_values), max(v[key] for v in all_values)) for key in keys}
 
 
-def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=None, second_panel_text=None):
+def draw_panels(averages, bands, outname, ylabel_x=0.034, left=0.015, flux_text=None, second_panel_text=None):
     """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
     and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
     The legend goes in the upper left of the first panel. flux_text goes in the first panel, under
@@ -114,11 +114,16 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
     on_the_left = lambda y_lo, y_hi: y_lo < -1
     has_band = any(bands[frag] for frag in bands)
     texts = [(on_the_right, 0.77)]
-    # first panel: pT label on the right, legend in the upper left (its last line is the widest)
-    first_panel_texts = [(on_the_right, 0.77), (on_the_left, 0.42 if has_band else 0.6),
-                         (lambda y_lo, y_hi: y_lo < 1, 0.5 if has_band else 1.0)]
+    # With fewer pT bins than panels, the bins fill the first panels and the first free one holds the legend.
+    # Otherwise the legend goes in the upper left of the first panel (its last line is the widest), with
+    # the pT label on the right.
+    n_free = axes.size - len(PT_BINS)
+    legend_panel = n_free > 0
+    bin_axes = axes.flat[:len(PT_BINS)]
+    first_panel_texts = texts if legend_panel else [(on_the_right, 0.77), (on_the_left, 0.42 if has_band else 0.6),
+                                                    (lambda y_lo, y_hi: y_lo < 1, 0.5 if has_band else 1.0)]
 
-    for ax, (pt_lo, pt_hi) in zip(axes.flat, PT_BINS):
+    for ax, (pt_lo, pt_hi) in zip(bin_axes, PT_BINS):
         bin_top = {y_bin: 0.0 for y_bin in Y_BINS}   # highest point of each y bin
         for frag, _, color, linestyle in FRAG_SCHEMES:
             values = [averages[frag].get((pt_lo, y_lo), np.nan) for y_lo, _ in Y_BINS]
@@ -138,10 +143,10 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
 
         ax.set_xlim(-3, 3)
         y_max = 1.12 * max(bin_top.values())
-        panel_texts = first_panel_texts if ax is axes.flat[0] else texts
-        if flux_text and ax is axes.flat[0]:
+        panel_texts = first_panel_texts if ax is bin_axes[0] else texts
+        if flux_text and ax is axes.flat[0] and not legend_panel:
             panel_texts = panel_texts + [(on_the_right, 0.66)]
-        if second_panel_text and ax is axes.flat[1]:
+        if second_panel_text and ax is axes.flat[1] and not legend_panel:
             panel_texts = panel_texts + [(on_the_right, 0.66)]
         for under_text, free_below in panel_texts:
             y_max = max([y_max] + [top / free_below for y_bin, top in bin_top.items() if under_text(*y_bin)])
@@ -164,14 +169,26 @@ def draw_panels(averages, bands, outname, ylabel_x=0.028, left=0.015, flux_text=
     if has_band:
         frag_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none",
                                   label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_T$"))
-    if flux_text:
+    if flux_text and not legend_panel:
         axes.flat[0].text(0.95, 0.79, flux_text, transform=axes.flat[0].transAxes, ha="right", va="top", fontsize=30)
-    if second_panel_text:
+    if second_panel_text and not legend_panel:
         axes.flat[1].text(0.95, 0.79, second_panel_text, transform=axes.flat[1].transAxes, ha="right", va="top",
                           fontsize=30)
-    axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=28, frameon=False)
+    if not legend_panel:
+        axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=28, frameon=False)
 
-    for ax in axes[-1]:
+    # panels without a pT bin are hidden, the first one holds the legend (process and channel on top, as
+    # entries without a line); the panel above them gets the y axis labels
+    for i, ax in enumerate(axes.flat[len(PT_BINS):], start=len(PT_BINS)):
+        ax.axis("off")
+        if i == len(PT_BINS):
+            text_handles = [Patch(visible=False, label=t) for t in (second_panel_text, flux_text) if t]
+            legend = ax.legend(handles=text_handles + frag_handles, loc="center", fontsize=30,
+                               frameon=True, fancybox=False, edgecolor="0.3", borderpad=0.8)
+            legend.get_frame().set_linewidth(1.2)
+        axes.flat[i - axes.shape[1]].tick_params(labelbottom=True)
+        axes.flat[i - axes.shape[1]].set_xlabel(r"$y$", labelpad=12, fontsize=34)
+    for ax in axes[-1][:axes.shape[1] - n_free]:
         ax.set_xlabel(r"$y$", labelpad=12, fontsize=34)
     fig.supylabel(r"$d\sigma/dy\,dp_{D\perp}$ [mb/GeV]", fontsize=34, x=ylabel_x)
 

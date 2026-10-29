@@ -19,6 +19,9 @@ from D0 import (
 INCLUSIVE_FACTOR_A = alphae * e_c**2 * Nc / (2 * math.pi) ** 4   # prefactor of inclusive-D0-UPC
 
 PT_MAX_PLOT = 8.0
+# Below PT_MIN_PLOT the ratio is not shown: there the inclusive (LO) is not at the accuracy of the
+# diffractive part (qqg), which would need soft gluon emission in the inclusive as well.
+PT_MIN_PLOT = float(os.environ.get("PT_MIN_PLOT", 1.0))
 
 
 def load_inclusive_results(frag="HymnD"):
@@ -133,7 +136,7 @@ def main():
                   f"check {CENTRAL_DIR} and ../input/inclusive/.")
     y_range = (y_values[0], y_values[-1], len(y_values))
 
-    pt_grid = sorted({pt for pt, _ in proc_results[y_values[0]] if pt <= PT_MAX_PLOT})
+    pt_grid = sorted({pt for pt, _ in proc_results[y_values[0]] if PT_MIN_PLOT <= pt <= PT_MAX_PLOT})
     ratio = compute_ratio_grid(proc_results, incl_results, y_values, pt_grid)
 
     fig, ax = plt.subplots(figsize=(8, 6.5))

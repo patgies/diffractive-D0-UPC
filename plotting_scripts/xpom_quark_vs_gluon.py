@@ -28,15 +28,16 @@ def main():
 
     plt.figure(figsize=(8, 6.5))
     plt.plot(xg, g, color="#b2182b", lw=2.5, label="gluon DTMD")
-    plt.plot(xq, q, color="#4dac26", lw=2.5, label="quark DTMD")
-    plt.axvline(xpo_min, color="0.5", ls=":", lw=2, label=r"$x_{\mathbb{P}}^{\min}=M^2/W^2$")
+    plt.plot(xq, q, color="#2166ac", lw=2.5, label="quark DTMD")
+    plt.axvline(xpo_min, color="0.5", ls=":", lw=2, label=r"$x_{\mathbb{P}}^{\min}=M_{c\bar c}^2/W^2$")
 
     plt.xscale("log")
     plt.yscale("log")
     plt.ylim(3e-12, 1e-7)
     plt.xlabel(r"$x_{\mathbb{P}}$", labelpad=10)
     plt.ylabel(r"$d\sigma/dy\,d^2\mathbf{p}\,d\ln(x_{\mathbb{P}})$ [mb/GeV$^2$]", labelpad=15, fontsize=27)
-    plt.title(rf"$\gamma+p$, $p_\perp={P:g}$ GeV, $y=0$, $z=0.5$", pad=15, fontsize=28)
+    plt.gca().text(0.95, 0.95, rf"$\gamma+p$, $p_\perp={P:g}$ GeV, $y=0$, $z=0.5$",
+                   transform=plt.gca().transAxes, ha="right", va="top", fontsize=24)
     plt.legend(loc="center right", fontsize=23, frameon=False)
 
     plt.tight_layout()

@@ -55,6 +55,7 @@ def xpo_min(p, y, M2):
 
 
 def main():
+    # same blue and red as xpom_quark_vs_gluon.py
     TARGETS = [("proton", "qs_proton.dat", "#2166ac"), ("Pb", "qs_Pb_b0.dat", "#b2182b")]
     p = np.geomspace(0.2, 20, 200)
     mt = np.hypot(p, M_CHARM)
@@ -71,8 +72,8 @@ def main():
     for name, qs_file, color in reversed(TARGETS):
         qs_A = [qs_at(f"{QS_DIR}/{qs_file}", xpo_min(p, y, 4 * mt**2), 2) for y in (0.0, 3.0)]
         qs_F = [qs_at(f"{QS_DIR}/{qs_file}", xpo_min(p, y, 4 * p**2 + 2 * M_CHARM**2), 1) for y in (0.0, 3.0)]
-        left.fill_between(p, qs_A[0], qs_A[1], color=color, alpha=0.35, lw=0, label=rf"$Q_{{s,A}}$ {name}")
-        right.fill_between(p, qs_F[0], qs_F[1], color=color, alpha=0.35, lw=0, label=rf"$Q_s$ {name}")
+        left.fill_between(p, qs_A[0], qs_A[1], color=color, alpha=0.45, lw=0, label=rf"$Q_{{s,A}}$ {name}")
+        right.fill_between(p, qs_F[0], qs_F[1], color=color, alpha=0.45, lw=0, label=rf"$Q_s$ {name}")
 
     for ax, title in ((left, "Gluon DTMD"), (right, "Quark DTMD")):
         ax.set_title(title, pad=15)
