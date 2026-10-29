@@ -23,7 +23,7 @@
 
 The notes on the large-$P_\perp$ behaviour (Sec.~4 and Erratum) predict, at fixed $z$ and $\xpo$:
 GBW $\Rightarrow m^2Q_s^4/P_\perp^8$; MV $\Rightarrow Q_s^4/P_\perp^6$, from the logarithm in
-$\mathcal{N}\sim Q_s^2r_\perp^2\ln(1/r_\perp\Lambda)$. Both are confirmed numerically (Fig.~\ref{fig:tail}).
+$\mathcal{N}\sim Q_s^2r_\perp^2\ln(1/r_\perp\Lambda)$. Both are confirmed numerically (Sec.~4).
 Our dipole, however, is the MVe fit with $e_c=18.9$ inside the logarithm. This delays the
 $1/P_\perp^6$ tail to $P_\perp\gtrsim50$~GeV; below it the spectrum behaves almost like GBW:
 \begin{itemize}
@@ -83,7 +83,7 @@ up to $r=40$~GeV$^{-1}$ (\texttt{plotting\_scripts/exclusive\_tail.py}). The BK 
 linearly in $y=\ln(x_0/x)$ between blocks, as in AmplitudeLib, and with a cubic spline in $(\ln r,\ln\mathcal{N})$.
 Two checks:
 \begin{itemize}
-\item The BK file at $x=x_0$ reproduces the analytic MVe exactly (dashed and solid blue in Fig.~\ref{fig:tail}).
+\item The BK file at $x=x_0$ reproduces the analytic MVe exactly (identical local powers in Sec.~4).
 \item At $\xpo=M^2/W^2$ (frozen above 0.01) it reproduces the code's \texttt{output/charm/charm\_fixed\_qp\_y00.dat}
   to $10^{-4}$ at all 20 points from 2 to 20~GeV: the GSL integrals in the code are accurate.
   Here $x=\xpo(P_\perp)=2m_T/\sqrt s$ ($y=0$, $z=\tfrac12$):
@@ -98,30 +98,36 @@ noisy, from the numerical BK solution.
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.62\textwidth]{../plots/exclusive_tail.pdf}
-\caption{Top: $F(P_\perp)$ at $z=\tfrac12$ for GBW, MV, MVe and the BK solution at fixed $x$, and the code at
+\caption{Top: the exclusive cross section $\mathrm{d}\sigma/\mathrm{d}y\,\mathrm{d}^2P_\perp$ (proton, $z=\tfrac12$) for GBW, MVe and the BK solution at $\xpo=10^{-3}$, and the code at
 fixed $q^+=2p^+$ ($y=0$, proton) where $\xpo$ grows with $P_\perp$ (black dots). Bottom: local power
-$\mathrm{d}\ln F/\mathrm{d}\ln P_\perp$; dotted lines at $-6$, $-8$, $-10$.}
+$\mathrm{d}\ln\sigma/\mathrm{d}\ln P_\perp$ (the same as $\mathrm{d}\ln F/\mathrm{d}\ln P_\perp$); dotted lines at $-6$, $-8$, $-10$.}
 \label{fig:tail}
 \end{figure}
 
 \subsection*{Reading the figure}
 
-\textbf{What is plotted.} The top panel shows $F(P_\perp)=m^2[(z^2+\bar z^2)I_1^2+I_0^2]$, the exclusive cross section
-$\mathrm{d}\sigma/\mathrm{d}^2P_\perp\mathrm{d}z$ at $z=\tfrac12$ without the constant prefactor
-$\alpha_{\mathrm{em}}e_q^2N_cS_\perp/2\pi^2$; hence the units GeV$^{-2}$. There is no photon flux and no fragmentation:
-it is the parton-level $c\bar c$ spectrum. The bottom panel shows its local power
+\textbf{What is plotted.} The top panel shows the full exclusive cross section on a proton,
+\begin{equation}
+\frac{\mathrm{d}\sigma}{\mathrm{d}y\,\mathrm{d}^2P_\perp}=\frac{\alpha_{\mathrm{em}}e_c^2N_cS_\perp}{2\pi^2}\,z\,F(P_\perp)\,,\qquad
+F=m^2\big[(z^2+\bar z^2)I_1^2+I_0^2\big]\,,
+\end{equation}
+at $z=\tfrac12$, with $e_c=\tfrac23$, $\alpha_{\mathrm{em}}=1/137$ and $S_\perp=\sigma_0/2=16.36$~mb of the MVe fit, in mb/GeV$^2$.
+This is the normalization of the exclusive curves of \texttt{plots/charm\_fixed\_qp.pdf}; the dots are those curves at
+$y=0$. There is no photon flux and no fragmentation: it is the parton-level $c\bar c$ spectrum. The prefactor is a constant,
+so the local powers are those of $F$. The bottom panel shows its local power
 $n(P_\perp)=\mathrm{d}\ln F/\mathrm{d}\ln P_\perp$, so that $F\propto P_\perp^{\,n}$ locally; a pure power law is a
 horizontal line.
 
 \textbf{The lines: one dipole amplitude at one fixed $x$ each.} Every line uses the same formula for $F$ and differs
 only in $\mathcal N(r)$:
 \begin{itemize}
-\item GBW, MV and MVe are the analytic models of Sec.~1, with no $x$ dependence.
-\item ``BK, $\xpo=x_0$'' is the BK solution of \texttt{mve.dat} at its initial condition. It lies exactly on MVe,
-  which checks that the file is read correctly.
-\item ``BK, $\xpo=10^{-3}$'' and ``BK, $\xpo=10^{-5}$'' are the same BK solution after evolution. Evolution raises $Q_s$, so
-  $F$ is larger, and makes $\mathcal N$ at small $r$ closer to the MV form, so the tail is flatter.
+\item GBW and MVe are the analytic models of Sec.~1, with no $x$ dependence. MVe is also the BK solution of
+  \texttt{mve.dat} at its initial condition $x_0$.
+\item ``BK, $\xpo=10^{-3}$'' is the same BK solution after evolution. Evolution raises $Q_s$, so the cross section is
+  larger, and lowers $\gamma_{\mathrm{eff}}$ at small $r$, so the tail is flatter (Sec.~5).
 \end{itemize}
+MV ($e_c=1$), BK at $x_0$ and BK at $\xpo=10^{-5}$ are not drawn, to keep the figure readable; their local powers are in
+the table of Sec.~4.
 Since $x$ is the same at all $P_\perp$ along a line, the lines isolate the $P_\perp$ dependence of the Hankel integrals
 $I_0$, $I_1$. That dependence is what the notes compute, so the lines are the ones to compare with $P_\perp^{-6}$ and
 $P_\perp^{-8}$.
@@ -147,7 +153,7 @@ Evaluating the BK solution at the dots' own $\xpo(P_\perp)$ reproduces every dot
 $(P_\perp,x)$.
 
 \textbf{Consequence for the $P_\perp^{-6}$ question.} The notes' $P_\perp^{-6}$ is a statement at fixed $x$: it is
-the MV line, and it is reached by MVe only above $\approx50$~GeV (Sec.~2). Our spectrum is not at fixed $x$, and in
+the MV curve of Sec.~4, and it is reached by MVe only above $\approx50$~GeV (Sec.~2). Our spectrum is not at fixed $x$, and in
 our range it is steeper for two separate reasons: the large $e_c$ of the fit, which keeps the fixed-$x$ power near
 $-7$, and the growth of $\xpo$ with $P_\perp$, which adds $\approx-1.3$.
 
