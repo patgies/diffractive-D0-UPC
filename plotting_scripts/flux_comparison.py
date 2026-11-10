@@ -43,7 +43,9 @@ SCAN_DIR = "../output/flux_scan"
 def load_table(path):
     rows = [l.split() for l in open(path) if l.strip() and not l.startswith("#")]
     a = np.array(rows, dtype=float)
-    return {"y4": a[:, 2], "AnAn": a[:, 3], "An0n": a[:, 4], "0n0n": a[:, 5]}
+    # no Xn0n column: An0n = 0n0n + Xn0n
+    xn0n = np.log(np.exp(a[:, 4]) - np.exp(a[:, 5]))
+    return {"y4": a[:, 2], "AnAn": a[:, 3], "An0n": a[:, 4], "0n0n": a[:, 5], "Xn0n": xn0n}
 
 
 def interp_flux(tab, key, y):
@@ -83,13 +85,11 @@ eff = load_scan(os.path.join(SCAN_DIR, "flux_scan_EFF.dat"))
 for ch in ["AnAn", "An0n", "Xn0n", "0n0n"]:
     scan[ch] = eff[ch]
 
-XN0N_ENTRY = ("Xn0n", None, None, r"$Xn0n$")
-
 PAIRS = [
     ("AnAn",     WS, "AnAn", r"$AnAn$"),
     ("An0n",     WS, "An0n", r"$An0n$"),
     ("0n0n",     WS, "0n0n", r"$0n0n$"),
-    XN0N_ENTRY,
+    ("Xn0n",     WS, "Xn0n", r"$Xn0n$"),
 ]
 CHANNEL_COLORS = {
     "PL(AnAn)": "#333333",
@@ -98,8 +98,8 @@ CHANNEL_COLORS = {
     "Xn0n":     "#1a7f4b",
     "0n0n":     "#e08a00",
 }
-TABLE_STYLE = dict(ls="-", lw=6.5, alpha=0.35, solid_capstyle="butt")
-OURS_STYLE  = dict(ls=(0, (3, 1.5)), lw=2.0)
+TABLE_STYLE = dict(ls="-", lw=1.3)                # thin, so it does not look like an error band
+OURS_STYLE  = dict(ls=(0, (4, 2.5)), lw=2.8)
 
 if __name__ == "__main__":
     TABLED = [p for p in PAIRS if p[1] is not None]
@@ -115,7 +115,8 @@ if __name__ == "__main__":
     YMIN = 1e-3
     RATIO_STYLE = {"AnAn":     dict(lw=1.5),
                    "An0n":     dict(lw=1.5),
-                   "0n0n":     dict(lw=1.5)}
+                   "0n0n":     dict(lw=1.5),
+                   "Xn0n":     dict(lw=1.5)}
     fig, (ax, axr) = plt.subplots(2, 1, figsize=(8, 9.5), sharex=True, gridspec_kw={"height_ratios": [4, 1]})
     yy = np.logspace(-4, 0, 400)
     for ch, tab, key, label in PAIRS:
@@ -164,10 +165,6 @@ if __name__ == "__main__":
     ax.add_artist(channel_legend)
     ax.legend(handles=source_handles, loc="lower left", bbox_to_anchor=(0.02, 0.005),
               fontsize=22, labelspacing=0.55, title="Model", title_fontsize=22, frameon=False)
-    ratio_handles = [Line2D([], [], color=CHANNEL_COLORS[ch], ls="-", **RATIO_STYLE[ch], label=label)
-                     for ch, _, _, label in PAIRS if ch in RATIO_STYLE]
-    axr.legend(handles=ratio_handles, loc="upper left", bbox_to_anchor=(0.0, 1.04), ncol=3, fontsize=22,
-               frameon=False, handlelength=1.4, columnspacing=0.9)
     axr.set_xscale("log"); axr.set_ylabel(r"$P_b$/STARlight", labelpad=15, fontsize=20); axr.set_xlabel(r"$z_\gamma$", labelpad=6)
     axr.set_yscale("linear"); axr.set_ylim(0.98, 1.02)
     axr.yaxis.set_major_locator(FixedLocator([0.98, 1.0, 1.02]))

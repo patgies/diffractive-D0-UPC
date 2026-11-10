@@ -46,15 +46,14 @@ def main():
     ax_ratio.set_yticks([1, 10])
     ax_ratio.set_yticklabels(["1", "10"])
     ax_ratio.set_xlabel(r"$z_\gamma$", labelpad=10)
-    ax_ratio.set_ylabel(r"ratio to $F$", labelpad=10, fontsize=20)
+    ax_ratio.set_ylabel(r"ratio to $F_b$", labelpad=10, fontsize=20)
 
     ax.text(0.95, 0.95, r"Pb-Pb 5.36 TeV" + "\n" + r"$\sigma_{NN} = 92$ mb", transform=ax.transAxes,
             ha="right", va="top", fontsize=22, linespacing=1.4)
     channel_handles = [Line2D([0], [0], color=CHANNEL_COLORS[ch], lw=3, label=ch) for ch in CHANNELS]
-    # the symbols in a fixed-width box, so that the descriptions start in the same column
-    model_handles = [Line2D([0], [0], **PL_STYLE, label=r"\makebox[2.3em][l]{$F^{\mathrm{PL}}$}point-like"),
-                     Line2D([0], [0], color="0.2", **WS_STYLE, label=r"\makebox[2.3em][l]{$F$}at $\mathbf{b}$"),
-                     Line2D([0], [0], color="0.2", **EFF_STYLE, label=r"\makebox[2.3em][l]{$F^{\mathrm{eff}}$}at $\mathbf{r}$")]
+    model_handles = [Line2D([0], [0], **PL_STYLE, label=r"$f^{\mathrm{PL}}$"),
+                     Line2D([0], [0], color="0.2", **WS_STYLE, label=r"$F_b$"),
+                     Line2D([0], [0], color="0.2", **EFF_STYLE, label=r"$F^{\mathrm{eff}}$")]
     for a in (ax, ax_ratio):
         a.tick_params(labelsize=26)
         a.tick_params(axis="x", pad=9)
@@ -65,7 +64,7 @@ def main():
 
     # lower panel: the three F^eff/F lines lie on top of each other, so list them in one row
     ratio_handles = [Line2D([0], [0], color=CHANNEL_COLORS[ch], **EFF_STYLE, label=ch) for ch in CHANNELS]
-    ratio_handles.append(Line2D([0], [0], **PL_STYLE, label=r"$F^{\mathrm{PL}}$"))
+    ratio_handles.append(Line2D([0], [0], **PL_STYLE, label=r"$f^{\mathrm{PL}}$"))
     ax_ratio.legend(handles=ratio_handles, loc="upper left", bbox_to_anchor=(0.0, 0.88), ncol=4, fontsize=22, frameon=False,
                     handlelength=1.0, handletextpad=0.3, columnspacing=0.6, borderaxespad=0.3)
     fig.align_ylabels([ax, ax_ratio])   # both y titles at the same distance from the axis
