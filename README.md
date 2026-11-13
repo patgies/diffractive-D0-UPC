@@ -18,13 +18,6 @@ make
 
 Requirements: CMake, GSL (GNU Scientific Library) and OpenMP.
 
-## Repository layout
-
-- [src](src): C++ sources
-- [run_scripts](run_scripts): run scripts, with the default settings in [config.sh](run_scripts/config.sh)
-- [plotting_scripts](plotting_scripts): plotting scripts
-- `data/`: dipole files, `input/`: other inputs, `output/`: results, `plots/`: figures
-
 ## Basic run
 
 ```bash
