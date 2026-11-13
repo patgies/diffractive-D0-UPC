@@ -256,7 +256,7 @@ static double gluon_dtmd_kernel(double r1, double r2, double k, double x_po, dou
                 * r2 * Jn(2, k*r2) * Kn(2, omega*r2) * D2;
 }
 
-// Quark DTMD, arXiv:2606.04169 Eqs. 4.21-4.54 at Q^2 = 0 (notes/quark_dtmd.pdf); hard charm + gluon,
+// Quark DTMD, arXiv:2606.04169 Eqs. 4.21-4.54 at Q^2 = 0; hard charm + gluon,
 // semi-hard charm k: 2 pi k z z(1+zbar^2)/p^4 x/(1-x) (k^2+m^2)/(x k^2+m^2) [Q_1^2 + (1-x) m^2/(x k^2+m^2) Q_0^2],
 // Q_n = omega^2 int dr r J_n(k r) K_n(omega r) N(r), omega^2 = (m^2 + x k^2)/(1-x), M^2 = p^2/(z zbar) + m^2/z.
 // Per d ln(x_po). Returns false outside 0 < x < 1.

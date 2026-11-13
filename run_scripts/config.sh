@@ -34,7 +34,6 @@
 
 # Diffractive part: cut k <= K_CUT_FACTOR * scale on the semi-hard momentum (scale m_T for the gluon DTMD
 # with K_CUT_SCALE=mt, pc for the quark DTMD), quark DTMD only for pc >= QUARK_P_MIN [GeV].
-# See notes/kt_cut_and_quark_dtmd and notes/correlation_limit.
 : "${K_CUT_FACTOR:=2}"
 : "${K_CUT_SCALE:=mt}"             # mt | p
 : "${QUARK_P_MIN:=5}"
