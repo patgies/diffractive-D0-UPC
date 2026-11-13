@@ -9,8 +9,7 @@
 
 using namespace std;
 
-// Number given by the environment variable `name`, or by `fallback` (another variable) if it is not
-// set, or `value` if neither is.
+// Env variable `name`, else `fallback`, else `value`
 static double env_number(const char* name, double value, const char* fallback = nullptr)
 {
     if (getenv(name)) return atof(getenv(name));
@@ -18,25 +17,22 @@ static double env_number(const char* name, double value, const char* fallback = 
     return value;
 }
 
-// Settings of D0 and D0_xpom for a D0 with transverse momentum pD0 and rapidity y, read from the
-// environment (see run_scripts/config.sh). d_frag_interp keeps the fragmentation function that
-// param points to. Returns false, after printing the error, if a setting is not valid.
+// Settings from the environment (run_scripts/config.sh). False if a setting is invalid.
 bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp, double pD0, double y,
                       const string& frag_tag, const string& channel)
 {
     load_data_and_initialize("./input/WS_photon_flux/Gamma_AA.dat");
 
-    // TARGET=pA: proton target. It changes the collision energy and the photon flux.
+    // TARGET=pA: proton target (other energy and flux)
     param.target = getenv("TARGET") ? getenv("TARGET") : "AA";
     param.ss     = (param.target == "pA") ? 8160.0 : 5360.0;
 
-    // VEGAS calls per point. Exclusive: 5D integral below EXCL_PT_THRESHOLD, 3D integral above.
+    // VEGAS calls. Exclusive: 5D below EXCL_PT_THRESHOLD, 3D above.
     param.calls_excl            = (size_t)env_number("CALLS_EXCL", 1e5, "CALLS");
     param.calls_excl_factorized = (size_t)env_number("CALLS_EXCL_FACTORIZED", 2e3);
     param.excl_pt_threshold     = env_number("EXCL_PT_THRESHOLD", 3.0);
     param.calls_diff            = (size_t)env_number("CALLS_DIFF", 1e5, "CALLS");
-    // K_CUT_FACTOR: diffractive cut k <= K_CUT_FACTOR*scale (<= 0: no cut, default 2), with the scale pc,
-    // or m_T for the gluon DTMD with K_CUT_SCALE=mt (default). QUARK_P_MIN: quark DTMD only for pc >= QUARK_P_MIN.
+    // Cut k <= K_CUT_FACTOR * scale; quark DTMD only for pc >= QUARK_P_MIN
     param.k_cut_factor          = env_number("K_CUT_FACTOR", 2.0);
     param.k_cut_scale           = getenv("K_CUT_SCALE") ? getenv("K_CUT_SCALE") : "mt";
     param.quark_p_min           = env_number("QUARK_P_MIN", 5.0);
@@ -44,7 +40,7 @@ bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp
         cerr << "Error: unknown K_CUT_SCALE '" << param.k_cut_scale << "'. Expected p or mt." << endl;
         return false;
     }
-    // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
+    // DTMD: gluon, quark or both
     param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
     if (param.dtmd != "gluon" && param.dtmd != "quark" && param.dtmd != "both") {
         cerr << "Error: unknown DTMD '" << param.dtmd << "'. Expected gluon, quark or both." << endl;
@@ -59,8 +55,7 @@ bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp
     param.S       = pow(17.4, 2) / pow(0.197327, 2);
     param.channel = channel;
     param.bmin    = 14.2 / 0.197327;
-    // FLUX_MODEL: EFF (default, effective flux), PL or WS (flux at one b),
-    // STARLIGHT (from a table). For TARGET=pA: WS (default) or PL.
+    // FLUX_MODEL: EFF (default), PL, WS, STARLIGHT. pA: WS (default) or PL.
     if (param.target == "pA") {
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "WS";
         if (param.flux_model == "EFF" || param.flux_model == "STARLIGHT") {
@@ -70,7 +65,7 @@ bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp
         }
         init_pA_flux(env_number("SIGMA_NN", 99.0));
         if (param.flux_model == "WS") init_ws_form_factor();
-        const double R_PL_fm = 7.1;   // point-like radius, as in b_min = 2R_PL = 14.2 fm for Pb+Pb (arXiv:2606.05469)
+        const double R_PL_fm = 7.1;   // point-like radius [fm] (arXiv:2606.05469)
         param.bmin = (param.flux_model == "PL") ? (1.1 * R_PL_fm / 0.197327) : 1e-3;
     } else {
         param.flux_model = getenv("FLUX_MODEL") ? getenv("FLUX_MODEL") : "EFF";
@@ -78,16 +73,15 @@ bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp
         else if (param.flux_model == "EFF") init_effective_flux(param.channel, &param);
         else if (param.flux_model == "STARLIGHT") init_starlight_flux(param.channel);
     }
-    // QPMAX: largest photon energy, only for tests (default 800 GeV).
+    // QPMAX: max photon energy [GeV], for tests
     param.qpmax   = env_number("QPMAX", 800.0);
 
-    // Upper limit of the b integral, 60/(z_gamma_min*mn), where z_gamma_min is the smallest
-    // photon energy fraction possible at this (pD0, y).
+    // b_max = 60/(z_gamma_min*mn)
     double mt_min = sqrt(pD0*pD0 + param.m2);          // mt at z_h = 1
     double z_gamma_min = mt_min * exp(y) / param.ss;
     param.bmax    = 60.0 / (z_gamma_min * param.mn);
 
-    // Fragmentation (c -> D0)
+    // Fragmentation c -> D0
     param.z_h_min = 0.05;
     param.z_h_max = 1.0;
 
@@ -100,11 +94,11 @@ bool setup_parameters(parameters& param, unique_ptr<Interpolator>& d_frag_interp
     }
 
     string hymnD_file = getenv("HYMND_FILE") ? getenv("HYMND_FILE") : "input/HymnD/prompt-D0-1-109_0000.dat";
-    const int hymnD_charm_flavor = 4;  // PDG id for the charm quark
-    // Fragmentation scale Q = SCALE_FACTOR * mt0, mt0 = sqrt(pD0^2 + m^2).
+    const int hymnD_charm_flavor = 4;  // PDG id of charm
+    // Fragmentation scale Q = SCALE_FACTOR * mt0
     double mt0 = sqrt(pD0*pD0 + param.m2);
     double frag_scale = env_number("SCALE_FACTOR", 1.0) * mt0;
-    // the fragmentation scale cannot be below the charm mass
+    // at least the charm mass
     if (frag_scale < param.m) frag_scale = param.m;
     if (param.frag_type == FragmentationType::HymnD) {
         d_frag_interp = MakeLHAPDFGridInterpolator(hymnD_file, hymnD_charm_flavor, frag_scale);

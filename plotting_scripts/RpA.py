@@ -14,20 +14,18 @@ from D0 import (
     A_NUCLEUS, NUCLEUS, CHANNEL, CENTRAL_DIR,
 )
 
-# R_pA = dsigma_AA / (A * dsigma_pA), both with the same nuclear photon flux. Numerator:
-# Pb+Pb results (D0.py); denominator: run_proton.sh (TARGET=AA) output, no b_d integral.
+# R_pA = dsigma_AA / (A dsigma_pA), same photon flux. Proton from run_proton.sh (TARGET=AA).
 
 A_PB = A_NUCLEUS[NUCLEUS]
 Y_TO_PLOT = [0.0, 0.5, 1.0, 1.5, 2.0]
-# The diffractive (TMD) R_pA is shown only for pT >= PT_MIN_DIFF (GeV), where the correlation limit holds better
+# diffractive R_pA only for pT >= PT_MIN_DIFF (GeV)
 PT_MIN_DIFF = float(os.environ.get("PT_MIN_DIFF", 1.0))
 
-PROTON_DIR = os.environ.get("PROTON_DIR", f"../output/{CHANNEL}/proton_baseline")
+PROTON_DIR = os.environ.get("PROTON_DIR", f"../output/proton_baseline/EFF/{CHANNEL}/factor_1.0")
 
 
 def load_proton_baseline(process, frag="HymnD"):
-    """Read PROTON_DIR/<frag>/D0_proton_baseline_<process>_<frag>_<channel>_y*.dat (no b_d column)
-    and return {y: [(pt, dsigma_pA_dy_dpt), ...]}."""
+    """{y: [(pt, dsigma_pA)]} from the proton baseline files."""
     results = {}
     name = f"D0_proton_baseline_{process}_{frag}_{CHANNEL}_y*.dat"
     for filename in sorted(glob.glob(f"{PROTON_DIR}/{frag}/{name}") or glob.glob(f"{PROTON_DIR}/{name}")):
@@ -46,7 +44,7 @@ def load_proton_baseline(process, frag="HymnD"):
 
 
 def load_proton_baseline_sum(frag="HymnD"):
-    """Same as load_proton_baseline, but summing exclusive+diffractive."""
+    """Exclusive + diffractive proton baseline."""
     excl = load_proton_baseline("exclusive", frag)
     diff = load_proton_baseline("diffractive", frag)
     results = {}
@@ -56,8 +54,7 @@ def load_proton_baseline_sum(frag="HymnD"):
 
 
 def make_plot(process):
-    """process is "exclusive"/"diffractive" (-> load_results/load_proton_baseline)
-    or "sum" (-> _summed_results/load_proton_baseline_sum)."""
+    """process: "exclusive", "diffractive" or "sum"."""
     if process == "sum":
         aa_results = _summed_results(CENTRAL_DIR, "HymnD")
         pa_results = load_proton_baseline_sum("HymnD")

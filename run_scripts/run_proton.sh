@@ -1,6 +1,6 @@
 #!/bin/bash
 # D0 cross section on a proton. TARGET=AA (default): R_pA baseline with the Pb+Pb flux,
-# in output/<CHANNEL>/proton_baseline/<FRAG>/. TARGET=pA: p+Pb at 8.16 TeV, in output/pPb/central_values/<FRAG>/.
+# in output/proton_baseline/<FLUX_MODEL>/<CHANNEL>/factor_<SCALE_FACTOR>/<FRAG>/ (read by D0.py and RpA.py). TARGET=pA: p+Pb at 8.16 TeV, in output/pPb/central_values/<FRAG>/.
 
 # Defaults for p+Pb
 if [[ "${TARGET:-AA}" == "pA" ]]; then
@@ -30,7 +30,7 @@ if [[ "$TARGET" == "pA" ]]; then
 	channel_text=""
 	description="p+Pb UPC (TARGET=pA): lead emits, proton target, 8.16 TeV, Gamma_pA [sigma_NN=${SIGMA_NN} mb], flux_model=${FLUX_MODEL}, no EMD"
 else
-	OUTDIR=${OUTDIR:-$OUTPUT_ROOT/$channel_tag/proton_baseline/$FRAG_TYPE}
+	OUTDIR=${OUTDIR:-$OUTPUT_ROOT/proton_baseline/$FLUX_MODEL/$channel_tag/factor_$SCALE_FACTOR/$FRAG_TYPE}
 	prefix=D0_proton_baseline
 	name_tag="_${channel_tag}"
 	channel_text=", ${channel_tag} channel"

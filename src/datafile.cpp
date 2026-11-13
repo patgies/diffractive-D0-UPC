@@ -19,7 +19,7 @@ using std::endl;
 
 DataFile::DataFile(string fname)
 {
-    x0=0.01;    // Default value if not given in the file
+    x0=0.01;    // default
     filename=fname;
     ifstream file(fname.c_str());
     if (!file.is_open())
@@ -61,7 +61,7 @@ DataFile::DataFile(string fname)
         }
     }
 
-    // Ok, configurations are read, then read all yvals
+    // read the y values
     double y=-1;
     std::vector<double> tmpvec;
     while (!file.eof())
@@ -85,16 +85,14 @@ DataFile::DataFile(string fname)
             y = StrToReal(line.substr(3,line.length()-3));
             yvals.push_back(y);
             tmpvec.clear();
-            continue;   // Next line is probably new amplitude value
+            continue;   // new amplitude value
         }
         else if (line.substr(0,1)=="#")
             continue;   // Comment
 
-        // Ok, so this a new amplitude value
         tmpvec.push_back(StrToReal(line));
     }
 
-    // Add last entry
     data.push_back(tmpvec);
     
     file.close();
@@ -111,7 +109,7 @@ void DataFile::GetData(std::vector< std::vector<double> > &n,
 {
     n.clear();
     rapidities.clear();
-    // Return vector where indexes are vec[y][r] containing amplitude
+    // amplitude as vec[y][r]
 
     for (uint yind=0; yind < data.size(); yind++)
     {

@@ -33,8 +33,8 @@ plt.rcParams.update({
     "ytick.major.pad": 4,
 })
 
-# Compares the photon flux of this code with the tables of arXiv:2404.09731. Inputs:
-# output/flux_scan/, made by run_scripts/run_flux_scan.sh (sigma_NN = 90.85 mb of the Starlight tables).
+# Photon flux vs the tables of arXiv:2404.09731.
+# Input: output/flux_scan/ (run_flux_scan.sh, sigma_NN = 90.85 mb).
 
 TABLE_DIR = "../input/Starlight_photon_flux"
 SCAN_DIR = "../output/flux_scan"
@@ -49,7 +49,7 @@ def load_table(path):
 
 
 def interp_flux(tab, key, y):
-    """f(y) = exp[ sum_j w_j/(y4-y4_j) log f_j / sum_j w_j/(y4-y4_j) ]  (Eq. 34)."""
+    """Interpolation in y4 (Eq. 34)."""
     y4j, logf = tab["y4"], tab[key]
     n = len(y4j) - 1
     w = (-1.0) ** np.arange(n + 1)
@@ -68,7 +68,7 @@ def interp_flux(tab, key, y):
 
 
 def load_scan(fn):
-    """scan_flux output: "# channel  y  dN_dy" header, one row per (channel, y)."""
+    """Reads scan_flux output."""
     d = {}
     for line in open(fn):
         if not line.strip() or line.startswith("#"):
@@ -98,7 +98,7 @@ CHANNEL_COLORS = {
     "Xn0n":     "#1a7f4b",
     "0n0n":     "#e08a00",
 }
-TABLE_STYLE = dict(ls="-", lw=1.3)                # thin, so it does not look like an error band
+TABLE_STYLE = dict(ls="-", lw=1.3)
 OURS_STYLE  = dict(ls=(0, (4, 2.5)), lw=2.8)
 
 if __name__ == "__main__":

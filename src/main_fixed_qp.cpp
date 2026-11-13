@@ -13,15 +13,14 @@
 
 using namespace std;
 
-// Exclusive and diffractive spectra at fixed q+ (qp = 2*pp, no photon flux),
-// as a function of the quark transverse momentum p, at fixed rapidity y.
+// Charm spectra vs p at fixed q+ = 2p+ and y, no photon flux.
 
 int main(int argc, char* argv[])
 {
-    // optional 4th argument: dipole file (default: proton)
+    // 4th argument: dipole file (default proton)
     string datafile = (argc > 4) ? argv[4] : "./data/proton/mve.dat";
 
-    // GSL errors off before loading the dipole (see main.cpp)
+    // GSL errors off (see main.cpp)
     gsl_set_error_handler_off();
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);
@@ -40,14 +39,14 @@ int main(int argc, char* argv[])
     param.m2       = param.m * param.m;
     param.y        = (argc > 1) ? atof(argv[1]) : 0.0;
     param.kmax     = 400.0;
-    // K_CUT_FACTOR: diffractive cut k <= K_CUT_FACTOR*scale (<= 0: no cut, default 1), with the scale p,
-    // or m_T for the gluon DTMD with K_CUT_SCALE=mt. QUARK_P_MIN: quark DTMD only for p >= QUARK_P_MIN.
+    // K_CUT_FACTOR: cut k <= factor*scale (<= 0: none); scale p, or m_T (K_CUT_SCALE=mt, gluon).
+    // QUARK_P_MIN: quark DTMD only above it.
     param.k_cut_factor = getenv("K_CUT_FACTOR") ? atof(getenv("K_CUT_FACTOR")) : 2.0;
     param.k_cut_scale  = getenv("K_CUT_SCALE") ? getenv("K_CUT_SCALE") : "mt";
     param.quark_p_min  = getenv("QUARK_P_MIN") ? atof(getenv("QUARK_P_MIN")) : 5.0;
-    // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
+    // DTMD: gluon, quark or both
     param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
-    // DIFF_METHOD: diffractive part by VEGAS (default) or by quadrature without Monte Carlo ("quad")
+    // DIFF_METHOD: VEGAS (default) or "quad"
     string diff_method = getenv("DIFF_METHOD") ? getenv("DIFF_METHOD") : "vegas";
 
     int n_pt = (argc > 2) ? atoi(argv[2]) : 40;

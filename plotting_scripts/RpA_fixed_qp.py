@@ -12,23 +12,22 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 
-# R_pA at fixed photon energy q+ = 2p+ (z = 0.5), for the charm quark: no photon flux, no fragmentation.
-# Pb: run_charm_fixed_qp.sh with DIPOLE_DIR=data/Pb/mve (integrated over b_d); proton: run_charm_fixed_qp.sh.
+# Charm R_pA at fixed q+ = 2p+ (z = 0.5): no flux, no fragmentation. From run_charm_fixed_qp.sh
+# (Pb with DIPOLE_DIR=data/Pb/mve).
 from D0 import prefactor, nuclear_edge_factor, alphas_run, mc, SIGMA0_MB, GEVSQR_TO_MB, NUCLEUS, NUCLEAR_EDGE
 from RpA import A_PB, Y_TO_PLOT, PT_MIN_DIFF
 
-# Default: gluon DTMD only, by quadrature (DIFF_METHOD=quad DTMD=gluon run_charm_fixed_qp.sh), no Monte Carlo noise
-CHARM_DIR = os.environ.get("CHARM_DIR", "../output/charm_quad")
-MU_R_FACTORS = [0.5, 1.0, 2.0]   # renormalization-scale variation, mu_R = factor * m_T
-# BK posterior samples: member_NNNN/ folders with the layout of output/charm/, each from the Pb dipoles
-# data/Pb/bk_posterior/member_NNNN/ and the proton dipole data/proton/bk_posterior/member_NNNN.dat (see README)
+# gluon DTMD by quadrature (DIFF_METHOD=quad DTMD=gluon)
+CHARM_DIR = os.environ.get("CHARM_DIR", "../output/charm_RpA")
+MU_R_FACTORS = [0.5, 1.0, 2.0]   # mu_R = factor * m_T
+# BK posterior samples: member_NNNN/ folders, from data/Pb/bk_posterior/ and data/proton/bk_posterior/
 BK_DIR = os.environ.get("BK_DIR", "../output/charm_bk")
 BK_SAMPLES = "../input/BK/posteriorsamples_100_LOmvefit.dat"
 PROCESS_PARTS = {"sum": ["exclusive", "diffractive"], "exclusive": ["exclusive"], "diffractive": ["diffractive"]}
 
 
 def read_file(filename):
-    """Returns (y, pt, exclusive, diffractive), the last three as arrays, without prefactors."""
+    """Returns (y, pt, exclusive, diffractive), without prefactors."""
     with open(filename) as f:
         y = next(float(line.split("=")[-1]) for line in f if "y (fixed)" in line)
     data = np.loadtxt(filename, comments="#")
@@ -36,7 +35,7 @@ def read_file(filename):
 
 
 def proton_results(charm_dir=None, sigma0_mb=SIGMA0_MB):
-    """{y: {process: (pt, dsigma/d2p in mb/GeV^2)}} for the proton. sigma0_mb is sigma0/2 of the dipole fit."""
+    """Proton {y: {process: (pt, mb/GeV^2)}}. sigma0_mb: sigma0/2 of the fit."""
     charm_dir = CHARM_DIR if charm_dir is None else charm_dir
     out = {}
     for filename in glob.glob(f"{charm_dir}/charm_fixed_qp_y*.dat"):
@@ -47,7 +46,7 @@ def proton_results(charm_dir=None, sigma0_mb=SIGMA0_MB):
 
 
 def nucleus_results(charm_dir=None):
-    """{y: {process: (pt, dsigma/d2p in mb/GeV^2)}} for the nucleus, integrated over b_d."""
+    """Nucleus {y: {process: (pt, mb/GeV^2)}}, integrated over b_d."""
     charm_dir = CHARM_DIR if charm_dir is None else charm_dir
     per_y = {}
     for filename in glob.glob(f"{charm_dir}/{NUCLEUS}/b*/charm_fixed_qp_y*.dat"):
@@ -70,19 +69,17 @@ def nucleus_results(charm_dir=None):
 
 
 def r_pa(aa, pa, y, procs):
-    """R_pA at rapidity y for the sum of the processes in procs."""
+    """R_pA at y for the sum of procs."""
     return sum(aa[y][p][1] for p in procs) / (A_PB * sum(pa[y][p][1] for p in procs))
 
 
 def bk_relative_spread():
-    """Relative spread (std/mean) of R_pA over the BK posterior samples: for each sample, Pb and the
-    proton use the dipoles of the same sample, and the proton its own sigma0/2. The samples come from
-    another fit than the central dipole, so only the relative spread is used.
-    Returns {process: {y: array}}, or {} if the runs are missing (see BK_DIR)."""
+    """Relative spread of R_pA over the BK samples (each with its own Pb and proton dipoles).
+    Returns {process: {y: array}}, or {}."""
     member_dirs = sorted(glob.glob(f"{BK_DIR}/member_*"))
     if len(member_dirs) < 2 or not os.path.isfile(BK_SAMPLES):
         return {}
-    sigma0_samples = np.loadtxt(BK_SAMPLES)[:, 3]   # sigma0/2 in mb, one line per sample
+    sigma0_samples = np.loadtxt(BK_SAMPLES)[:, 3]   # sigma0/2 in mb per sample
     ratios = {}
     for member_dir in member_dirs:
         index = int(member_dir[-4:])
@@ -96,8 +93,7 @@ def bk_relative_spread():
 
 
 def add_edge(aa, pa, charm_dir, sigma0_mb):
-    """Adds the dilute edge of the nucleus to the nucleus results aa, in place: beyond the last b_d of
-    the dipole files the cross section is nuclear_edge_factor (D0.py) times the proton one."""
+    """Adds the dilute nuclear edge to aa, in place."""
     if not NUCLEAR_EDGE:
         return aa
     b_max = max(float(re.search(r"/b([0-9.]+)/", f).group(1))
@@ -128,13 +124,12 @@ def make_plot(process, aa, pa, bk_spread):
         central = r_pa(aa, pa, y, procs)[keep]
         plt.plot(pt, central, color=y_colors.get(y, "0.3"), linestyle=linestyles[y], linewidth=2)
 
-        # band: BK samples (relative spread), plus the mu_R variation for the sum, in quadrature
+        # band: BK spread and, for the sum, mu_R variation, in quadrature
         half_width = np.zeros_like(central)
         if y in bk_spread.get(process, {}):
             half_width = bk_spread[process][y][keep] * central
         if process == "sum":
-            # mu_R band: alpha_s only multiplies the diffractive part, the same in Pb and in the proton,
-            # so it changes the weight of the two processes (no band for each process alone)
+            # mu_R changes only the diffractive part, so no mu_R band for one process alone
             ratios = []
             for mu_r in MU_R_FACTORS:
                 rescale = np.array([alphas_run(mu_r * math.sqrt(p**2 + mc**2)) / alphas_run(math.sqrt(p**2 + mc**2))
@@ -156,7 +151,7 @@ def make_plot(process, aa, pa, bk_spread):
 
     label = {"sum": "Diffractive", "exclusive": "Exclusive",
              "diffractive": r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$"}[process]
-    # (label top, legend anchor): placed where the curves of each process leave room
+    # (label top, legend anchor)
     (label_x, label_top, label_ha), legend_loc, legend_anchor, ncol = {
         "sum": ((0.95, 0.97, "right"), "lower right", (0.97, 0.03), 1),
         "exclusive": ((0.08, 0.9, "left"), "lower right", (0.97, 0.02), 1),
@@ -173,7 +168,7 @@ def make_plot(process, aa, pa, bk_spread):
     if process == "exclusive":
         plt.ylim(bottom=0.6)
     if process == "diffractive":
-        plt.ylim(top=0.99)   # room for the label in the upper left
+        plt.ylim(top=0.99)
         plt.yticks([0.85, 0.9, 0.95])
         plt.xlim(PT_MIN_DIFF, 12)
         plt.xticks([1, 2, 4, 6, 8, 10, 12])

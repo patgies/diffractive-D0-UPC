@@ -9,8 +9,8 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.ticker import LogLocator
 
-# Charm quark cross section at fixed q+ = 2p+ (z = 0.5) on a proton: no photon flux, no fragmentation.
-# Reads the output of run_charm_fixed_qp.sh, from CHARM_DIR (default ../output/charm).
+# Charm cross section at fixed q+ = 2p+ (z = 0.5) on a proton: no flux, no fragmentation.
+# Input: run_charm_fixed_qp.sh, in CHARM_DIR (default ../output/charm).
 from D0 import alphas_run, alphae, mc, e_c, Nc, SIGMA0_MB   # also sets the plot style
 
 plt.rcParams["axes.labelsize"] = 29
@@ -19,7 +19,7 @@ PREFACTOR_EXCL =alphae * Nc * e_c**2 * SIGMA0_MB / (2 * math.pi**2)
 
 
 def prefactor_diff(pt):
-    """Diffractive prefactor, with alpha_s at the scale m_T = sqrt(pt^2 + mc^2)."""
+    """Diffractive prefactor, alpha_s at m_T."""
     alphas = alphas_run(np.sqrt(pt**2 + mc**2))
     return alphas * alphae * e_c**2 * (Nc**2 - 1) * SIGMA0_MB / (8 * math.pi**4)
 
@@ -46,17 +46,12 @@ def main():
     if not files:
         sys.exit(f"No files found matching {pattern} -- run ../run_scripts/run_charm_fixed_qp.sh first.")
 
-    Y_TO_PLOT = [0.0, 1.0, 2.0]   # rapidities shown (the files also have y = 0.5 and 1.5)
+    Y_TO_PLOT = [0.0, 1.0, 2.0]
     files = [f for f in files if read_y(f) in Y_TO_PLOT]
     y_values = [read_y(f) for f in files]
 
     EXCL_COLOR, DIFF_COLOR = "#2166ac", "#b2182b"
-    QUARK_COLOR = "#4dac26"   # the quark DTMD part of the diffractive
-    # quark-DTMD-only run (DTMD=quark), drawn only if QUARK_DIR is set (e.g. ../output/charm_quark);
-    # the diffractive curve already includes it
-    quark_dir = os.environ.get("QUARK_DIR")
-    quark_files = {read_y(f): f for f in glob.glob(quark_dir + "/charm_fixed_qp_y*.dat")} if quark_dir else {}
-    linestyle_cycle = ["-", "--", ":"]   # solid, dashed, dotted
+    linestyle_cycle = ["-", "--", ":"]
     linestyles = [linestyle_cycle[i % len(linestyle_cycle)] for i in range(len(y_values))]
 
     fig, ax = plt.subplots(figsize=(8, 6.5))
@@ -67,15 +62,8 @@ def main():
         data_by_y[y] = (pt, excl, diff)
         ax.plot(pt, diff, color=DIFF_COLOR, linestyle=linestyle, lw=2.0)
         ax.plot(pt, excl, color=EXCL_COLOR, linestyle=linestyle, lw=2.0)
-        if y in quark_files:
-            pq, _, quark = read_data(quark_files[y])
-            assert np.allclose(pq, pt), "quark and total runs on different p grids"
-            on = quark > 0   # the quark DTMD is only used for p >= QUARK_P_MIN
-            # (the gluon part, diff - quark, is > 99% of diff: on top of the red curve, so not drawn)
-            ax.plot(pt[on], quark[on], color=QUARK_COLOR, linestyle=linestyle, lw=1.5)
 
-    # guide lines with their labels: p^-8 under the exclusive curves, p^-4 above the diffractive ones
-    # (between the two sets of curves there is no room for a label)
+    # guide lines p^-8 and p^-4
     x8 = np.geomspace(4.2, 7.8, 40)
     ax.plot(x8, 7e-9 * (x8 / 4) ** -8, color="0.5", lw=1.8, zorder=1)
     x4 = np.geomspace(4, 9.5, 20)
@@ -83,7 +71,6 @@ def main():
     ax.text(2.95, 3.5e-10, r"$\sim p_{\perp}^{-8}$", fontsize=23)
     ax.text(5.2, 1.6e-6, r"$\sim p_{\perp}^{-4}$", fontsize=23)
 
-    # log-log, so that the power laws are straight lines
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_ylim(1e-11, 2e-4)
@@ -101,8 +88,6 @@ def main():
     style_handles = [Line2D([0], [0], color=EXCL_COLOR, lw=3, linestyle='-', label="Exclusive"),
                      Line2D([0], [0], color=DIFF_COLOR, lw=3, linestyle='-',
                             label=r"Diffractive$_{\mbox{\fontsize{14}{14}\selectfont TMD}}$")]
-    if quark_files:
-        style_handles += [Line2D([0], [0], color=QUARK_COLOR, lw=3, linestyle='-', label="quark DTMD")]
     y_legend = ax.legend(handles=y_handles, fontsize=21, loc='lower left',
                          bbox_to_anchor=(0.02, 0.0), frameon=False)
     ax.add_artist(y_legend)

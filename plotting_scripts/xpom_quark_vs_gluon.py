@@ -3,8 +3,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# Gluon vs quark DTMD x_po distribution at fixed q+ = 2p+ (z = 0.5), p = 8 GeV, y = 0: no photon flux,
-# no fragmentation, proton target as in charm_fixed_qp_xpom.py. Data from
+# Gluon vs quark DTMD x_po distribution at q+ = 2p+, p = 8 GeV, y = 0, proton. Data from
 #   DTMD=gluon|quark ./build/bin/charm_fixed_qp_xpom 0 8 30 1e5
 from charm_fixed_qp import prefactor_diff   # also sets the plot style
 
@@ -13,7 +12,7 @@ P = 8.0
 
 
 def load(dtmd):
-    """Returns (x_po, dsigma/dy d2p dln x_po) above the smallest x_po, and that x_po."""
+    """Returns (x_po, dsigma) above the smallest x_po, and that x_po."""
     filename = f"../output/charm/xpom/charm_fixed_qp_xpom_{dtmd}_y00_p80.dat"
     with open(filename) as f:
         xpo_min = next(float(line.split("=")[1].split()[0]) for line in f if line.startswith("# x_po (excl)"))

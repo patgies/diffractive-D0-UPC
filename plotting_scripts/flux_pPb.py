@@ -6,13 +6,12 @@ from matplotlib.ticker import LogLocator
 
 from flux_comparison import load_scan, CHANNEL_COLORS   # also sets the plot style
 
-# Photon flux of the lead nucleus in p+Pb at 8.16 TeV (as Fig. 11 of arXiv:2606.05469):
-# "AnAn" is the Woods-Saxon flux with Gamma_pA(b), "PL(AnAn)" the point-like flux with b_min = 1.1 * 7.1 fm.
-# Inputs: output/flux_scan/flux_scan_pPb_{WS,PL}.dat, made by run_scripts/run_flux_scan.sh.
+# Lead photon flux in p+Pb at 8.16 TeV (Fig. 11 of arXiv:2606.05469): WS and point-like.
+# Input: output/flux_scan/flux_scan_pPb_{WS,PL}.dat (run_flux_scan.sh).
 
 SCAN_DIR = "../output/flux_scan"
-CURVES = [   # AnAn first, so the dotted PL curve is drawn on top of it
-    ("WS", "AnAn", "Woods-Saxon", "-"),      # no neutron classes in p+Pb: the labels name the charge distribution
+CURVES = [
+    ("WS", "AnAn", "Woods-Saxon", "-"),
     ("PL", "PL(AnAn)", "point-like", ":"),
 ]
 

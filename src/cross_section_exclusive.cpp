@@ -14,7 +14,7 @@ double exclusiveCrossSection(void* p)
     gsl_monte_function F;
     F.params = par;
 
-    // effective flux: b is not used, its range is [0,1]
+    // effective flux: b unused
     bool eff = is_effective_flux(par);
     double b_lo = b_integration_min(par);
     double b_hi = eff ? 1.0 : par->bmax;
@@ -60,14 +60,13 @@ double exclusiveCrossSection_xpom(void* p)
 }
 
 
-// Exclusive cross section at fixed q+ (q+ = 2p+, no flux, no fragmentation):
-// two 1D integrals over r, I0 and I1. No Monte Carlo.
-// If q0, q1 are given, they get the I0^2 and (z^2+zbar^2) I1^2 terms (their sum is the result).
+// Exclusive at fixed q+ = 2p+, no flux or fragmentation: 1D r integrals I0, I1.
+// q0, q1 (optional): the I0^2 and (z^2+zbar^2) I1^2 terms.
 double exclusiveCrossSection_fixed_qp(void* p, double* q0, double* q1)
 {
     parameters* par = (parameters*)p;
 
-    double z = 0.5;   // q+ = 2p+, so p+/q+ = 1/2
+    double z = 0.5;
     double zbar = 1.0 - z;
 
     double pp   = (par->mt / M_SQRT2) * exp(par->y);

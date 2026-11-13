@@ -13,16 +13,14 @@
 
 using namespace std;
 
-// Diffractive dsigma/dln(x_po) at fixed q+ (qp = 2*pp, no photon flux), at fixed rapidity y and
-// quark transverse momentum p, on a log grid in x_po. The exclusive part has no x_po
-// distribution here: at fixed q+ it sits at x_po = M^2/W^2, where the diffractive one starts.
+// Diffractive dsigma/dln(x_po) at fixed q+ = 2p+, y and p. No exclusive: it sits at x_po = M^2/W^2.
 
 int main(int argc, char* argv[])
 {
-    // arguments: y, p, number of x_po points, VEGAS calls, dipole file (default: proton)
+    // args: y, p, n_xpo, VEGAS calls, [dipole file]
     string datafile = (argc > 5) ? argv[5] : "./data/proton/mve.dat";
 
-    // GSL errors off before loading the dipole (see main.cpp)
+    // GSL errors off (see main.cpp)
     gsl_set_error_handler_off();
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);
@@ -47,13 +45,13 @@ int main(int argc, char* argv[])
     double p2m2 = param.p2 + param.m2;
     param.mt   = sqrt(p2m2);
     param.k_upper = param.kmax;
-    // DTMD: diffractive part from the gluon DTMD, the quark DTMD or both (default)
+    // DTMD: gluon, quark or both
     param.dtmd = getenv("DTMD") ? getenv("DTMD") : "both";
 
     int n_xpo = (argc > 3) ? atoi(argv[3]) : 40;
-    double xpo_min = 1e-5, xpo_max = 0.1;   // x_po > 0.1 is zero, as in charm_fixed_qp
+    double xpo_min = 1e-5, xpo_max = 0.1;
 
-    // smallest x_po of the diffractive part (x < 1): M^2/W^2 with z = 1/2
+    // smallest x_po: M^2/W^2, z = 1/2
     double xpo_excl = 4.0 * p2m2 / (M_SQRT2 * 2.0 * (param.mt / M_SQRT2) * exp(param.y) * param.ss);
 
     std::time_t now = std::time(nullptr);

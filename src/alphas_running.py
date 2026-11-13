@@ -1,8 +1,6 @@
 import numpy as np
 
-# One-loop running of alpha_s from alpha_s(mZ), with Nf = 5 above the b-quark threshold mb and
-# Nf = 4 below it (alpha_s continuous at mb):
-# 1/alpha_s(mu) = 1/alpha_s(mu0) + 2*b0(Nf)*ln(mu/mu0), b0(Nf) = (33 - 2*Nf)/(12*pi)
+# One-loop alpha_s from alpha_s(mZ); Nf = 5 above mb, 4 below.
 
 alphas_mZ = 0.118
 mZ        = 91.2
@@ -13,7 +11,7 @@ def b0(nf):
     return (33 - 2*nf) / (12*np.pi)
 
 def alphas_run(mu):
-    inv_mb = 1.0/alphas_mZ + 2*b0(5)*np.log(mb/mZ)          # 1/alpha_s(mb), Nf = 5 from mZ
+    inv_mb = 1.0/alphas_mZ + 2*b0(5)*np.log(mb/mZ)
     inv = np.where(mu >= mb,
                    1.0/alphas_mZ + 2*b0(5)*np.log(mu/mZ),
                    inv_mb + 2*b0(4)*np.log(mu/mb))

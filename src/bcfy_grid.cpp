@@ -9,7 +9,7 @@ const int kCharmPid = 4;
 
 std::unique_ptr<Interpolator> MakeBCFYInterpolator(double Q)
 {
-    // BCFY_EKO_FILE: use another grid file.
+    // BCFY_EKO_FILE: other grid
     const char* path = std::getenv("BCFY_EKO_FILE");
     return MakeLHAPDFGridInterpolator(path ? path : DefaultGridPath(), kCharmPid, Q);
 }

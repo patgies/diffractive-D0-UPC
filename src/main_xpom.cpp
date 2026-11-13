@@ -8,8 +8,7 @@
 
 using namespace std;
 
-// D0 cross section in a UPC at one (pD0, y) and fixed x_po: exclusive dsigma/dx_po and diffractive
-// dsigma/dln(x_po), without prefactors. Same settings as D0 (main.cpp).
+// As D0, at fixed x_po: exclusive dsigma/dx_po, diffractive dsigma/dln(x_po).
 int main(int argc, char* argv[])
 {
     if (argc < 5 || argc > 7) {
@@ -23,7 +22,7 @@ int main(int argc, char* argv[])
     string frag_tag = (argc > 5) ? argv[5] : "BCFY";
     string channel  = (argc > 6) ? argv[6] : "An0n";
 
-    // GSL errors off before loading the dipole (see main.cpp)
+    // GSL errors off (see main.cpp)
     gsl_set_error_handler_off();
     AmplitudeLib inst(datafile);
     inst.SetOutOfRangeErrors(false);

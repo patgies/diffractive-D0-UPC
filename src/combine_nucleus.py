@@ -1,9 +1,7 @@
 import os
 import sys
 
-# Writes tables of the final D0 cross sections dsigma/(dy dpD0) [mb/GeV]: the run_nucleus.sh output
-# integrated over the impact parameter b_d, with the prefactors, as in the plots (plotting_scripts/D0.py).
-# One file per process and rapidity, in output/<CHANNEL>/combined/.
+# Final dsigma/(dy dpD0) [mb/GeV], integrated over b_d, in output/<CHANNEL>/combined/.
 # usage (from src/ or plotting_scripts/): CHANNEL=An0n FRAG_TYPE=HymnD python3 ../src/combine_nucleus.py
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "plotting_scripts"))

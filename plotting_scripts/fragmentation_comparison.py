@@ -9,8 +9,8 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 
-# Fragmentation functions D(z, Q^2) for c -> D0 at three scales: BCFY, Kniehl-Kramer and HymnD (68% band of
-# the replicas). Reads the grids the same way as src/lhapdf_grid.cpp. HymnD replicas: HYMND_DIR or the LHAPDF folder.
+# c -> D0 fragmentation functions at three scales: BCFY, Kniehl-Kramer, HymnD (68% band).
+# HymnD replicas: HYMND_DIR or the LHAPDF folder.
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -47,11 +47,11 @@ PANELS = [
     (np.sqrt(3.0**2 + MC**2), r"$\mu=m_T={:.2f}$ GeV".format(np.sqrt(3.0**2 + MC**2)), r"$p_{D\perp}=3$ GeV"),
     (np.sqrt(9.0**2 + MC**2), r"$\mu=m_T={:.2f}$ GeV".format(np.sqrt(9.0**2 + MC**2)), r"$p_{D\perp}=9$ GeV"),
 ]
-COLORS = {"BCFY": "#2166ac", "KK": "#1b7837", "HymnD": "#b2182b"}   # same as FRAG_SCHEMES in pPb_bins.py
+COLORS = {"BCFY": "#2166ac", "KK": "#1b7837", "HymnD": "#b2182b"}
 
 
 def hymnd_dir():
-    """Folder with all HymnD members: HYMND_DIR, else the LHAPDF data folder, else ../input/HymnD."""
+    """HymnD folder: HYMND_DIR, LHAPDF data folder, or ../input/HymnD."""
     if os.environ.get("HYMND_DIR"):
         return os.environ["HYMND_DIR"]
     try:
@@ -65,7 +65,7 @@ def hymnd_dir():
 
 
 def read_blocks(filename, flavor=CHARM):
-    """Q blocks of an LHAPDF grid file: list of (x, Q, values[ix, iq]) for one flavor."""
+    """Q blocks of an LHAPDF grid: (x, Q, values) for one flavor."""
     with open(filename) as f:
         text = f.read()
     blocks = []
@@ -83,7 +83,7 @@ def read_blocks(filename, flavor=CHARM):
 
 
 def D_at(blocks, Q):
-    """D(z) at scale Q: linear interpolation in Q, as in src/lhapdf_grid.cpp. Returns (z, D)."""
+    """D(z) at Q, linear in Q as in src/lhapdf_grid.cpp."""
     Q = min(max(Q, blocks[0][1][0]), blocks[-1][1][-1])
     for x, q, values in blocks:
         if q[0] <= Q <= q[-1]:
@@ -125,7 +125,7 @@ def main():
         hidden = ([] if i == 0 else [0]) + ([] if i == len(axes) - 1 else [1])
         ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _, h=hidden: "" if round(v, 6) in h else f"{v:g}"))
 
-    axes[0].set_ylim(0, 4.3)   # room for the legend above the curves of the first panel
+    axes[0].set_ylim(0, 4.3)
     axes[0].set_ylabel(r"$D_{c\to D^0}(z_h, \mu)$", labelpad=16)
 
     handles = [
@@ -135,7 +135,6 @@ def main():
         if band else Line2D([0], [0], color=COLORS["HymnD"], lw=3, ls="-."),
     ]
     labels = ["BCFY", r"Kniehl \& Kramer", r"HymnD (68\% CL)" if band else "HymnD"]
-    # in the first panel, under its scale label
     axes[0].legend(handles, labels, loc="upper left", bbox_to_anchor=(0.02, 0.85), fontsize=20, frameon=False)
 
     outname = "../plots/fragmentation_comparison.pdf"

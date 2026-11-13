@@ -12,8 +12,7 @@
 #include <fstream>
 
 
-// Woods-Saxon charge form factor F_A(q), formula of Maximon & Schrack,
-// J. Res. Natl. Bur. Stand. B 70, 85 (1966). F(0) = 1.
+// Woods-Saxon form factor F_A(q), F(0) = 1 (Maximon & Schrack, J. Res. NBS B 70, 85 (1966)).
 class WSFormFactor {
 private:
     double c_, a_, q_max_, rho0_;
@@ -56,7 +55,7 @@ public:
     double operator()(double q) const
     {
         if (q >= q_max_) return 0.0;      // F is already zero before q_max
-        if (q < 1e-6) return 1.0;         // F(0)=1. This avoids 0/0 in the formula below
+        if (q < 1e-6) return 1.0;         // avoids 0/0
         double qa  = q * a_;
         double pqa = M_PI * qa;
         double sh = std::sinh(pqa), ch = std::cosh(pqa);
@@ -70,8 +69,7 @@ public:
 #include <gsl/gsl_spline2d.h>
 #include <gsl/gsl_sf_result.h>
 
-// Table of the k_perp integral I(z_gamma,r) of the Woods-Saxon flux, on a grid in (log z_gamma, log r).
-// f_WS(z_gamma,r) = alpha Z^2/(pi^2 z_gamma) * I(z_gamma,r)^2 (arXiv:2404.09731 Eq. 11).
+// Table of I(z_gamma,r), with f_WS = alpha Z^2/(pi^2 z_gamma) I^2 (arXiv:2404.09731 Eq. 11).
 class WSFluxTable {
 private:
     gsl_spline2d* spline;
@@ -115,13 +113,13 @@ public:
         for (int j = 0; j < nr; j++) lr[j] = lr_min + (lr_max - lr_min) * j / (nr - 1.0);
 
         spline = gsl_spline2d_alloc(gsl_interp2d_bicubic, nz_gamma, nr);
-        std::vector<double> grid_z(nz_gamma * nr);   // 1D array in the order gsl_spline2d needs
+        std::vector<double> grid_z(nz_gamma * nr);
         for (int i = 0; i < nz_gamma; i++) {
             double z_gamma = std::exp(lz_gamma[i]);
             for (int j = 0; j < nr; j++) {
                 double r = std::exp(lr[j]);
                 double I = raw_I(z_gamma, r, mn, FA, q_max);
-                // if the k_perp integral fails (it can near z_gamma=1), store a tiny value so the spline still works
+                // the integral can fail near z_gamma = 1
                 double logI2 = std::isfinite(I) ? std::log(std::max(I * I, 1e-300)) : std::log(1e-300);
                 gsl_spline2d_set(spline, grid_z.data(), i, j, logI2);
             }
@@ -134,7 +132,7 @@ public:
     WSFluxTable(const WSFluxTable&) = delete;
     WSFluxTable& operator=(const WSFluxTable&) = delete;
 
-    // Returns I(z_gamma,r)^2, without the alpha Z^2/(pi^2 z_gamma) prefactor.
+    // I^2, without prefactor
     double I2(double z_gamma, double r) const
     {
         double lz_gamma_ = std::log(z_gamma), lr_ = std::log(r);
@@ -209,15 +207,14 @@ public:
         if (b > b_max)
             return 1.0;
  
-        // keep the value between 0 and 1: the spline can give ~-1e-32 where Gamma -> 0
+        // clamp to [0, 1]
         return std::min(1.0, std::max(0.0, TA(b)));
     }
 };
 
-GammaAA& gamma_aa();   // declared here so EffFluxRadial below can use it
+GammaAA& gamma_aa();
 
-// Nuclear thickness function T_B(s) from the Woods-Saxon density,
-// scaled so that it adds up to B_mass nucleons.
+// Woods-Saxon thickness T_B(s), normalized to B_mass nucleons.
 class WSThickness {
 private:
     gsl_spline* spline;
@@ -241,7 +238,7 @@ public:
                 double w = (k == 0 || k == M) ? 1.0 : (k % 2 ? 4.0 : 2.0);
                 sum += w * rho;
             }
-            raw[i] = 2.0 * sum * h / 3.0;   // times 2: the integral is the same for z' > 0 and z' < 0
+            raw[i] = 2.0 * sum * h / 3.0;   // symmetric in z'
         }
         double h2 = sg[1] - sg[0], sum2 = 0.0;
         for (int i = 0; i < n; i++) {
@@ -263,8 +260,7 @@ public:
     ~WSThickness() { gsl_spline_free(spline); gsl_interp_accel_free(acc); }
 };
 
-// H_channel(r) = \int d^2s T_B(s) Gamma_AB(|r-s|) P_EMD(|r-s|), stored as a spline in r up to
-// r_switch. For larger r we use B_mass*Gamma_AB(r)*P_EMD(r).
+// H(r) = int d^2s T_B(s) Gamma_AB(|r-s|) P_EMD(|r-s|); above r_switch, B_mass Gamma_AB(r) P_EMD(r).
 class EffFluxRadial {
 private:
     gsl_spline* spline;
@@ -292,12 +288,12 @@ private:
             double ph = M_PI / Nphi, sum_phi = 0.0;
             for (int j = 0; j <= Nphi; j++) {
                 double phi = j * ph;
-                double b = std::sqrt(std::max(0.0, r * r + s * s - 2.0 * r * s * std::cos(phi)));   // max avoids a tiny negative number at r=s, phi=0
+                double b = std::sqrt(std::max(0.0, r * r + s * s - 2.0 * r * s * std::cos(phi)));
                 double val = gamma_aa()(b) * channel_factor(channel, b, S);
                 double w = (j == 0 || j == Nphi) ? 1.0 : (j % 2 ? 4.0 : 2.0);
                 sum_phi += w * val;
             }
-            double phi_integral = 2.0 * (sum_phi * ph / 3.0);   // times 2: phi from pi to 2pi gives the same as 0 to pi
+            double phi_integral = 2.0 * (sum_phi * ph / 3.0);   // symmetric in phi
             double w = (i == 0 || i == Ns) ? 1.0 : (i % 2 ? 4.0 : 2.0);
             sum_s += w * s * Tval * phi_integral;
         }
@@ -305,7 +301,7 @@ private:
     }
 
 public:
-    // The r grid is evenly spaced in log r. r_switch must be much larger than R_A (see EFF_R_SWITCH).
+    // log r grid; r_switch >> R_A
     EffFluxRadial(const WSThickness& TB, const std::string& channel_, double S_,
                   double B_mass_, double r_switch, int nr = 400, double r0 = 0.5)
         : r_min_(r0), r_switch_(r_switch), B_mass(B_mass_), S(S_), channel(channel_)
@@ -337,28 +333,26 @@ public:
 
 void load_data_and_initialize(const std::string& filename);
 
-// File and sigma_NN of the Gamma_AA table that load_data_and_initialize() loaded.
+// File and sigma_NN of the loaded Gamma_AA table
 const std::string& gamma_aa_info();
 
-// Builds the Woods-Saxon flux table. Call it before using flux_model "WS".
+// Needed for flux_model "WS"
 void init_ws_form_factor(double RA_fm = 6.49, double a_fm = 0.54, double mn = 0.938);
 
-// Builds the effective flux f_eff(z_gamma) for the given channel (arXiv:2404.09731 Eq. 4).
+// Effective flux f_eff(z_gamma) (arXiv:2404.09731 Eq. 4)
 void init_effective_flux(const std::string& channel, void* par,
                           double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
 
-// FLUX_MODEL=STARLIGHT: reads the effective flux table of P. Paakkinen
-// (arXiv:2404.09731), with EMD probabilities from Starlight v313. The table has AnAn, An0n and 0n0n.
+// FLUX_MODEL=STARLIGHT: flux table of P. Paakkinen (Starlight v313 EMD); AnAn, An0n, 0n0n
 void init_starlight_flux(const std::string& channel,
                          const std::string& filename = "./input/Starlight_photon_flux/log-flux-tbl-PbPb-5.36-TeV-WS.dta");
 
-// Effective flux dN/domega. The sum over b is already done.
+// dN/domega, integrated over b
 double effective_photon_flux(double qp, void* par);
 
 GammaAA& gamma_aa();
 
-// Proton target: Gamma_pA(b) = exp(-sigma_NN * T_A(b)),
-// Eq. 26 of arXiv:2606.05469. There is no EMD factor for pA.
+// pA: Gamma_pA(b) = exp(-sigma_NN T_A(b)), no EMD (arXiv:2606.05469 Eq. 26)
 void init_pA_flux(double sigma_NN_mb, double RA_fm = 6.49, double a_fm = 0.54, double B_mass = 208.0);
 double GammaPA(double b);
 

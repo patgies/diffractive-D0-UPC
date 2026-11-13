@@ -9,17 +9,10 @@
 #include <sstream>
 #include <vector>
 
-/**
- * Read BK equation solution from a given file.
- *
- * File structure: see doc/bk_solution_spec.txt
- */
+// BK solution read from a file
 class DataFile
 {
     public:
-        /**
-         * Read BK equation solution from the given file
-         */
         DataFile(std::string fname);
         double MinR();
         double RMultiplier();
@@ -28,12 +21,7 @@ class DataFile
         double MaxY();
         double X0();
 
-        /**
-         * Return data in a given vector and evolution y values
-         *
-         * @param n n[yind][rind]: dipole amplitude values
-         * @param rapidities: evolution rapidity values
-         */
+        // n[yind][rind] and the evolution rapidities
         void GetData(std::vector< std::vector<double> > &n,
             std::vector<double> &rapidities);
 

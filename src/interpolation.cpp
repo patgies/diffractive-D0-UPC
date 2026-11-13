@@ -16,18 +16,14 @@
 
 typedef unsigned int uint;
 
-/*
- * Intialize interpolation
- * Returns -1 in case of error, 0 otherwise
- */
+// Returns -1 on error, 0 otherwise
 int Interpolator::Initialize()
 {
     int status=0;
     out_of_range_errors = true;
     if (ready)
     {
-        // Interpolator is already initialized: clear it (GSL part)
-        // and re-initialize
+        // already initialized: clear and re-initialize
         switch(method)
         {
             case INTERPOLATE_SPLINE:
@@ -66,7 +62,7 @@ int Interpolator::Initialize()
         cerr << "Interpolator initialization failed at " << LINEINFO << endl;
         return -1;
     }
-    return 0;   //ok, there is no error handling at the moment...
+    return 0;   // no error handling
 }
 
 
@@ -91,7 +87,7 @@ double Interpolator::Evaluate(double x)
 			if (x<minx) return freeze_underflow;
 			else return freeze_overflow;
 		}
-		if (x < 0.9999*minx or x > 1.00001*maxx)	// if not true, no need to display error
+		if (x < 0.9999*minx or x > 1.00001*maxx)	// warn only clearly outside the range
         {
             if (out_of_range_errors)
                 cerr << "x=" << x << " is not within limits [" << minx << ", " << maxx << "], forcing "
@@ -285,8 +281,7 @@ INTERPOLATION_METHOD Interpolator::GetMethod() const
     return method;
 }
 
-// Copy data from given class and initialize this, as this is
-// the copy constructor
+// Copy constructor
 Interpolator::Interpolator(const Interpolator& inter)
 {
     points=inter.GetNumOfPoints();

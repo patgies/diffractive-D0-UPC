@@ -4,8 +4,7 @@
 #include <memory>
 #include "interpolation.hpp"
 
-// BCFY c -> D0 fragmentation function D(z_h), evolved with DGLAP,
-// at the scale Q (GeV).
+// BCFY c -> D0 fragmentation D(z_h, Q), DGLAP-evolved
 
 std::unique_ptr<Interpolator> MakeBCFYInterpolator(double Q);
 

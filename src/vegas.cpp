@@ -9,10 +9,10 @@ double vegas_integrate(gsl_monte_function* F, double* low, double* up, size_t ca
     gsl_monte_vegas_state* s = gsl_monte_vegas_alloc(F->dim);
     double res, err;
 
-    // short first run so VEGAS can adapt its grid
+    // short warm-up run
     gsl_monte_vegas_integrate(F, low, up, F->dim, calls/10, r, s, &res, &err);
 
-    // repeat until chi-square is close to 1, at most 3 times
+    // until chi2 ~ 1, at most 3 times
     int iter = 0;
     do {
         gsl_monte_vegas_integrate(F, low, up, F->dim, calls, r, s, &res, &err);

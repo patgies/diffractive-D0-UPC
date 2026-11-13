@@ -13,7 +13,7 @@ from matplotlib.patches import Patch
 from matplotlib.ticker import MultipleLocator, ScalarFormatter
 
 
-# Reads the output of run_proton.sh (TARGET=pA).
+# Input: run_proton.sh (TARGET=pA).
 from D0 import read_rapidity, proton_prefactor, sum_with_limit, _scale_combos, SCALE_FACTOR_TAGS
 
 PROCESS = os.environ.get("PROCESS", "sum")
@@ -27,7 +27,6 @@ FRAG_SCHEMES = [
     ("KniehlKramer", "KK", "#1b7837", "--"),
     ("HymnD", "HymnD", "#b2182b", ":"),
 ]
-# Text in the second panel: "Diffractive" is the sum of the two parts, as in the other figures
 PANEL_PROCESS_LABELS = {
     "sum": "Diffractive",
     "exclusive": "Exclusive",
@@ -36,14 +35,14 @@ PANEL_PROCESS_LABELS = {
 
 
 class TrimmedFormatter(ScalarFormatter):
-    """Tick labels without zeros at the end of a decimal: 0.01 instead of 0.010, 1 instead of 1.0."""
+    """Tick labels without trailing zeros."""
     def _set_format(self):
         super()._set_format()
         self.format = re.sub(r"%1\.\d+f", "%g", self.format)
 
 
 def load_pPb(process, frag, data_dir, mu_r_factor=1.0):
-    """Read data_dir/D0_pA_<process>_<frag>*_y*.dat and return {y: [(pt, dsigma_dy_dpt), ...]}."""
+    """{y: [(pt, dsigma)]} from D0_pA files."""
     results = {}
     for filename in sorted(glob.glob(f"{data_dir}/D0_pA_{process}_{frag}*_y*.dat")):
         y = read_rapidity(filename)
@@ -61,7 +60,7 @@ def load_pPb(process, frag, data_dir, mu_r_factor=1.0):
 
 
 def get_results(frag, data_dir, mu_r_factor=1.0):
-    """{y: [(pt, cross_section), ...]} for PROCESS and one fragmentation function."""
+    """{y: [(pt, cross_section), ...]} for one fragmentation function."""
     if PROCESS != "sum":
         return load_pPb(PROCESS, frag, data_dir, mu_r_factor)
     excl = load_pPb("exclusive", frag, data_dir)
@@ -77,7 +76,7 @@ def pt_integrate(points, pt_lo, pt_hi):
 
 
 def bin_averages(results):
-    """Average of dsigma/(dy dpT) over each (pT, y) bin. Returns {(pt_lo, y_lo): value}."""
+    """Average over each (pT, y) bin. Returns {(pt_lo, y_lo): value}."""
     out = {}
     for pt_lo, pt_hi in PT_BINS:
         per_y = {y: pt_integrate(points, pt_lo, pt_hi) for y, points in results.items()}
@@ -91,7 +90,7 @@ def bin_averages(results):
 
 
 def scale_band(frag):
-    """Minimum and maximum of the bin averages over the 7 (mu_F, mu_R) points. {} if there is no data."""
+    """Min and max of the bin averages over the 7 scale points. {} if no data."""
     dirs = {mu_f: f"{PPB_DIR}/{frag}" if tag is None else f"{SCALE_BASE}/{frag}/factor_{tag}"
             for mu_f, tag in SCALE_FACTOR_TAGS.items()}
     if not all(os.path.isdir(d) for d in dirs.values()):
@@ -102,21 +101,15 @@ def scale_band(frag):
 
 
 def draw_panels(averages, bands, outname, ylabel_x=0.034, left=0.015, flux_text=None, second_panel_text=None):
-    """One panel per pT bin with the bin averages {frag: {(pt_lo, y_lo): value}} as histograms in y
-    and the bands {frag: {(pt_lo, y_lo): (low, high)}}. Also used by PbPb_bins.py.
-    The legend goes in the upper left of the first panel. flux_text goes in the first panel, under
-    its pT label; second_panel_text in the second one, also under its pT label."""
+    """One panel per pT bin: histograms in y and scale bands. Also used by PbPb_bins.py."""
     fig, axes = plt.subplots(3, 2, figsize=(16, 17), sharex=True)
 
-    # Texts at the top of a panel: (bins under the text, fraction of the height that is free below it).
-    # The vertical range is the smallest one where the histograms stay below these texts.
+    # Texts at the top of a panel: (bins under it, free fraction below it).
     on_the_right = lambda y_lo, y_hi: y_hi > -0.4
     on_the_left = lambda y_lo, y_hi: y_lo < -1
     has_band = any(bands[frag] for frag in bands)
     texts = [(on_the_right, 0.77)]
-    # With fewer pT bins than panels, the bins fill the first panels and the first free one holds the legend.
-    # Otherwise the legend goes in the upper left of the first panel (its last line is the widest), with
-    # the pT label on the right.
+    # Legend in the first free panel, or in the upper left of the first one.
     n_free = axes.size - len(PT_BINS)
     legend_panel = n_free > 0
     bin_axes = axes.flat[:len(PT_BINS)]
@@ -124,12 +117,12 @@ def draw_panels(averages, bands, outname, ylabel_x=0.034, left=0.015, flux_text=
                                                     (lambda y_lo, y_hi: y_lo < 1, 0.5 if has_band else 1.0)]
 
     for ax, (pt_lo, pt_hi) in zip(bin_axes, PT_BINS):
-        bin_top = {y_bin: 0.0 for y_bin in Y_BINS}   # highest point of each y bin
+        bin_top = {y_bin: 0.0 for y_bin in Y_BINS}
         for frag, _, color, linestyle in FRAG_SCHEMES:
             values = [averages[frag].get((pt_lo, y_lo), np.nan) for y_lo, _ in Y_BINS]
             if np.all(np.isnan(values)):
                 continue
-            for value, (y_lo, y_hi) in zip(values, Y_BINS):   # one flat segment per bin, no vertical steps
+            for value, (y_lo, y_hi) in zip(values, Y_BINS):
                 if not np.isnan(value):
                     ax.plot([y_lo, y_hi], [value, value], color=color, linestyle=linestyle, lw=3)
             for value, y_bin in zip(values, Y_BINS):
@@ -155,10 +148,10 @@ def draw_panels(averages, bands, outname, ylabel_x=0.034, left=0.015, flux_text=
         ax.tick_params(labelsize=30, pad=10)
         formatter = TrimmedFormatter(useMathText=True)
         if pt_hi <= 2.0:
-            formatter.set_scientific(False)   # decimals in the first two panels
+            formatter.set_scientific(False)
         else:
             formatter.set_powerlimits((-2, 2))
-            ax.yaxis.get_offset_text().set(fontsize=30, color="black")   # the x10^n stays black, unlike the ticks
+            ax.yaxis.get_offset_text().set(fontsize=30, color="black")
             ax.yaxis.OFFSETTEXTPAD = 8
         ax.yaxis.set_major_formatter(formatter)
         ax.text(0.95, 0.93, rf"$p_{{D\perp}} \in ({pt_lo:g}, {pt_hi:g})$ GeV", transform=ax.transAxes,
@@ -177,8 +170,7 @@ def draw_panels(averages, bands, outname, ylabel_x=0.034, left=0.015, flux_text=
     if not legend_panel:
         axes.flat[0].legend(handles=frag_handles, loc="upper left", fontsize=28, frameon=False)
 
-    # panels without a pT bin are hidden, the first one holds the legend (process and channel on top, as
-    # entries without a line); the panel above them gets the y axis labels
+    # empty panels hidden, the first one holds the legend
     for i, ax in enumerate(axes.flat[len(PT_BINS):], start=len(PT_BINS)):
         ax.axis("off")
         if i == len(PT_BINS):

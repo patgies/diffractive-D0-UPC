@@ -4,8 +4,7 @@
 
 using namespace std;
 
-// Range of the logarithmic sampling of k, up to k_cut_factor * m_T at pc = pD0/z_h_min, which is above
-// both cuts (k_cut_factor * p and k_cut_factor * m_T); K_MAX_NOCUT without a cut.
+// Upper k of the log sampling: above both cuts; K_MAX_NOCUT without a cut.
 static void set_k_range(parameters* par)
 {
     double pc_max = par->pD0 / par->z_h_min;
@@ -56,7 +55,7 @@ double diffractiveCrossSection_xpom(void* p)
     return vegas_integrate(&F, low, up, par->calls_diff);
 }
 
-// VEGAS integral of a fixed-q+ diffractive integrand: r1, r2 in [0, 99], the other variables in [0, 1].
+// VEGAS: r1, r2 in [0, 99], others in [0, 1]
 static double vegas_fixed_qp(double (*integrand)(double*, size_t, void*), size_t dim, parameters* par)
 {
     par->log_k = log(par->k_upper / K_MIN);
@@ -73,7 +72,7 @@ static double vegas_fixed_qp(double (*integrand)(double*, size_t, void*), size_t
     return vegas_integrate(&F, low, up, par->calls_diff);
 }
 
-// Diffractive cross section at fixed q+, and at fixed q+ and x_po. Set par->k_upper before calling.
+// Diffractive at fixed q+ (and x_po). Set par->k_upper first.
 double diffractiveCrossSection_fixed_qp(void* p)
 {
     return vegas_fixed_qp(&integrand_diffractive_fixed_qp, 4, (parameters*)p);

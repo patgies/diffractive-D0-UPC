@@ -1,8 +1,8 @@
 import os
 import sys
 
-# D0 cross section in Pb+Pb in bins of pT and y, for the three fragmentation functions.
-# FLUX_MODEL=STARLIGHT reads the results with the STARlight flux.
+# Pb+Pb D0 cross section in pT and y bins, for three fragmentation functions.
+# FLUX_MODEL=STARLIGHT for the STARlight flux.
 from D0 import (load_results, _summed_results, _scale_combos, SCALE_FACTOR_TAGS, NUCLEUS, CHANNEL, CENTRAL_DIR,
                 OUTPUT_BASE, FLUX_TAG, FLUX_MODEL)
 from pPb_bins import bin_averages, draw_panels, FRAG_SCHEMES, PROCESS, PANEL_PROCESS_LABELS
@@ -12,14 +12,14 @@ SCALE_BASE = os.environ.get("SCALE_BASE", f"{OUTPUT_BASE}/{CHANNEL}/scale_variat
 
 
 def get_results(frag, data_dir, mu_r_factor=1.0):
-    """{y: [(pt, cross_section), ...]} for PROCESS and one fragmentation function."""
+    """{y: [(pt, cross_section), ...]} for one fragmentation function."""
     if PROCESS == "sum":
         return _summed_results(data_dir, frag, mu_r_factor=mu_r_factor)
     return load_results(PROCESS, frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
 
 
 def scale_band(frag):
-    """Minimum and maximum of the bin averages over the 7 (mu_F, mu_R) points. {} if there is no data."""
+    """Min and max of the bin averages over the 7 scale points. {} if no data."""
     dirs = {mu_f: CENTRAL_DIR if tag is None else f"{SCALE_BASE}/{frag}/factor_{tag}"
             for mu_f, tag in SCALE_FACTOR_TAGS.items()}
     if not all(os.path.isdir(d) for d in dirs.values()):
@@ -37,7 +37,7 @@ def main():
 
     suffix = "" if PROCESS == "sum" else f"_{PROCESS}"
     draw_panels(averages, bands, f"../plots/D0_bins_y_{CHANNEL}_{NUCLEUS}{NUCLEUS}{FLUX_TAG}{suffix}.pdf", ylabel_x=0.023,
-                left=0.035,   # the tick numbers are wider here: more room for the axis title
+                left=0.035,
                 second_panel_text=f"{PANEL_PROCESS_LABELS[PROCESS]} {NUCLEUS}-{NUCLEUS}",
                 flux_text=CHANNEL if FLUX_MODEL == "EFF" else f"{FLUX_LABELS.get(FLUX_MODEL, FLUX_MODEL)} {CHANNEL}")
 

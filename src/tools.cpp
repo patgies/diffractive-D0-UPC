@@ -11,9 +11,6 @@
 
 
 
-/*
- * Str to double/int
- */
 double StrToReal(std::string str)
 {
     std::stringstream buff(str);
@@ -30,13 +27,7 @@ int StrToInt(std::string str)
     return tmp;
 }
 
-//
-
-/* Returns index i for which
- * vec[i]<=val
- * Assumes that vec[i]<vec[i+1]
- * If such index can't be found, returns -1
- */
+// Index i with vec[i] <= val < vec[i+1] (vec increasing); -1 below the range
 
 int FindIndex(double val, std::vector<double> &vec)
 {

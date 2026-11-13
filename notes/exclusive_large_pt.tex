@@ -51,7 +51,7 @@ $1/r_0=e_c\,e\,\Lambda\approx12$~GeV (from a non-smooth $r_0|\mathbf r|$ term) a
 In the cross section this tail enters with a weight $\propto(r_0\pt)^2$, so in our range the $m^2/\pt^8$
 term still dominates: local power $-7.3$ to $-7.5$ for $5<\pt<20$~GeV.
 \item rcBK evolution builds a strong $r^2\ln\frac1r$ term (three times the MV one at $x_{\mathbb P}=10^{-3}$),
-so at fixed small $x_{\mathbb P}$ the spectrum is close to $\pt^{-6}$ (Fig.~\ref{fig:terms}). In the real
+so at fixed small $x_{\mathbb P}$ the spectrum is close to $\pt^{-6}$. In the real
 kinematics $x_{\mathbb P}\propto m_T$ grows with $\pt$, the evolution fades, and at $y=0$ the partonic
 power is $-6.7$ at 5~GeV and $-8.2$ at 12~GeV (Section 7c).
 \end{itemize}
@@ -322,21 +322,9 @@ $B$ [GeV$^2$] & 0.12 & 0.27 & 0.63 & 1.93 \\
 Pure MV with the same $Q_{s0}^2$ has $B=Q_{s0}^2=0.22$. So at $x_{\mathbb P}=10^{-3}$ the generated logarithm
 is already three times the MV one. The $K_1$ term grows as $B^2$, without $m^2$, and dominates: at
 \textbf{fixed} $x_{\mathbb P}\le10^{-3}$ the partonic spectrum goes as $p^{-6}$ to $p^{-6.8}$ from
-$p\approx5$~GeV on, and the $K_1$ term is $40$--$70\%$ of the cross section at $8$--$12$~GeV
-(Fig.~\ref{fig:terms}, right). In the real kinematics, however, $x_{\mathbb P}$ grows with $p$ and this
+$p\approx5$~GeV on, and the $K_1$ term is $40$--$70\%$ of the cross section at $8$--$12$~GeV.
+In the real kinematics, however, $x_{\mathbb P}$ grows with $p$ and this
 is undone (Section 7c).
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.95\textwidth]{../plots/exclusive_terms_test.pdf}
-\caption{The two terms of Eq.~\eqref{eq:sigma} separately, $m=1.5$~GeV, $z=1/2$, centre of Pb
-($Q_{s0}^2=0.216$~GeV$^2$). Solid: $K_1$ term $m^2(z^2+\bar z^2)I_1^2$ (survives $m\to0$); dashed:
-$K_0$ term $m^2I_0^2$ (needs the mass). Bottom: local power. Left: no evolution, GBW ($r^2$ part of the IC)
-and the MV$^e$ IC. Right: our rcBK-evolved dipole at fixed $x_{\mathbb P}$. The dips of the dashed curves
-at $2$--$3$~GeV are sign changes of $I_0$; the wiggles above $40$~GeV on the right are interpolation noise
-of the tabulated dipole. (Standalone test, not part of the code.)}
-\label{fig:terms}
-\end{figure}
 
 \section*{6. What this means for our dipole}
 
@@ -380,13 +368,12 @@ turns towards $-6$, as predicted.
 \item BK evolution generates $r^2\ln\frac1r$ terms (Section 5b; an effective $\gamma<1$ only near
 $Q_s$, see also Section 6 of \texttt{exclusive\_pt8.pdf}). Like the MV logarithm, this is a non-smooth
 term, so it also feeds $I_1$ without the $m^2$ suppression: at fixed $x_{\mathbb P}\le10^{-3}$ the spectrum
-is close to $p^{-6}$ (Fig.~\ref{fig:terms}).
+is close to $p^{-6}$.
 \item In the full $D^0$ calculation the photon flux, the $x_{\mathbb P}$ dependence and the fragmentation make
 the spectrum steeper again (local power $-7.5$ to $-9.7$ at $y=0$, see \texttt{exclusive\_pt8.pdf}).
 \end{itemize}
 
-\textbf{Why the MV$^e$ $K_1$ term reaches $-6$ only at large $p$} (Fig.~\ref{fig:terms}, left, orange
-solid). Three regimes:
+\textbf{Why the MV$^e$ $K_1$ term reaches $-6$ only at large $p$}. Three regimes:
 \begin{itemize}
 \item $p\lesssim10$~GeV: $m\,I_1\simeq2m^2Q_{s0}^2\ln(e_ce)/p^5+Q_{s0}^2r_0/(4p^2)$. The two are equal at
 $p\approx(8m^2\ln(e_ce)/r_0)^{1/3}\approx10$~GeV; below, the mass-suppressed $r^2$ part wins (local power
@@ -447,7 +434,7 @@ pure MV              & $-6.2$ & $-6.5$ & $-6.6$ & $-6.6$ & $-6.3$ \\
 Up to about $12$~GeV our dipole is close to GBW; the turn towards $-6$ starts above, when $r_0p\sim1$.
 
 \textbf{(c) $x_{\mathbb P}$ grows with $p$, and the evolution goes away.} At fixed $x_{\mathbb P}\le10^{-3}$ the
-evolved dipole gives about $p^{-6}$ (Section 5b, Fig.~\ref{fig:terms}). But in the exclusive process
+evolved dipole gives about $p^{-6}$ (Section 5b). But in the exclusive process
 $x_{\mathbb P}=m_Te^{-y}/(\sqrt{s_{NN}}(1-z))$ (manuscript Eq.~(9)), so each doubling of $p$ doubles
 $x_{\mathbb P}$ and lowers $Y$ by $\ln2$. The coefficient $B$ of the generated logarithm drops fast with $Y$
 (table of Section 5b), so the $p^{-6}$ term loses weight as $p$ grows; above $x_{\mathbb P}=0.01$
@@ -591,8 +578,7 @@ $x_{\mathbb P}(p)$ at $y=0$ the large-$p$ points sit at $x_{\mathbb P}>0.01$ (IC
 small-$p$ points are flatter, so the measured slope is steeper (Section 7c).
 
 \textbf{Suggested test.} Run \texttt{charm\_fixed\_qp\_xpom} at a fixed $x_{\mathbb P}$ ($10^{-2}$ and
-$10^{-3}$) up to $p\approx80$~GeV and plot $p^6\,d\sigma$: a $p^{-6}$ tail is a plateau. Fig.~\ref{fig:terms}
-is a standalone version of this test.
+$10^{-3}$) up to $p\approx80$~GeV and plot $p^6\,d\sigma$: a $p^{-6}$ tail is a plateau.
 
 \textbf{Caveat.} $e_c$ and $\gamma$ come from the fit to HERA data. Changing them is a diagnostic of where
 the $p^{-6}$ comes from, not another prediction, unless there is a physical reason (e.g.\ a refit with

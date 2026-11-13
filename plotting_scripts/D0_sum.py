@@ -7,7 +7,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib import ticker
 
-# Total D0 cross section (diffractive + exclusive) for some rapidities, with its uncertainty band.
+# Diffractive + exclusive D0 cross section with its uncertainty band.
 from D0 import (
     load_results, load_hymnd_sum_band, band_label, sum_with_limit, NUCLEUS, CHANNEL, FRAG_TYPES, LINEWIDTH,
     P_D_MIN_DIFF,
@@ -46,11 +46,11 @@ def main():
         pt_values, totals = zip(*sum_with_limit(dict(results_excl.get(y, [])), dict(results_diff.get(y, []))))
         plt.plot(pt_values, totals, color=colors[y], linestyle=linestyles[y], lw=LINEWIDTH)
 
-    # below P_D_MIN_DIFF the sum is the exclusive part alone (see D0.sum_with_limit)
+    # exclusive only below P_D_MIN_DIFF
     if P_D_MIN_DIFF > 0:
         plt.axvline(P_D_MIN_DIFF, color="0.5", lw=1.5, linestyle=":", zorder=0)
     plt.yscale("log")
-    plt.ylim(3e-8, 1.5 * plt.gca().dataLim.y1)   # just above the highest curve
+    plt.ylim(3e-8, 1.5 * plt.gca().dataLim.y1)
     plt.xlim(0, 12)
     plt.xlabel(r"$p_{D\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D\perp}$ [mb/GeV]", labelpad=11)

@@ -40,15 +40,14 @@ plt.rcParams.update({
     "ytick.major.pad": 4,
 })
 
-# Reads the D0 output of run_nucleus.sh, integrates it over the impact parameter b_d
-# and plots exclusive and diffractive spectra. The other plotting scripts take the plot style,
-# the constants, the prefactors and the readers from here.
+# D0 spectra from run_nucleus.sh, integrated over b_d. Other scripts import the style,
+# constants, prefactors and readers from here.
 
 alphae = 1/137
 mc     = 1.5
 e_c    = 2/3
 Nc     = 3
-SIGMA0_MB = 16.36   # sigma0/2 of the proton dipole fit (MVe), in mb: the proton transverse area
+SIGMA0_MB = 16.36   # sigma0/2 of the MVe proton fit, in mb
 A_NUCLEUS = {"Pb": 208}
 
 FMGEV = 5.068
@@ -58,7 +57,7 @@ GEVSQR_TO_MB = GEVSQR_TO_NB * 1e-6
 NUCLEUS = os.environ.get("NUCLEUS", "Pb")
 CHANNEL = os.environ.get("CHANNEL", "An0n").translate(str.maketrans('', '', '() '))
 
-# FLUX_MODEL: EFF (default) or another flux, whose files are in ../output/<FLUX_MODEL>/ with a _<FLUX_MODEL> tag
+# FLUX_MODEL: EFF (default) or another flux, read from ../output/<FLUX_MODEL>/
 FLUX_MODEL = os.environ.get("FLUX_MODEL", "EFF")
 FLUX_TAG = "" if FLUX_MODEL == "EFF" else f"_{FLUX_MODEL}"
 OUTPUT_BASE = "../output" if FLUX_MODEL == "EFF" else f"../output/{FLUX_MODEL}"
@@ -70,9 +69,8 @@ PROCESSES = ["diffractive", "exclusive"]
 FRAG_TYPES = ["HymnD"]
 MIN_Y_TO_PLOT = -1.0
 MAX_Y_TO_PLOT = 2.0
-MIN_B_D_SAMPLES = 10   # a pT point needs at least this many impact parameters to be integrated
-# The diffractive+exclusive sum has the diffractive TMD part only for pD >= P_D_MIN_DIFF (GeV); below, the
-# sum is the exclusive part alone. Default 0: the TMD part (K_perp <= 2 m_T) at all pD.
+MIN_B_D_SAMPLES = 10   # minimum number of b_d points to integrate a pT point
+# Diffractive TMD part in the sum only for pD >= P_D_MIN_DIFF (GeV); default 0: all pD.
 P_D_MIN_DIFF = float(os.environ.get("P_D_MIN_DIFF", 0.0))
 
 SCALE_FACTOR_TAGS = {0.5: "0.5", 1.0: None, 2.0: "2.0"}
@@ -81,7 +79,7 @@ EXPECTED_SCALE_FACTORS = [tag for tag in SCALE_FACTOR_TAGS.values() if tag]
 
 
 def _mu_f_dir(factor):
-    """Folder with the D0_*.dat files for a given mu_F factor (see SCALE_FACTOR_TAGS)."""
+    """Folder of the D0_*.dat files for a mu_F factor."""
     tag = SCALE_FACTOR_TAGS[factor]
     return CENTRAL_DIR if tag is None else f"{SCALE_DIR}/factor_{tag}"
 
@@ -105,7 +103,7 @@ def read_rapidity(filename):
 
 
 def read_data_file(filename):
-    """Returns three plain lists (b_d, pD0, dsigma), skipping comment lines."""
+    """Returns lists (b_d, pD0, dsigma)."""
     b_d_list = []
     pt_list = []
     dsigma_list = []
@@ -131,7 +129,7 @@ def group_by_pt(b_d_list, pt_list, dsigma_list):
 
 
 def integrate_over_b_d(pairs):
-    """Integral of b_d*dsigma(b_d) db_d with Simpson's rule."""
+    """Simpson integral of b_d*dsigma(b_d) db_d."""
     pairs = sorted(pairs)
     if pairs[0][0] < 0:
         raise ValueError(
@@ -144,8 +142,7 @@ def integrate_over_b_d(pairs):
 
 
 def prefactor(process, pt, mu_r_factor=1.0):
-    """Prefactor of the cross section. No sigma0: the b_d integral already gives the area.
-    mu_r_factor multiplies the scale of alpha_s. Only the diffractive process uses it."""
+    """Prefactor, without sigma0 (the b_d integral gives the area). mu_r_factor: alpha_s scale (diffractive only)."""
     if process == "exclusive":
         return alphae * Nc * e_c**2 / (2 * math.pi**2)
     elif process == "diffractive":
@@ -154,20 +151,19 @@ def prefactor(process, pt, mu_r_factor=1.0):
     raise ValueError(f"unknown process {process}")
 
 
-# Dilute edge of the nucleus. The dipole files stop at the impact parameter b_max where
-# A T_A(b) sigma0/2 ~ 1; beyond it the nuclear amplitude is A T_A(b) sigma0/2 times the proton one
-# (arXiv:1309.6963), so that for a coherent process sigma_A^edge = nuclear_edge_factor * sigma_p.
-# sigma_p: proton target with the same flux, channel, fragmentation function and scale, in
-# ../output/proton_edge/<FLUX_MODEL>/<CHANNEL>/factor_<scale>/<FRAG>/ (run_proton.sh, TARGET=AA).
+# Dilute edge of the nucleus, beyond the last b_d of the dipole files, where A T_A(b) sigma0/2 ~ 1 (arXiv:1309.6963):
+# sigma_A^edge = nuclear_edge_factor * sigma_p for a coherent process.
+# sigma_p from run_proton.sh (TARGET=AA), in
+# ../output/proton_baseline/<FLUX_MODEL>/<CHANNEL>/factor_<scale>/<FRAG>/
 NUCLEAR_EDGE = os.environ.get("NUCLEAR_EDGE", "1") == "1"
-PROTON_EDGE_DIR = os.environ.get("PROTON_EDGE_DIR", "../output/proton_edge")
-WOODS_SAXON = {"Pb": (6.49, 0.542)}   # R and a in fm that reproduce the initial conditions of the dipole files
+PROTON_EDGE_DIR = os.environ.get("PROTON_EDGE_DIR", "../output/proton_baseline")
+WOODS_SAXON = {"Pb": (6.49, 0.542)}   # R, a in fm
 HBARC = 0.1973   # GeV fm
 _edge_cache = {}
 
 
 def nuclear_edge_factor(b_max, sigma0_mb=SIGMA0_MB, nucleus=None):
-    """(sigma0/2) * integral of [A T_A(b)]^2 d^2b over b > b_max (b_max in GeV^-1)."""
+    """(sigma0/2) * int_{b > b_max} [A T_A(b)]^2 d^2b, b_max in GeV^-1."""
     nucleus = NUCLEUS if nucleus is None else nucleus
     key = (nucleus, round(b_max, 6))
     if key not in _edge_cache:
@@ -183,7 +179,7 @@ def nuclear_edge_factor(b_max, sigma0_mb=SIGMA0_MB, nucleus=None):
 
 
 def proton_prefactor(process, pt, mu_r_factor=1.0):
-    """Prefactor for a proton target, with sigma0/2 in mb (so no GEVSQR_TO_MB)."""
+    """Prefactor for a proton target (sigma0/2 in mb)."""
     if process == "exclusive":
         return alphae * Nc * e_c**2 * SIGMA0_MB / (2 * math.pi**2)
     alphas = alphas_run(mu_r_factor * math.sqrt(pt**2 + mc**2))
@@ -194,9 +190,7 @@ _warned_no_edge = set()
 
 
 def load_proton_edge(process, frag, data_dir, mu_r_factor=1.0):
-    """Proton-target cross section {y: {pt: dsigma/dy dpt in mb/GeV}} that matches the lead results of
-    data_dir: the scale factor is read from a "factor_<f>" folder name (1.0 otherwise; the member
-    folders of the HymnD and BK bands use the central proton result). {} if the runs are missing."""
+    """Proton cross section {y: {pt: mb/GeV}} for the scale of data_dir (factor_<f> folder, else 1.0). {} if missing."""
     scale = next((part[len("factor_"):] for part in data_dir.split("/") if part.startswith("factor_")), "1.0")
     folder = f"{PROTON_EDGE_DIR}/{FLUX_MODEL}/{CHANNEL}/factor_{scale}/{frag}"
     files = sorted(glob.glob(f"{folder}/D0_proton_baseline_{process}_{frag}_{CHANNEL}_y*.dat"))
@@ -218,8 +212,7 @@ def load_proton_edge(process, frag, data_dir, mu_r_factor=1.0):
 
 
 def load_results(process, frag, data_dir=None, mu_r_factor=1.0):
-    """Read all files for one (process, frag) in data_dir or data_dir/<frag>/
-    and return {y: [(pt, cross_section), ...]}."""
+    """{y: [(pt, cross_section), ...]} for one (process, frag)."""
     data_dir = CENTRAL_DIR if data_dir is None else data_dir
     name = f"D0_{process}_{frag}_{CHANNEL}_{NUCLEUS}{FLUX_TAG}_y*.dat"
     filenames = glob.glob(f"{data_dir}/{name}") or glob.glob(f"{data_dir}/{frag}/{name}")
@@ -257,8 +250,7 @@ def load_results(process, frag, data_dir=None, mu_r_factor=1.0):
 
 
 def _member_band(member_dir_pattern, load):
-    """Mean and standard deviation over the member folders of load(member_dir), which gives
-    {y: [(pt, value), ...]}. Returns {y: (pt_values, means, stds)}, or {} if none are found."""
+    """Mean and std over member folders. Returns {y: (pt, means, stds)}, or {}."""
     per_member = [load(member_dir) for member_dir in sorted(glob.glob(member_dir_pattern))]
     per_member = [results for results in per_member if results]
     if not per_member:
@@ -275,24 +267,22 @@ def _member_band(member_dir_pattern, load):
 
 
 def _band_from_members(process, frag, member_dir_pattern):
-    """Band of one process from the member folders (see _member_band)."""
+    """Member band of one process."""
     return _member_band(member_dir_pattern, lambda member_dir: load_results(process, frag, data_dir=member_dir))
 
 
 def load_hymnd_replica_band(process, frag="HymnD"):
-    """Band from the HymnD replicas (one fragmentation function per member). {} if there is no data."""
+    """HymnD replica band. {} if no data."""
     return _band_from_members(process, frag, f"{OUTPUT_BASE}/{CHANNEL}/HymnD_band/member_*")
 
 
 def load_bk_band(process, frag="HymnD"):
-    """Band from the BK posterior samples (one dipole per sample). {} if there is no data."""
+    """BK posterior band. {} if no data."""
     return _band_from_members(process, frag, f"{OUTPUT_BASE}/{CHANNEL}/bk_band/member_*")
 
 
 def sum_with_limit(excl_points, diff_points):
-    """Exclusive + diffractive TMD per pt ({pt: value} each), with the diffractive part only from
-    P_D_MIN_DIFF on: below it, it depends on the K_perp cut (2 m_T is not >> Q_s,A). A point just below
-    the limit, exclusive alone, makes the step sharp (also in the pT bin integrals).
+    """Exclusive + diffractive per pt, with the diffractive part only from P_D_MIN_DIFF on.
     Returns [(pt, total), ...]."""
     pt_values = sorted(set(diff_points) | set(excl_points))
     totals = [(pt, excl_points.get(pt, 0.0) + (diff_points.get(pt, 0.0) if pt >= P_D_MIN_DIFF else 0.0))
@@ -305,10 +295,7 @@ def sum_with_limit(excl_points, diff_points):
 
 
 def _summed_results(data_dir, frag="HymnD", mu_r_factor=1.0):
-    """diffractive+exclusive summed per (y, pt) for one directory of D0_*.dat files, the diffractive
-    part only from P_D_MIN_DIFF on (sum_with_limit). Returns {y: [(pt, total), ...]}, or {} if neither
-    process has data there.
-    """
+    """Diffractive+exclusive sum per (y, pt) in one folder. Returns {y: [(pt, total), ...]}, or {}."""
     diff = load_results("diffractive", frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
     excl = load_results("exclusive", frag, data_dir=data_dir, mu_r_factor=mu_r_factor)
     if not diff and not excl:
@@ -317,30 +304,28 @@ def _summed_results(data_dir, frag="HymnD", mu_r_factor=1.0):
 
 
 def _summed_band_from_members(member_dir_pattern, frag="HymnD"):
-    """Like _band_from_members, but for the diffractive+exclusive sum of each member."""
+    """Member band of the diffractive+exclusive sum."""
     return _member_band(member_dir_pattern, lambda member_dir: _summed_results(member_dir, frag))
 
 
 def load_hymnd_replica_sum_band(frag="HymnD"):
-    """Band from the HymnD replicas for the diffractive+exclusive sum. {} if there is no data."""
+    """HymnD replica band of the sum. {} if no data."""
     return _summed_band_from_members(f"{OUTPUT_BASE}/{CHANNEL}/HymnD_band/member_*", frag)
 
 
 def load_bk_sum_band(frag="HymnD"):
-    """Band from the BK posterior samples for the diffractive+exclusive sum. {} if there is no data."""
+    """BK posterior band of the sum. {} if no data."""
     return _summed_band_from_members(f"{OUTPUT_BASE}/{CHANNEL}/bk_band/member_*", frag)
 
 
 def _scale_combos():
-    """The 7-point (mu_F, mu_R) grid: SCALE_FACTORS for both, without the two
-    points where mu_F/mu_R is 4 or 1/4 (e.g. arXiv:2506.09893)."""
+    """7-point (mu_F, mu_R) grid: no points with mu_F/mu_R = 4 or 1/4 (arXiv:2506.09893)."""
     return [(mu_f, mu_r) for mu_f in SCALE_FACTORS for mu_r in SCALE_FACTORS
             if 0.5 <= mu_f / mu_r <= 2.0]
 
 
 def _envelope_from_results(results_by_combo):
-    """Minimum and maximum over {(mu_f, mu_r): {y: [(pt, val), ...]}}.
-    Returns {y: (pt_values, lower, upper)}."""
+    """Min and max over the scale points. Returns {y: (pt, lower, upper)}."""
     central = results_by_combo[(1.0, 1.0)]
     envelope = {}
     for y in central:
@@ -357,9 +342,7 @@ def _envelope_from_results(results_by_combo):
 
 
 def _scale_envelope(load):
-    """Minimum and maximum over the 7 (mu_F, mu_R) points (see _scale_combos) of
-    load(data_dir, mu_r_factor) = {y: [(pt, value), ...]}. Returns {y: (pt_values, lower, upper)},
-    or {} if the two mu_F folders are not both there."""
+    """Envelope over the 7 scale points. Returns {y: (pt, lower, upper)}, or {} if a mu_F folder is missing."""
     variation_dirs = [f"{SCALE_DIR}/factor_{factor}" for factor in EXPECTED_SCALE_FACTORS]
     if not all(os.path.isdir(d) for d in variation_dirs):
         return {}
@@ -375,17 +358,17 @@ def _scale_envelope(load):
 
 
 def load_scale_band(process, frag="HymnD"):
-    """Scale-variation band of one process (see _scale_envelope)."""
+    """Scale band of one process."""
     return _scale_envelope(lambda data_dir, mu_r: load_results(process, frag, data_dir=data_dir, mu_r_factor=mu_r))
 
 
 def load_scale_sum_band(frag="HymnD"):
-    """Scale-variation band for the diffractive+exclusive sum (see _scale_envelope)."""
+    """Scale band of the sum."""
     return _scale_envelope(lambda data_dir, mu_r: _summed_results(data_dir, frag, mu_r_factor=mu_r))
 
 
 def _relative_std(member_band, y):
-    """{pt: std/mean} of a member band (see _band_from_members) at rapidity y; {} if it has no data."""
+    """{pt: std/mean} of a member band at y; {} if no data."""
     if not member_band or y not in member_band:
         return {}
     pt_values, means, stds = member_band[y]
@@ -393,10 +376,8 @@ def _relative_std(member_band, y):
 
 
 def _combine_in_quadrature(central, rep_band, bk_band, scale_band):
-    """Total uncertainty around the central curve: scale variation, HymnD replicas and BK posterior
-    samples added in quadrature. The replica and BK bands enter as relative spreads (std/mean of
-    the members), since the BK samples come from another fit than the central dipole; a band with
-    no data (other channels) is left out. Returns {y: (pt_values, central_values, sigma_total)}."""
+    """Scale, HymnD and BK uncertainties in quadrature (HymnD and BK as relative spreads).
+    Returns {y: (pt, central, sigma_total)}."""
     if not central or not scale_band:
         return {}
 
@@ -424,8 +405,7 @@ def _combine_in_quadrature(central, rep_band, bk_band, scale_band):
 
 
 def band_label():
-    """Legend label of the uncertainty band: the total one where the HymnD-replica and BK runs exist
-    for this channel (see _combine_in_quadrature), the scale variation alone otherwise."""
+    """Legend label of the band: total if HymnD and BK runs exist, else scale only."""
     has_members = (glob.glob(f"{OUTPUT_BASE}/{CHANNEL}/HymnD_band/member_*")
                    or glob.glob(f"{OUTPUT_BASE}/{CHANNEL}/bk_band/member_*"))
     if has_members:
@@ -434,8 +414,7 @@ def band_label():
 
 
 def load_hymnd_band(process, frag="HymnD"):
-    """Total uncertainty band (scale + HymnD replicas + BK samples, see _combine_in_quadrature).
-    {} if there is no data."""
+    """Total uncertainty band. {} if no data."""
     return _combine_in_quadrature(
         load_results(process, frag),
         load_hymnd_replica_band(process, frag),
@@ -445,7 +424,7 @@ def load_hymnd_band(process, frag="HymnD"):
 
 
 def load_hymnd_sum_band(frag="HymnD"):
-    """Total uncertainty band (see load_hymnd_band) for the diffractive+exclusive sum."""
+    """Total uncertainty band of the sum."""
     return _combine_in_quadrature(
         _summed_results(CENTRAL_DIR, frag),
         load_hymnd_replica_sum_band(frag),
@@ -515,7 +494,7 @@ def main():
             plt.plot(pt_values, cross_section_values, color=colors[y], linestyle=linestyle, lw=LINEWIDTH)
 
     plt.yscale("log")
-    plt.ylim(1e-11, 1.5 * plt.gca().dataLim.y1)   # just above the highest curve; room for the legends below
+    plt.ylim(1e-11, 1.5 * plt.gca().dataLim.y1)   # room for the legends
     plt.xlim(0, 12)
     plt.xlabel(r"$p_{D\perp}$ [GeV]", labelpad=14)
     plt.ylabel(r"$d\sigma/dy\,dp_{D\perp}$ [mb/GeV]", labelpad=11)
@@ -549,7 +528,7 @@ def main():
                 style_handles.append(Line2D([0], [0], color="0.3", linestyle=linestyle, lw=LINEWIDTH, label=label))
     if any(hymnd_bands.values()):
         style_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none", label=band_label()))
-    # lower right, below the exclusive curves
+    # lower right
     plt.legend(handles=style_handles, loc="lower right", bbox_to_anchor=(1.01, 0.0), fontsize=22,
                frameon=False)
 

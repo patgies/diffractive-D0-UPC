@@ -3,6 +3,7 @@
 # Usage: Y_VALS="0.0 2.0" NPT=60 ./run_scripts/run_charm_fixed_qp.sh
 # With DIPOLE_DIR=data/Pb/mve: one run per Glauber sample, in output/charm/<NUCLEUS>/b<b_d>/.
 # Without DIPOLE_DIR: proton, with the dipole file DIPOLE_FILE (default data/proton/mve.dat).
+# For RpA_fixed_qp.py: DIFF_METHOD=quad DTMD=gluon OUTDIR=output/charm_RpA, once for the proton and once with DIPOLE_DIR.
 
 : "${Y_VALS:=0.0 1.0 2.0}"
 : "${NPT:=40}"

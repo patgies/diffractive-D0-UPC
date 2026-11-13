@@ -16,4 +16,4 @@ for dfile in "${DIPOLE_DIR:-data/$NUCLEUS/mve}"/glauber_mve_*; do
 	./build/bin/saturation_scale "$dfile" "$NS" > "$OUTDIR/qs_${NUCLEUS}_b$b_d.dat"
 done
 
-echo "Done. Next: python3 saturation_scale.py (from plotting_scripts/) to plot."
+echo "Done. Next: python3 correlation_limit.py (from plotting_scripts/) to plot."

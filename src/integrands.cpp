@@ -27,8 +27,7 @@ double Jn(int nu, double x)
 }
 
 
-// Photon flux per unit q+. The flux functions return dN/domega and q+ = sqrt(2) omega, so
-// dN/dq+ = (dN/domega)/sqrt(2).
+// dN/dq+ = (dN/domega)/sqrt(2)
 static double flux_per_qp(double b, double qp, void* p)
 {
     parameters* par = (parameters*)p;
@@ -36,24 +35,23 @@ static double flux_per_qp(double b, double qp, void* p)
     return dN_domega / M_SQRT2;
 }
 
-// Fragmentation factor D(z_h)/z_h^2 for c -> D0.
+// D(z_h)/z_h^2
 static double fragmentation(double z_h, parameters* par)
 {
     double D_frag = par->D_frag_interp->Evaluate(z_h);
     return D_frag / (z_h * z_h);
 }
 
-// Charm quark with transverse momentum pc = pD0/z_h and rapidity par->y, and a photon with momentum qp
-// between p+ and qpmax (u_qp from 0 to 1). jac_qp is the Jacobian of u_qp.
+// Charm pc = pD0/z_h and photon q+ in [p+, qpmax] from u_qp in [0, 1]
 struct Kinematics {
-    double pc, p2;      // quark transverse momentum and its square
+    double pc, p2;      // pc, pc^2
     double pp, qp;      // p+ of the quark, q+ of the photon
     double jac_qp;
     double z, zbar;     // p+/q+ and 1 - z
     double w2;          // W^2
 };
 
-// Returns false if no photon energy is possible (p+ above qpmax).
+// False if p+ > qpmax
 static bool photon_kinematics(double z_h, double u_qp, const parameters* par, Kinematics& kin)
 {
     kin.pc = par->pD0 / z_h;
@@ -83,7 +81,7 @@ static double excl_radial_integrand(double r, void* params)
     return r * Jn(rp->nu, rp->pc * r) * Kn(rp->nu, rp->m * r) * rp->dipole->N(r, rp->x_dip);
 }
 
-// The r1 and r2 integrals of the exclusive process as two 1D integrals, I0 and I1.
+// Exclusive r1, r2 integrals as two 1D integrals I0, I1
 void exclusive_radial_integrals(double pc, double m, double x_dip, AmplitudeLib* dipole, double& I0, double& I1)
 {
     static thread_local gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
@@ -100,7 +98,7 @@ void exclusive_radial_integrals(double pc, double m, double x_dip, AmplitudeLib*
     gsl_integration_qags(&F1, 0.0, rmax, 1e-10, 1e-6, 1000, w, &I1, &err1);
 }
 
-// x_P of the exclusive process, M_qq^2/W^2. Returns false above XPO_MAX.
+// Exclusive x_P = M_qq^2/W^2; false above XPO_MAX
 static bool exclusive_xpo(const Kinematics& kin, const parameters* par, double& xP_dip)
 {
     double Mqq2 = (kin.p2 + par->m2) / (kin.z * kin.zbar);
@@ -110,7 +108,7 @@ static bool exclusive_xpo(const Kinematics& kin, const parameters* par, double& 
     return true;
 }
 
-// Exclusive, 3D version: VEGAS integral over {u_qp, b, z_h}. r1 and r2 are done inside.
+// Exclusive 3D: {u_qp, b, z_h}
 double integrand_exclusive_factorized(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
@@ -138,8 +136,7 @@ double integrand_exclusive_factorized(double* vec, size_t /*dim*/, void* p)
     return kernel * fragmentation(z_h, par);
 }
 
-// Exclusive at fixed x_P (par->fixed_xpo): x_P fixes q+, so VEGAS only
-// integrates over {b, z_h}. Returns dsigma/dx_P.
+// Exclusive at fixed x_P: {b, z_h}, returns dsigma/dx_P
 double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
@@ -158,7 +155,7 @@ double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
 
     double zbar = mt * exp(-par->y) / (par->ss * xP);   // 1 - z_*
     double z = 1.0 - zbar;
-    if (z <= 0.0 || zbar <= 0.0) return 0.0;   // this x_P is not possible for this (pD0, y, z_h)
+    if (z <= 0.0 || zbar <= 0.0) return 0.0;   // x_P not reachable
 
     double qp = pp / z;   // q+ at this x_P
     if (qp > par->qpmax) return 0.0;
@@ -172,7 +169,7 @@ double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
     double factor = z*z + zbar*zbar;
     double g = factor * I1*I1 + I0*I0;
 
-    // Jacobian (q+)^2 (1-z) / p+, divided by x_P
+    // Jacobian (q+)^2 (1-z)/p+, over x_P
     double jac_xpo = qp*qp * zbar / (pp * xP);
 
     double kernel = z * m*m * jac_xpo * flux * g;
@@ -180,7 +177,7 @@ double integrand_exclusive_xpom(double* vec, size_t /*dim*/, void* p)
     return kernel * fragmentation(z_h, par);
 }
 
-// Exclusive, 5D version: VEGAS integral over {r1, r2, u_qp, b, z_h}. Used at low pt.
+// Exclusive 5D: {r1, r2, u_qp, b, z_h}, low pt
 double integrand_exclusive_mc(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
@@ -216,13 +213,9 @@ double integrand_exclusive_mc(double* vec, size_t /*dim*/, void* p)
     return kernel * fragmentation(z_h, par);
 }
 
-// Gluon DTMD part of the diffractive cross section at given photon energy (W^2 = w2), quark momentum
-// (p2 = p^2) and z = p+/q+, as in arXiv:2606.04169 (Eqs. 3.38, 3.43-3.45): 2 pi k H(z, p) G^2 / (1 - x),
-// with G = Omega^2 int dr r J_2(k r) K_2(Omega r) N_g(r), the gluon-gluon dipole amplitude N_g = 2N - N^2
-// (N_A), Omega^2 = x/(1-x) k^2 and x = M_qq^2/(x_po W^2). The cross section is per d ln(1/x) = d ln(x_po).
-// The Jacobians of the k and x_po variables are not included.
-// gluon_dtmd_kinematics gives Omega and the factor pref = 2 pi k H Omega^4/(1 - x) in front of the squared
-// radial integral, and returns false outside 0 < x < 1.
+// Gluon DTMD, arXiv:2606.04169 Eqs. 3.38, 3.43-3.45: 2 pi k H G^2/(1-x) per d ln(x_po),
+// G = Omega^2 int dr r J_2(k r) K_2(Omega r) N_g(r), N_g = 2N - N^2, Omega^2 = x k^2/(1-x).
+// No k, x_po Jacobians. Returns false outside 0 < x < 1.
 static bool gluon_dtmd_kinematics(double k, double x_po, double z, double p2, double w2, const parameters* par,
                                   double& omega, double& pref)
 {
@@ -237,7 +230,7 @@ static bool gluon_dtmd_kinematics(double k, double x_po, double z, double p2, do
     double omega2 = xfac * k * k;
     omega = sqrt(xfac) * k;
 
-    // hard factor H
+    // hard factor
     double denom4      = (p2 + m2) * (p2 + m2);
     double p4m4        = p2*p2 + m2*m2;
     double two_m2p2m2  = 2.0 * m2 * p2;
@@ -247,7 +240,7 @@ static bool gluon_dtmd_kinematics(double k, double x_po, double z, double p2, do
     return true;
 }
 
-// The gluon DTMD part with the two radial integrals as the variables r1, r2 (VEGAS).
+// Gluon DTMD with r1, r2 as VEGAS variables
 static double gluon_dtmd_kernel(double r1, double r2, double k, double x_po, double z, double p2,
                                 double w2, const parameters* par)
 {
@@ -263,16 +256,10 @@ static double gluon_dtmd_kernel(double r1, double r2, double k, double x_po, dou
                 * r2 * Jn(2, k*r2) * Kn(2, omega*r2) * D2;
 }
 
-// Quark DTMD part, arXiv:2606.04169 (Eqs. 4.21, 4.23, 4.48, 4.50, 4.52-4.54) at Q^2 = 0 (notes/quark_dtmd.pdf),
-// with the roles of quark and antiquark exchanged (charge conjugation): the measured charm (momentum p,
-// fraction z) and a gluon (1 - z) are hard, and the other charm, with momentum k, is semi-hard. With the
-// same prefactor as the gluon part (2 C_F N_c = N_c^2 - 1), it is
-//   2 pi k z * z (1 + zbar^2)/p^4 * x/(1-x) (k^2+m^2)/(x k^2+m^2) [Q_1^2 + (1-x) m^2/(x k^2+m^2) Q_0^2],
-// where the first z is the Jacobian dz/dy (as in the gluon part), the hard factor is massless,
-// Q_n = omega^2 int dr r J_n(k r) K_n(omega r) N(r) with the quark dipole N, omega^2 = (m^2 + x k^2)/(1-x),
-// and x = M^2/(x_po W^2) with the charm-gluon mass M^2 = p^2/(z zbar) + m^2/z. Per d ln(1/x) = d ln(x_po).
-// quark_dtmd_kinematics gives omega and the factors c1, c0 in front of the squared radial integrals
-// (int dr r J_n K_n N)^2 of Q_1 and Q_0, with omega^4 included, and returns false outside 0 < x < 1.
+// Quark DTMD, arXiv:2606.04169 Eqs. 4.21-4.54 at Q^2 = 0 (notes/quark_dtmd.pdf); hard charm + gluon,
+// semi-hard charm k: 2 pi k z z(1+zbar^2)/p^4 x/(1-x) (k^2+m^2)/(x k^2+m^2) [Q_1^2 + (1-x) m^2/(x k^2+m^2) Q_0^2],
+// Q_n = omega^2 int dr r J_n(k r) K_n(omega r) N(r), omega^2 = (m^2 + x k^2)/(1-x), M^2 = p^2/(z zbar) + m^2/z.
+// Per d ln(x_po). Returns false outside 0 < x < 1.
 static bool quark_dtmd_kinematics(double k, double x_po, double z, double p2, double w2, const parameters* par,
                                   double& omega, double& c1, double& c0)
 {
@@ -296,7 +283,7 @@ static bool quark_dtmd_kinematics(double k, double x_po, double z, double p2, do
     return true;
 }
 
-// The quark DTMD part with the two radial integrals as the variables r1, r2 (VEGAS).
+// Quark DTMD with r1, r2 as VEGAS variables
 static double quark_dtmd_kernel(double r1, double r2, double k, double x_po, double z, double p2,
                                 double w2, const parameters* par)
 {
@@ -313,15 +300,13 @@ static double quark_dtmd_kernel(double r1, double r2, double k, double x_po, dou
     return c1 * Q1sq + c0 * Q0sq;
 }
 
-// True if k is below the cut k_cut_factor * scale (no cut for k_cut_factor <= 0)
+// k below the cut
 static bool below_k_cut(double k, double scale, const parameters* par)
 {
     return par->k_cut_factor <= 0.0 || k <= par->k_cut_factor * scale;
 }
 
-// Diffractive cross section: gluon and/or quark DTMD parts (par->dtmd), same variables as above.
-// Gluon part: k <= k_cut_factor * p, or * m_T with k_cut_scale = "mt" (its hard scale contains m).
-// Quark part: k <= k_cut_factor * p (m is semi-hard), and only for p >= quark_p_min.
+// Gluon and/or quark DTMD. Gluon cut: k_cut_factor * p or m_T; quark: k_cut_factor * p, p >= quark_p_min.
 static double diffractive_kernel(double r1, double r2, double k, double x_po, double z, double p2,
                                  double w2, const parameters* par)
 {
@@ -336,8 +321,7 @@ static double diffractive_kernel(double r1, double r2, double k, double x_po, do
     return result;
 }
 
-// Diffractive at given x_po, for the VEGAS variables {r1, r2, u_k, u_qp, b, z_h}: the kernel with the
-// photon flux, the fragmentation function and the Jacobians of u_qp and u_k.
+// Diffractive at given x_po, with flux, fragmentation and Jacobians
 static double diffractive_at_xpo(double r1, double r2, double u_k, double u_qp, double b, double z_h,
                                  double x_po, void* p)
 {
@@ -356,7 +340,7 @@ static double diffractive_at_xpo(double r1, double r2, double u_k, double u_qp, 
     return kernel * fragmentation(z_h, par);
 }
 
-// Diffractive: VEGAS integral over {r1, r2, u_k, u_qp, b, u_xpo, z_h}.
+// Diffractive: {r1, r2, u_k, u_qp, b, u_xpo, z_h}
 double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
 {
     double log_xpo_range = log(XPO_MAX / XPO_MIN);
@@ -365,18 +349,17 @@ double integrand_diffractive(double* vec, size_t /*dim*/, void* p)
     return diffractive_at_xpo(vec[0], vec[1], vec[2], vec[3], vec[4], vec[6], x_po, p) * log_xpo_range;
 }
 
-// Diffractive at fixed x_po (par->fixed_xpo): VEGAS integral over {r1, r2, u_k, u_qp, b, z_h}.
+// Diffractive at fixed x_po: {r1, r2, u_k, u_qp, b, z_h}
 double integrand_diffractive_xpom(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
     return diffractive_at_xpo(vec[0], vec[1], vec[2], vec[3], vec[4], vec[5], par->fixed_xpo, p);
 }
 
-// Diffractive at fixed q+ (q+ = 2p+, no flux, no fragmentation), at given r1, r2, k and x_po,
-// without the Jacobians of the k and x_po variables.
+// Fixed q+ = 2p+, no Jacobians
 static double diffractive_fixed_qp_kernel(double r1, double r2, double k, double x_po, const parameters* par)
 {
-    double z = 0.5;   // q+ = 2p+, so p+/q+ = 1/2
+    double z = 0.5;   // q+ = 2p+
     double pp = (par->mt / M_SQRT2) * exp(par->y);
     double qp = 2.0 * pp;
     double w2 = M_SQRT2 * qp * par->ss;
@@ -384,7 +367,7 @@ static double diffractive_fixed_qp_kernel(double r1, double r2, double k, double
     return diffractive_kernel(r1, r2, k, x_po, z, par->p2, w2, par);
 }
 
-// Diffractive at fixed q+: VEGAS integral over {r1, r2, u_k, u_xpo}.
+// Fixed q+: {r1, r2, u_k, u_xpo}
 double integrand_diffractive_fixed_qp(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
@@ -398,7 +381,7 @@ double integrand_diffractive_fixed_qp(double* vec, size_t /*dim*/, void* p)
            * (k * par->log_k) * log_xpo_range;
 }
 
-// Diffractive at fixed q+ and fixed x_po (par->fixed_xpo): VEGAS integral over {r1, r2, u_k}.
+// Fixed q+ and x_po: {r1, r2, u_k}
 double integrand_diffractive_fixed_qp_xpom(double* vec, size_t /*dim*/, void* p)
 {
     parameters* par = (parameters*)p;
@@ -408,9 +391,8 @@ double integrand_diffractive_fixed_qp_xpom(double* vec, size_t /*dim*/, void* p)
     return diffractive_fixed_qp_kernel(vec[0], vec[1], k, par->fixed_xpo, par) * (k * par->log_k);
 }
 
-// int_0^rmax dr r J_nu(k r) K_nu(omega r) N(r, x_dip), with N_A in place of N if adjoint, as a sum of
-// 10-point Gauss-Legendre panels: a geometric grid for the scales 1/omega, 1/Q_s and 1/m, and the half
-// periods pi/k of J_nu. rmax = 99 as in the VEGAS integrals, or 50/omega, above which K_nu < e^-50.
+// int dr r J_nu(k r) K_nu(omega r) N(r) (N_A if adjoint), Gauss-Legendre panels on a geometric grid
+// plus the half periods pi/k. rmax = min(99, 50/omega).
 double dtmd_radial_integral(int nu, double k, double omega, double x_dip, bool adjoint, AmplitudeLib* dipole)
 {
     static const gsl_integration_glfixed_table* gl = gsl_integration_glfixed_table_alloc(10);
@@ -440,7 +422,7 @@ double dtmd_radial_integral(int nu, double k, double omega, double x_dip, bool a
     return sum;
 }
 
-// int_a^b f(t) dt with n_panels 8-point Gauss-Legendre panels
+// int_a^b f, 8-point Gauss-Legendre panels
 template <class F>
 static double gauss_legendre(double a, double b, int n_panels, F f)
 {
@@ -455,23 +437,21 @@ static double gauss_legendre(double a, double b, int n_panels, F f)
     return sum;
 }
 
-// Diffractive at fixed q+ without Monte Carlo: the radial integrals with dtmd_radial_integral, then
-// k and x_po with Gauss-Legendre in ln k (K_MIN to the cut, or k_upper) and ln x_po (from x = 1 to XPO_MAX).
-// Same result as diffractiveCrossSection_fixed_qp (gluon and/or quark DTMD, cuts of diffractive_kernel).
+// Fixed q+ by quadrature (no Monte Carlo); same as diffractiveCrossSection_fixed_qp
 double diffractiveCrossSection_fixed_qp_quad(void* p)
 {
     parameters* par = (parameters*)p;
-    // QUAD_REFINE multiplies the numbers of panels (convergence checks)
+    // QUAD_REFINE: more panels, for convergence checks
     const int refine = getenv("QUAD_REFINE") ? atoi(getenv("QUAD_REFINE")) : 1;
     const int n_panels_k = 16 * refine, n_panels_xpo = 12 * refine;
 
-    double z = 0.5;   // q+ = 2p+, so p+/q+ = 1/2
+    double z = 0.5;   // q+ = 2p+
     double zbar = 1.0 - z;
     double pp = (par->mt / M_SQRT2) * exp(par->y);
     double w2 = M_SQRT2 * 2.0 * pp * par->ss;
     double pc = par->p, p2 = par->p2;
 
-    // int d ln(x_po) d ln(k) k f(k, x_po), k up to the cut k_cut_factor * scale, x_po from M^2/W^2 (x = 1)
+    // int d ln(x_po) d ln(k) k f, k up to the cut, x_po from M^2/W^2
     auto integrate = [&](double scale, double M2, auto f) {
         double k_hi = (par->k_cut_factor > 0.0) ? min(par->k_upper, par->k_cut_factor * scale) : par->k_upper;
         double xpo_lo = max(XPO_MIN, M2 / w2);

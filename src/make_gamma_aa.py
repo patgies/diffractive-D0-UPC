@@ -2,21 +2,21 @@ import argparse
 import datetime
 import numpy as np
 
-# Gamma_AA(b) = exp[-sigma_NN T_AA(b)], optical Glauber. sigma_NN: 92 mb, 90.8533 mb (Starlight).
+# Gamma_AA(b) = exp[-sigma_NN T_AA(b)], optical Glauber.
 
 
 HBARC = 0.197327
 
 
 def thickness(R, a, A, s):
-    """T_A(s) [fm^-2]: integral of the WS density along z. int d2s T_A = A."""
+    """T_A(s) [fm^-2], normalized to A."""
     z = np.linspace(-40.0, 40.0, 4001)
     TA = np.array([np.trapezoid(1.0 / (1.0 + np.exp((np.sqrt(z**2 + ss**2) - R) / a)), z) for ss in s])
     return TA * A / np.trapezoid(2 * np.pi * s * TA, s)
 
 
 def overlap(s, TA, b_fm):
-    """T_AA(b) [fm^-2] on a polar grid centred on one nucleus."""
+    """T_AA(b) [fm^-2]."""
     sp = np.linspace(0.0, 25.0, 1001)
     ph = np.linspace(0.0, np.pi, 721)
     SP, PH = np.meshgrid(sp, ph, indexing="ij")

@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
-# Reads the D0_xpom output of run_xpom.sh, integrates over b_d and plots
-# the diffractive cross section versus ln(x_po).
+# Diffractive cross section vs ln(x_po), from run_xpom.sh, integrated over b_d.
 from D0 import integrate_over_b_d, prefactor, GEVSQR_TO_MB, NUCLEUS, CHANNEL   # also sets the plot style
 
 plt.rcParams["text.latex.preamble"] = r"\usepackage{amssymb}"   # \mathbb{P}
@@ -18,7 +17,7 @@ FRAG = os.environ.get("FRAG_TYPE", "BCFY")
 
 
 def read_header(filename):
-    """Returns (y, pD0) read from the '# fixed rapidity y :' / '# fixed pD0 :' header lines."""
+    """Returns (y, pD0) from the header."""
     y = None
     pt = None
     with open(filename) as f:
@@ -33,7 +32,7 @@ def read_header(filename):
 
 
 def read_data_file(filename):
-    """Returns three plain lists (b_d, x_po, dsigma), skipping comment lines."""
+    """Returns lists (b_d, x_po, dsigma)."""
     b_d_list = []
     xpo_list = []
     dsigma_list = []
@@ -59,8 +58,7 @@ def group_by_xpo(b_d_list, xpo_list, dsigma_list):
 
 
 def load_results(process="diffractive"):
-    """Read all files for one process ("exclusive"/"diffractive") and return
-    {(y, pt): [(x_po, dsigma_dy_dpt_dlnxpo), ...]}."""
+    """{(y, pt): [(x_po, dsigma), ...]} for one process."""
     name = f"D0_{process}_xpom_{FRAG}_{CHANNEL}_{NUCLEUS}_y*_pt*.dat"
     xpom_dir = f"../output/{CHANNEL}/xpom"
     results = {}
@@ -68,7 +66,7 @@ def load_results(process="diffractive"):
         y, pt = read_header(filename)
         b_d_list, xpo_list, dsigma_list = read_data_file(filename)
         xpo_groups = group_by_xpo(b_d_list, xpo_list, dsigma_list)
-        # The diffractive column is dsigma/dln(x_po); the exclusive one is dsigma/dx_po and gets the factor x_po.
+        # diffractive is dsigma/dln(x_po); exclusive is dsigma/dx_po, times x_po
         to_dlnxpo = (lambda xpo: 1.0) if process == "diffractive" else (lambda xpo: xpo)
 
         points = []

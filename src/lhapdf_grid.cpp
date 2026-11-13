@@ -26,7 +26,7 @@ std::vector<int> ParseInts(const std::string& line)
 struct QGridBlock {
     std::vector<double> xgrid;
     std::vector<double> qgrid;
-    std::vector<std::vector<double>> values;  // [ix][iq], only the flavor we need
+    std::vector<std::vector<double>> values;  // [ix][iq]
 };
 
 }
@@ -86,7 +86,7 @@ std::unique_ptr<Interpolator> MakeLHAPDFGridInterpolator(
     if (blocks.empty())
         throw std::runtime_error("MakeLHAPDFGridInterpolator: no Q subgrids found in " + member_file);
 
-    // If Q is outside the grid, use the closest grid value.
+    // clamp Q to the grid
     double q_clamped = Q;
     if (q_clamped < blocks.front().qgrid.front()) q_clamped = blocks.front().qgrid.front();
     if (q_clamped > blocks.back().qgrid.back()) q_clamped = blocks.back().qgrid.back();
@@ -106,7 +106,7 @@ std::unique_ptr<Interpolator> MakeLHAPDFGridInterpolator(
         for (size_t ix = 0; ix < nx; ix++) {
             double xf = block.values[ix][iq_lo] * (1.0 - t) + block.values[ix][iq_hi] * t;
             z_h_vals[ix] = block.xgrid[ix];
-            dvals[ix] = xf / z_h_vals[ix];   // the grid has x*f(x,Q), so divide by x to get D(z_h,Q)
+            dvals[ix] = xf / z_h_vals[ix];   // grid has x f(x)
         }
 
         return std::unique_ptr<Interpolator>(new Interpolator(z_h_vals, dvals));

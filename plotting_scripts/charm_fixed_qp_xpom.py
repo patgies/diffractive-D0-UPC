@@ -6,15 +6,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-# Diffractive charm x_po distribution at fixed q+ = 2p+ (z = 0.5): no photon flux, no fragmentation,
-# proton target as in charm_fixed_qp.py. Reads the output of run_charm_fixed_qp_xpom.sh.
+# Diffractive charm x_po distribution at fixed q+ = 2p+ (z = 0.5), proton, no flux, no fragmentation.
+# Input: run_charm_fixed_qp_xpom.sh.
 from charm_fixed_qp import prefactor_diff
 
 plt.rcParams["text.latex.preamble"] = r"\usepackage{amssymb}"   # \mathbb{P}
 
 
 def read_header(filename):
-    """Returns (y, p) from the '# y (fixed)' and '# p (fixed)' lines."""
+    """Returns (y, p) from the header."""
     values = {}
     with open(filename) as f:
         for line in f:

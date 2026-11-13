@@ -4,7 +4,7 @@
 #include <memory>
 #include "interpolation.hpp"
 
-// Kniehl-Kramer c -> D0 fragmentation function D(z_h), evolved with DGLAP
+// Kniehl-Kramer c -> D0 fragmentation D(z_h, Q), DGLAP-evolved
 
 std::unique_ptr<Interpolator> MakeKniehlKramerInterpolator(double Q);
 
