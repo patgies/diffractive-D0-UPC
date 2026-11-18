@@ -161,7 +161,7 @@ def draw_panels(averages, bands, outname, ylabel_x=0.034, left=0.015, flux_text=
                     for _, label, color, linestyle in FRAG_SCHEMES]
     if has_band:
         frag_handles.append(Patch(facecolor="0.3", alpha=0.25, edgecolor="none",
-                                  label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_T$"))
+                                  label=r"$\mu_F, \mu_R \in [0.5, 2]\, m_T^D$"))
     if flux_text and not legend_panel:
         axes.flat[0].text(0.95, 0.79, flux_text, transform=axes.flat[0].transAxes, ha="right", va="top", fontsize=30)
     if second_panel_text and not legend_panel:
